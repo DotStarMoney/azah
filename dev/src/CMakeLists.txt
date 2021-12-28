@@ -3,20 +3,29 @@ project(azah)
 set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(azah)
-target_link_libraries(azah absl::substitute)
+target_link_libraries(azah absl::container absl::strings glog eigen)
 
 set(NN_ACTIVATION
   nn/activation.h
   nn/activation.cc)
 
-set(NN_GRAPH_BUILDER
-  nn/graph/builder.h
-  nn/graph/builder.cc)
+set(NN_BUILDER
+  nn/builder.h
+  nn/builder.cc)
+
+set(NN_GRAPH
+  nn/graph.h
+  nn/graph.cc)
+
+set(NN_CORE
+  nn/core.h)
 
 target_sources(azah PRIVATE
   main.cc
   ${NN_ACTIVATION}
-	${NN_GRAPH_BUILDER})
+  ${NN_BUILDER}
+  ${NN_GRAPH}
+  ${NN_CORE})
 
 # ------------------------------------------------------------------------------
 

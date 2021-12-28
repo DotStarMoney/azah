@@ -11,7 +11,7 @@ struct LinearSegment {
 
 // Start of LUTs.
 //
-// Most of the LUT digits get truncated, but they're here because I prefer it.
+// Most of the LUT digits get truncated, but they're here for completeness.
 //
 
 // Swish:
