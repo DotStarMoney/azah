@@ -17,9 +17,6 @@ class Builder {
  public:
   typedef std::size_t NodeId;
 
-  Builder() {}
-  ~Builder() {}
-
   // An input node.
   NodeId Input(std::string_view input_name, int channel_n);
 
