@@ -28,9 +28,9 @@ set(UTIL_RANDOM
   util/random.h
   util/random.cc)
 
-set(ASYNC_SEMAPHOR
-  async/semaphor.h
-  async/semaphor.cc)
+set(ASYNC_SEMAPHORE
+  async/semaphore.h
+  async/semaphore.cc)
 
 set(ASYNC_GATEWAY
   async/gateway.h
@@ -48,7 +48,7 @@ target_sources(azah PRIVATE
   ${NN_CORE}
   ${UTIL_NONCOPYABLE}
   ${UTIL_RANDOM}
-  ${ASYNC_SEMAPHOR}
+  ${ASYNC_SEMAPHORE}
   ${ASYNC_GATEWAY}
   ${ASYNC_WORK_QUEUE})
 
