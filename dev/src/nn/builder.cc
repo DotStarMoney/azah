@@ -1,4 +1,4 @@
-#include "builder.h"
+#include "nn/builder.h"
 
 #include <memory>
 #include <string_view>
@@ -68,6 +68,45 @@ Builder::NodeId Builder::Add(Builder::NodeId in_a, Builder::NodeId in_b) {
   CheckId(in_a);
   CheckId(in_b);
   nodes_.emplace_back(new AddNode(in_a, in_b));
+  return nodes_.size() - 1;
+}
+
+Builder::NodeId Builder::Subtract(Builder::NodeId in_a, Builder::NodeId in_b) {
+  CheckId(in_a);
+  CheckId(in_b);
+  nodes_.emplace_back(new SubtractNode(in_a, in_b));
+  return nodes_.size() - 1;
+}
+
+Builder::NodeId Builder::Multiply(Builder::NodeId in_a, Builder::NodeId in_b) {
+  CheckId(in_a);
+  CheckId(in_b);
+  nodes_.emplace_back(new MultiplyNode(in_a, in_b));
+  return nodes_.size() - 1;
+}
+
+Builder::NodeId Builder::Multiply(Builder::NodeId in, float constant) {
+  CheckId(in);
+  nodes_.emplace_back(new MultiplyNode(in, constant));
+  return nodes_.size() - 1;
+}
+
+Builder::NodeId Builder::Divide(Builder::NodeId in_a, Builder::NodeId in_b) {
+  CheckId(in_a);
+  CheckId(in_b);
+  nodes_.emplace_back(new DivideNode(in_a, in_b));
+  return nodes_.size() - 1;
+}
+
+Builder::NodeId Builder::Divide(Builder::NodeId in, float constant) {
+  CheckId(in);
+  nodes_.emplace_back(new DivideNode(in, constant));
+  return nodes_.size() - 1;
+}
+
+Builder::NodeId Builder::Power(Builder::NodeId in, float constant) {
+  CheckId(in);
+  nodes_.emplace_back(new PowerNode(in, constant));
   return nodes_.size() - 1;
 }
 

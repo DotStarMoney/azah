@@ -7,13 +7,14 @@
 #include <string_view>
 #include <vector>
 
-#include "core.h"
-#include "builder.h"
+#include "nn/core.h"
+#include "nn/builder.h"
+#include "util/noncopyable.h"
 
 namespace azah {
 namespace nn {
 
-class Graph {
+class Graph : public util::NonCoyable {
  public:
   typedef std::size_t SlotId;
 
@@ -21,37 +22,39 @@ class Graph {
 
   std::string_view description() const { return description_; }
 
-  ColVector& input(SlotId id);
-  ColVector& input(std::string_view name);
-  BatchColVector& input_batch(SlotId id);
-  BatchColVector& input_batch(std::string_view name);
+  ColVector& input(SlotId input_id);
+  ColVector& input(std::string_view input_name);
+  BatchColVector& input_batch(SlotId input_id);
+  BatchColVector& input_batch(std::string_view input_name);
 
-  ColVector& output(SlotId id) const;
-  ColVector& output(std::string_view name) const;
+  ColVector& output(SlotId output_id) const;
+  ColVector& output(std::string_view output_name) const;
 
-  SlotId input_name_to_id(std::string_view name) const;
-  SlotId output_name_to_id(std::string_view name) const;
+  SlotId input_name_to_id(std::string_view input_name) const;
+  SlotId output_name_to_id(std::string_view output_name) const;
 
-  void Forward();
+  void Forward(const std::vector<std::string_view>& output_names);
+  void Forward(const std::vector<SlotId>& output_ids);
+
   void ForwardBatch();
 
-  //void BackwardBatch(/* some objective thing */);
+  void BackwardBatch(SlotId output_id);
+  void BackwardBatch(std::string_view output_name);
 
   std::size_t matrix_var_n() const;
   std::size_t vector_var_n() const;
 
   Matrix& matrix_var(SlotId id);
   ColVector& vector_var(SlotId id);
+  Matrix& matrix_var_grad(SlotId id);
+  ColVector& vector_var_grad(SlotId id);
 
   const std::vector<Matrix>& get_all_matrix_vars() const;
   const std::vector<ColVector>& get_all_vector_vars() const;
 
   // These consume their parameters.
-  void set_all_matrix_vars(std::vector<Matrix>* vars);
-  void set_all_vector_vars(std::vector<ColVector>* vars);
-
-  Graph(const Graph&) = delete;
-  Graph& operator=(const Graph&) = delete;
+  void set_all_matrix_vars(std::vector<Matrix>* consumed_vars);
+  void set_all_vector_vars(std::vector<ColVector>* consumed_vars);
 
  private:
   const std::string description_;

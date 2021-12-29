@@ -9,13 +9,17 @@
 #include <vector>
 
 #include "absl/strings/substitute.h"
+#include "util/noncopyable.h"
 
 namespace azah {
 namespace nn {
 
-class Builder {
+class Builder : public util:NonCopyable {
  public:
   typedef std::size_t NodeId;
+
+  Builder() {}
+  ~Builder() {}
 
   // An input node.
   NodeId Input(std::string_view input_name, int channel_n);
@@ -39,11 +43,15 @@ class Builder {
 
   // Arithmetic functions.
   NodeId Add(NodeId in_a, NodeId in_b);
+  NodeId Subtract(NodeId in_a, NodeId in_b);
+  NodeId Multiply(NodeId in_a, NodeId in_b);
+  NodeId Multiply(NodeId in, float constant);
+  NodeId Divide(NodeId in_a, NodeId in_b);
+  NodeId Divide(NodeId in, float constant);
+
+  NodeId Power(NodeId in, float constant);
 
   void Reset();
-
-  Builder(const Builder&) = delete;
-  Builder& operator=(const Builder&) = delete;
 
  private:
   enum class Type {
@@ -55,7 +63,11 @@ class Builder {
      kTanh,
      kSigmoid,
      kSoftmax,
-     kAdd
+     kAdd,
+     kSubtract,
+     kMultiply,
+     kDivide,
+     kPower
   };
 
   struct BuilderNode {
@@ -166,6 +178,69 @@ class Builder {
     std::string Description() const {
       return absl::Substitute("Add<ptr={}>", this);
     }
+  };
+
+  struct SubtractNode : public BuilderNode {
+    SubtractNode(NodeId in_a, NodeId in_b) :
+        BuilderNode(Description(), Type::kSubtract, {in_a, in_b}) {}
+
+    std::string Description() const {
+      return absl::Substitute("Subtract<ptr={}>", this);
+    }
+  };
+
+  struct MultiplyNode : public BuilderNode {
+    MultiplyNode(NodeId in_a, NodeId in_b) :
+        BuilderNode(Description(false, 0), Type::kMultiply, {in_a, in_b}), 
+        use_constant(false), constant(0) {}
+    MultiplyNode(NodeId in, float constant) :
+        BuilderNode(Description(true, constant), Type::kMultiply, {in}),
+        use_constant(true), constant(constant) {}
+
+    std::string Description(bool use_constant, float constant) const {
+      if (use_constant) {
+        return absl::Substitute("Multiply<ptr={}, constant={}>", this, 
+                                constant);
+      }
+      else {
+        return absl::Substitute("Multiply<ptr={}>", this);
+      }
+    }
+
+    const float constant;
+    const bool use_constant;
+  };
+
+  struct DivideNode : public BuilderNode {
+    DivideNode(NodeId in_a, NodeId in_b) :
+        BuilderNode(Description(false, 0), Type::kDivide, {in_a, in_b}),
+        use_constant(false), constant(0) {}
+    DivideNode(NodeId in, float constant) :
+        BuilderNode(Description(true, constant), Type::kDivide, {in}),
+        use_constant(true), constant(constant) {}
+
+    std::string Description(bool use_constant, float constant) const {
+      if (use_constant) {
+        return absl::Substitute("Divide<ptr={}, constant={}>", this, constant);
+      } else {
+        return absl::Substitute("Divide<ptr={}>", this);
+      }
+    }
+
+    const float constant;
+    const bool use_constant;
+  };
+
+  struct PowerNode : public BuilderNode {
+    PowerNode(NodeId in, float constant) :
+        BuilderNode(Description(constant), Type::kPower, {in}), 
+        constant(constant) {}
+
+    std::string Description(float constant) const {
+      return absl::Substitute("Power<ptr={}, constant={}>", this, constant);
+    }
+
+    const float constant;
   };
 
   void CheckId(NodeId id) const;
