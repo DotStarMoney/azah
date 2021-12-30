@@ -17,7 +17,6 @@ void work_fn(uint32_t worker_index, azah::async::WorkQueue* queue,
 	if (azah::util::TrueWithChance(0.5)) queue->AddWork(fn);
 }
 
-
 int main(int argc, char* argv[]) {
 	azah::async::WorkQueue queue(7, 1024);
 
@@ -32,8 +31,7 @@ int main(int argc, char* argv[]) {
 		queue.AddWork(fn);
 	}
 	
-	std::cout << "Letting work complete (5s)...\n";
-	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+	queue.Join();
 
 	for (int i = 0; i < 7; ++i) {
 		std::cout << total[i] << ", ";

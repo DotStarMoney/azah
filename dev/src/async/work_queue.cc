@@ -60,11 +60,7 @@ void WorkQueue::AddWorkInternal(WorkItem f) {
 }
 
 void WorkQueue::Join() {
-  //
-  // TODO!!!!!
-  //
-  // If empty, leave
-  // When a thread V's, it reads if there...
+  buffer_avail_.Join();
 }
 
 }  // namespace async

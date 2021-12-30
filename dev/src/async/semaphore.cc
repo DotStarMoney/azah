@@ -10,7 +10,8 @@
 namespace azah {
 namespace async {
 
-Semaphore::Semaphore(int32_t init_resource) : r_(init_resource) {
+Semaphore::Semaphore(int32_t init_resource) 
+    : r_(init_resource), init_resource_(init_resource) {
   CHECK_GE(init_resource, 0);
 }
 
@@ -38,9 +39,20 @@ bool Semaphore::TryP() {
 }
 
 void Semaphore::V() {
-  if (r_.fetch_add(1, std::memory_order_release) < 0) {
+  int32_t r = r_.fetch_add(1, std::memory_order_release);
+  if (r < 0) {
     std::unique_lock<std::shared_mutex> lock(m_);
     cv_.notify_one();
+  } else if ((init_resource_ > 0) && ((r + 1) == init_resource_)) {
+    std::unique_lock<std::shared_mutex> lock(join_m_);
+    join_cv_.notify_all();
+  }
+}
+
+void Semaphore::Join() {
+  std::shared_lock<std::shared_mutex> s_lock(join_m_);
+  if (r_.load(std::memory_order_consume) != init_resource_) {
+    join_cv_.wait(s_lock);
   }
 }
 

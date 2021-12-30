@@ -22,13 +22,21 @@ class Semaphore : public util::NonCopyable {
 
   void V();
 
+  // If init_resource > 0, blocks until the internal resource counter is equal
+  // to init_resource.
+  void Join();
+
   void Drain();
 
  private:
   std::shared_mutex m_;
+  std::shared_mutex join_m_;
   std::condition_variable_any cv_ GUARDED_BY(m_);
+  std::condition_variable_any join_cv_ GUARDED_BY(join_m_);
 
   std::atomic_int32_t r_;
+
+  const std::int32_t init_resource_;
 };
 
 }  // namespace async
