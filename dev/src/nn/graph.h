@@ -14,7 +14,8 @@
 namespace azah {
 namespace nn {
 
-class Graph : public util::NonCoyable {
+/*
+class Graph : public util::NonCopyable {
  public:
   typedef std::size_t SlotId;
 
@@ -74,6 +75,7 @@ class Graph : public util::NonCoyable {
   // Vector variables available to clients for gradient calculations.
   std::vector<SlotId> external_vector_vars_;
 };
+*/
 
 }  // namespace nn
 }  // namespace azah

@@ -1,27 +1,44 @@
-#include "nn/builder.h"
-#include "nn/graph.h"
+#include <stdint.h>
+
+#include <chrono>
+#include <functional>
+#include <iostream>
+#include <thread>
+
+#include "async/work_queue.h"
+#include "util/random.h"
+
+void work_fn(uint32_t worker_index, azah::async::WorkQueue* queue, 
+						 int total[]) {
+	total[worker_index]++;
+	std::this_thread::sleep_for(std::chrono::milliseconds(
+		  1 + azah::util::rnd() % 10));
+	auto fn = std::bind(work_fn, std::placeholders::_1, queue, total);
+	if (azah::util::TrueWithChance(0.5)) queue->AddWork(fn);
+}
+
 
 int main(int argc, char* argv[]) {
-	azah::nn::Builder graph_builder;
+	azah::async::WorkQueue queue(7, 1024);
 
-	auto x = graph_builder.Input("board_player_1", 24);
-	x = graph_builder.Dense(x, 64);
-	x = graph_builder.BatchNormalization(x);
-	x = graph_builder.Swish(x);
-	graph_builder.Output(x, "move_prob");
+	int total[7] = { 0, 0, 0, 0, 0, 0, 0};
 
-	azah::nn::Graph network(graph_builder);
+	auto fn = std::bind(work_fn, std::placeholders::_1, &queue, total);
 
-	auto input_vec = network.input("board_player_1");
-	// input_vec = some input state
+	std::cout << "Letting threads start (5s)...\n";
+	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
-	network.Forward();
+	for (int i = 0; i < 256; ++i) {
+		queue.AddWork(fn);
+	}
+	
+	std::cout << "Letting work complete (5s)...\n";
+	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
-	auto output = network.output("move_prob");
-
-	auto input_batch = network.input_batch("board_player_1");
-	network.ForwardBatch();
-	//network.BackwardBatch(ObjectFnObject);
+	for (int i = 0; i < 7; ++i) {
+		std::cout << total[i] << ", ";
+	}
+	std::cout << '\n';
 
 	return 0;
 }

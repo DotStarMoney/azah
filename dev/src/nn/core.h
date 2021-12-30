@@ -3,11 +3,11 @@
 
 #include <vector>
 
-#include "Eigen/Dense"
+//#include "Eigen/Dense"
 
 namespace azah {
 namespace nn {
-
+/*
 typedef Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 typedef Eigen::Matrix<float, 1, Eigen::Dynamic> RowVector;
 typedef Eigen::Matrix<float, Eigen::Dynamic, 1> ColVector;
@@ -42,7 +42,7 @@ inline BatchColVector CreateBatchColVector(int batch_n, int size_n,
   }
   return batch_col_vector;
 }
-
+*/
 }  // namespace nn
 }  // namespace azah
 

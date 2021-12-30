@@ -24,11 +24,11 @@ Semaphore::Semaphore(int32_t init_resource) : r_(init_resource) {
 
 void Semaphore::P() {
   std::shared_lock<std::shared_mutex> s_lock(m_);
-  if (r_.fetch_add(-1, std::memory_order_relaxed) <= 0) cv_.wait(s_lock);
+  if (r_.fetch_add(-1, std::memory_order_acquire) <= 0) cv_.wait(s_lock);
 }
 
 bool Semaphore::TryP() {
-  if (r_.fetch_add(-1, std::memory_order_relaxed) <= 0) {
+  if (r_.fetch_add(-1, std::memory_order_acquire) <= 0) {
     std::unique_lock<std::shared_mutex> lock(m_);
     r_.fetch_add(1, std::memory_order_relaxed);
     cv_.notify_one();
@@ -38,11 +38,14 @@ bool Semaphore::TryP() {
 }
 
 void Semaphore::V() {
-  if (r_.fetch_add(1, std::memory_order_relaxed) < 0) {
+  if (r_.fetch_add(1, std::memory_order_release) < 0) {
     std::unique_lock<std::shared_mutex> lock(m_);
     cv_.notify_one();
   }
 }
+
+// Ugh. Why are we still making this a macro??
+#undef max
 
 void Semaphore::Drain() {
   r_ = std::numeric_limits<int32_t>::max();

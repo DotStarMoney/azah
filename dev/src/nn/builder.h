@@ -14,7 +14,7 @@
 namespace azah {
 namespace nn {
 
-class Builder : public util:NonCopyable {
+class Builder : public util::NonCopyable {
  public:
   typedef std::size_t NodeId;
 

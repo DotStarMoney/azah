@@ -42,10 +42,10 @@ set(ASYNC_WORK_QUEUE
  
 target_sources(azah PRIVATE
   main.cc
-  ${NN_ACTIVATION}
-  ${NN_BUILDER}
-  ${NN_GRAPH}
-  ${NN_CORE}
+  #${NN_ACTIVATION}
+  #${NN_BUILDER}
+  #${NN_GRAPH}
+  #${NN_CORE}
   ${UTIL_NONCOPYABLE}
   ${UTIL_RANDOM}
   ${ASYNC_SEMAPHORE}
