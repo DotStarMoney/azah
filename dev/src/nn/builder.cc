@@ -10,9 +10,14 @@ namespace nn {
 
 using std::string_view;
 
+void Builder::CheckNotOutput(Builder::Type type) {
+  // glog doesn't understand enum comparison
+  CHECK_NE(static_cast<int>(type), static_cast<int>(Builder::Type::kOutput));
+}
+
 void Builder::CheckId(NodeId id) const {
   CHECK_LT(id, nodes_.size());
-  CHECK_NE(nodes_[id]->type, Builder::Type::kOutput);
+  CheckNotOutput(nodes_[id]->type);
 }
 
 Builder::NodeId Builder::Input(string_view input_name, int channel_n) {

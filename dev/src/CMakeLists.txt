@@ -3,6 +3,8 @@ project(azah)
 set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(azah)
+set_property(TARGET azah PROPERTY
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 target_link_libraries(azah absl::base absl::flat_hash_map absl::strings glog eigen)
 include_directories(${LOCAL_DIR})
 
@@ -43,13 +45,12 @@ set(ASYNC_WORK_QUEUE
 target_sources(azah PRIVATE
   main.cc
   #${NN_ACTIVATION}
-  #${NN_BUILDER}
+  ${NN_BUILDER}
   #${NN_GRAPH}
-  #${NN_CORE}
+  ${NN_CORE}
   ${UTIL_NONCOPYABLE}
   ${UTIL_RANDOM}
   ${ASYNC_SEMAPHORE}
-  ${ASYNC_GATEWAY}
   ${ASYNC_WORK_QUEUE})
 
 # ------------------------------------------------------------------------------
@@ -58,4 +59,12 @@ add_executable(azah_nn_activation_test
   ${NN_ACTIVATION}
   nn/activation_test.cc)
 target_link_libraries(azah_nn_activation_test gtest gtest_main)
-add_test(azah azah_nn_activation_test)
+add_test(azah_nn_activation_test azah_nn_activation_test)
+
+add_executable(azah_async_work_queue_test
+  ${ASYNC_WORK_QUEUE}
+  ${ASYNC_SEMAPHORE}
+  ${UTIL_RANDOM}
+  async/work_queue_test.cc)
+target_link_libraries(azah_async_work_queue_test absl::base glog gmock gtest gtest_main)
+add_test(azah_async_work_queue_test azah_async_work_queue_test)

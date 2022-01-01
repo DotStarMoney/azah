@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.20)
 project(azah)
 set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # For MSVC; gives a nice project layout.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 define_property(
   TARGET
@@ -51,7 +52,7 @@ FetchContent_Declare(
 
 FetchContent_Declare(
   eigen
-  GIT_REPOSITORY https://github.com/libigl/eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen
   GIT_TAG        master
 )
 

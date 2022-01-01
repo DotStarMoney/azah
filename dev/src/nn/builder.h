@@ -54,7 +54,7 @@ class Builder : public util::NonCopyable {
   void Reset();
 
  private:
-  enum class Type {
+  enum class Type : int {
      kInput,
      kOutput,
      kDense,
@@ -69,6 +69,8 @@ class Builder : public util::NonCopyable {
      kDivide,
      kPower
   };
+
+  static void CheckNotOutput(Type type);
 
   struct BuilderNode {
     BuilderNode(std::string&& description, Type type,
