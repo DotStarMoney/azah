@@ -57,7 +57,7 @@ inline BatchRowVector CreateBatchRowVector(
 inline BatchColVector CreateBatchColVector(
     int batch_n, int size_n, 
     ValueInitializer initializer_fn = ZerosInitializer) {
-  BatchColVector batch_col_vector(batch_n, ColVector(1, size_n));
+  BatchColVector batch_col_vector(batch_n, ColVector(size_n, 1));
   for (auto& col_vector : batch_col_vector) {
     for (int i = 0; i < col_vector.size(); ++i) {
       col_vector.data()[i] = initializer_fn();
