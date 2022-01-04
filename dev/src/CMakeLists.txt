@@ -44,9 +44,9 @@ set(ASYNC_WORK_QUEUE
  
 target_sources(azah PRIVATE
   main.cc
-  #${NN_ACTIVATION}
+  ${NN_ACTIVATION}
   ${NN_BUILDER}
-  #${NN_GRAPH}
+  ${NN_GRAPH}
   ${NN_CORE}
   ${UTIL_NONCOPYABLE}
   ${UTIL_RANDOM}
@@ -66,5 +66,5 @@ add_executable(azah_async_work_queue_test
   ${ASYNC_SEMAPHORE}
   ${UTIL_RANDOM}
   async/work_queue_test.cc)
-target_link_libraries(azah_async_work_queue_test absl::base glog gmock gtest gtest_main)
+target_link_libraries(azah_async_work_queue_test absl::base absl::status glog gmock gtest gtest_main)
 add_test(azah_async_work_queue_test azah_async_work_queue_test)

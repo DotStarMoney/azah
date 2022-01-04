@@ -1,13 +1,43 @@
 #include "nn/graph.h"
 
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "absl/status/statusor.h"
+#include "nn/builder.h"
+
 namespace azah {
 namespace nn {
 
+struct Graph::Op {
+  virtual void RunParallel(bool batch_mode, int batch_i) = 0;
 
+  virtual void RunSynchronized() = 0;
+
+  // Edges.
+  const std::vector<SlotId> in;
+  const std::vector<SlotId> out;
+
+  const bool batch_synchronized;
+};
+
+namespace {
+
+
+
+}  // namespace
+
+absl::StatusOr<std::unique_ptr<Graph>> Graph::Build(const Builder& builder) {
+
+}
+
+Graph::Graph(std::string* consumed_description) : 
+    description_(std::move(*consumed_description)) {}
+
+// TODO: "GetOrCreateOpPlan"
 
 /*
-Graph(const Builder& builder);
-
 std::string_view description() const { return description_; }
 
 ColVector& input(SlotId input_id);

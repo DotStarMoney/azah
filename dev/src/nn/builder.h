@@ -15,6 +15,8 @@ namespace azah {
 namespace nn {
 
 class Builder : public util::NonCopyable {
+  friend class Graph;
+
  public:
   typedef std::size_t NodeId;
 
@@ -93,7 +95,7 @@ class Builder : public util::NonCopyable {
                     input_name(input_name), channel_n(channel_n) {}
 
     std::string Description(std::string_view input_name, int channels_n) const {
-      return absl::Substitute("Input<name={}, channels_n={}, ptr={}>", 
+      return absl::Substitute("Input<name=\"$0\", channels_n=$1, ptr=$2>", 
                               input_name, channels_n, this);
     }
 
@@ -107,7 +109,7 @@ class Builder : public util::NonCopyable {
         output_name(output_name) {}
 
     std::string Description(std::string_view output_name) const {
-      return absl::Substitute("Output<name={}, ptr={}>", output_name, this);
+      return absl::Substitute("Output<name=\"$0\", ptr=$1>", output_name, this);
     }
 
     const std::string output_name;
@@ -123,7 +125,7 @@ class Builder : public util::NonCopyable {
 
     std::string Description(int channels_n, bool add_bias, int group_n) const {
       return absl::Substitute(
-          "Dense<channels_n={}, add_bias={}, group_n={}, ptr={}>", channels_n,
+          "Dense<channels_n=$0, add_bias=$1, group_n=$2, ptr=$3>", channels_n,
           add_bias, group_n, this);
     }
 
@@ -137,7 +139,7 @@ class Builder : public util::NonCopyable {
         BuilderNode(Description(), Type::kBatchNormalization, {in}) {}
 
     std::string Description() const {
-      return absl::Substitute("BatchNormalization<ptr={}>", this);
+      return absl::Substitute("BatchNormalization<ptr=$0>", this);
     }
   };
 
@@ -145,7 +147,7 @@ class Builder : public util::NonCopyable {
     SwishNode(NodeId in) : BuilderNode(Description(), Type::kSwish, {in}) {}
 
     std::string Description() const {
-      return absl::Substitute("Swish<ptr={}>", this);
+      return absl::Substitute("Swish<ptr=$0>", this);
     }
   };
 
@@ -153,7 +155,7 @@ class Builder : public util::NonCopyable {
     TanhNode(NodeId in) : BuilderNode(Description(), Type::kTanh, {in}) {}
 
     std::string Description() const {
-      return absl::Substitute("Tanh<ptr={}>", this);
+      return absl::Substitute("Tanh<ptr=$0>", this);
     }
   };
 
@@ -161,7 +163,7 @@ class Builder : public util::NonCopyable {
     SigmoidNode(NodeId in) : BuilderNode(Description(),Type::kSigmoid, {in}) {}
 
     std::string Description() const {
-      return absl::Substitute("Sigmoid<ptr={}>", this);
+      return absl::Substitute("Sigmoid<ptr=$0>", this);
     }
   };
 
@@ -169,7 +171,7 @@ class Builder : public util::NonCopyable {
     SoftmaxNode(NodeId in) : BuilderNode(Description(), Type::kSoftmax, {in}) {}
 
     std::string Description() const {
-      return absl::Substitute("Softmax<ptr={}>", this);
+      return absl::Substitute("Softmax<ptr=$0>", this);
     }
   };
 
@@ -178,7 +180,7 @@ class Builder : public util::NonCopyable {
         BuilderNode(Description(), Type::kAdd, {in_a, in_b}) {}
 
     std::string Description() const {
-      return absl::Substitute("Add<ptr={}>", this);
+      return absl::Substitute("Add<ptr=$0>", this);
     }
   };
 
@@ -187,7 +189,7 @@ class Builder : public util::NonCopyable {
         BuilderNode(Description(), Type::kSubtract, {in_a, in_b}) {}
 
     std::string Description() const {
-      return absl::Substitute("Subtract<ptr={}>", this);
+      return absl::Substitute("Subtract<ptr=$0>", this);
     }
   };
 
@@ -201,11 +203,11 @@ class Builder : public util::NonCopyable {
 
     std::string Description(bool use_constant, float constant) const {
       if (use_constant) {
-        return absl::Substitute("Multiply<ptr={}, constant={}>", this, 
+        return absl::Substitute("Multiply<ptr=$0, constant=$1>", this, 
                                 constant);
       }
       else {
-        return absl::Substitute("Multiply<ptr={}>", this);
+        return absl::Substitute("Multiply<ptr=$0>", this);
       }
     }
 
@@ -223,9 +225,9 @@ class Builder : public util::NonCopyable {
 
     std::string Description(bool use_constant, float constant) const {
       if (use_constant) {
-        return absl::Substitute("Divide<ptr={}, constant={}>", this, constant);
+        return absl::Substitute("Divide<ptr=$0, constant=$1>", this, constant);
       } else {
-        return absl::Substitute("Divide<ptr={}>", this);
+        return absl::Substitute("Divide<ptr=$0>", this);
       }
     }
 
@@ -239,7 +241,7 @@ class Builder : public util::NonCopyable {
         constant(constant) {}
 
     std::string Description(float constant) const {
-      return absl::Substitute("Power<ptr={}, constant={}>", this, constant);
+      return absl::Substitute("Power<ptr=$0, constant=$1>", this, constant);
     }
 
     const float constant;
@@ -247,7 +249,12 @@ class Builder : public util::NonCopyable {
 
   void CheckId(NodeId id) const;
 
+  NodeId InsertNode(std::unique_ptr<BuilderNode> node, NodeId in);
+  NodeId InsertNode(std::unique_ptr<BuilderNode> node, NodeId in_a, 
+                    NodeId in_b);
+
   std::vector<NodeId> inputs_;
+  std::vector<NodeId> outputs_;
   std::vector<std::unique_ptr<BuilderNode>> nodes_;
 };
 

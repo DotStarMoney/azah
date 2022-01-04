@@ -20,6 +20,26 @@ void Builder::CheckId(NodeId id) const {
   CheckNotOutput(nodes_[id]->type);
 }
 
+Builder::NodeId Builder::InsertNode(std::unique_ptr<BuilderNode> node,
+                                    NodeId in) {
+  CheckId(in);
+  nodes_.emplace_back(std::move(node));
+  auto id = nodes_.size() - 1;
+  nodes_[in]->outputs.push_back(id);
+  return id;
+}
+
+Builder::NodeId Builder::InsertNode(std::unique_ptr<BuilderNode> node, 
+                                    NodeId in_a, NodeId in_b) {
+  CheckId(in_a);
+  CheckId(in_b);
+  nodes_.emplace_back(std::move(node));
+  auto id = nodes_.size() - 1;
+  nodes_[in_a]->outputs.push_back(id);
+  nodes_[in_b]->outputs.push_back(id);
+  return id;
+}
+
 Builder::NodeId Builder::Input(string_view input_name, int channel_n) {
   nodes_.emplace_back(new InputNode(input_name, channel_n));
   auto id = nodes_.size() - 1;
@@ -30,93 +50,68 @@ Builder::NodeId Builder::Input(string_view input_name, int channel_n) {
 void Builder::Output(Builder::NodeId in, string_view output_name) {
   CheckId(in);
   nodes_.emplace_back(new OutputNode(in, output_name));
+  auto id = nodes_.size() - 1;
+  nodes_[in]->outputs.push_back(id);
+  outputs_.push_back(id);
 }
 
 Builder::NodeId Builder::Dense(Builder::NodeId in, int channel_n, bool add_bias,
                                int group_n) {
-  CheckId(in);
-  nodes_.emplace_back(new DenseNode(in, channel_n, add_bias, group_n));
-  return nodes_.size() - 1;
+  return InsertNode(
+      std::make_unique<DenseNode>(in, channel_n, add_bias, group_n), in);
 }
 
 Builder::NodeId Builder::BatchNormalization(Builder::NodeId in) {
-  CheckId(in);
-  nodes_.emplace_back(new BatchNormalizationNode(in));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<BatchNormalizationNode>(in), in);
 }
 
 Builder::NodeId Builder::Swish(Builder::NodeId in) {
-  CheckId(in);
-  nodes_.emplace_back(new SwishNode(in));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<SwishNode>(in), in);
 }
 
 Builder::NodeId Builder::Tanh(Builder::NodeId in) {
-  CheckId(in);
-  nodes_.emplace_back(new TanhNode(in));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<TanhNode>(in), in);
 }
 
 Builder::NodeId Builder::Sigmoid(Builder::NodeId in) {
-  CheckId(in);
-  nodes_.emplace_back(new SigmoidNode(in));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<SigmoidNode>(in), in);
 }
 
 Builder::NodeId Builder::Softmax(Builder::NodeId in) {
-  CheckId(in);
-  nodes_.emplace_back(new SoftmaxNode(in));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<SoftmaxNode>(in), in);
 }
 
 Builder::NodeId Builder::Add(Builder::NodeId in_a, Builder::NodeId in_b) {
-  CheckId(in_a);
-  CheckId(in_b);
-  nodes_.emplace_back(new AddNode(in_a, in_b));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<AddNode>(in_a, in_b), in_a, in_b);
 }
 
 Builder::NodeId Builder::Subtract(Builder::NodeId in_a, Builder::NodeId in_b) {
-  CheckId(in_a);
-  CheckId(in_b);
-  nodes_.emplace_back(new SubtractNode(in_a, in_b));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<SubtractNode>(in_a, in_b), in_a, in_b);
 }
 
 Builder::NodeId Builder::Multiply(Builder::NodeId in_a, Builder::NodeId in_b) {
-  CheckId(in_a);
-  CheckId(in_b);
-  nodes_.emplace_back(new MultiplyNode(in_a, in_b));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<MultiplyNode>(in_a, in_b), in_a, in_b);
 }
 
 Builder::NodeId Builder::Multiply(Builder::NodeId in, float constant) {
-  CheckId(in);
-  nodes_.emplace_back(new MultiplyNode(in, constant));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<MultiplyNode>(in, constant), in);
 }
 
 Builder::NodeId Builder::Divide(Builder::NodeId in_a, Builder::NodeId in_b) {
-  CheckId(in_a);
-  CheckId(in_b);
-  nodes_.emplace_back(new DivideNode(in_a, in_b));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<DivideNode>(in_a, in_b), in_a, in_b);
 }
 
 Builder::NodeId Builder::Divide(Builder::NodeId in, float constant) {
-  CheckId(in);
-  nodes_.emplace_back(new DivideNode(in, constant));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<DivideNode>(in, constant), in);
 }
 
 Builder::NodeId Builder::Power(Builder::NodeId in, float constant) {
-  CheckId(in);
-  nodes_.emplace_back(new PowerNode(in, constant));
-  return nodes_.size() - 1;
+  return InsertNode(std::make_unique<PowerNode>(in, constant), in);
 }
 
 void Builder::Reset() {
   inputs_.clear();
+  outputs_.clear();
   nodes_.clear();
 }
 
