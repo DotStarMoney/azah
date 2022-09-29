@@ -3,7 +3,7 @@ project(azah)
 set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(azah)
-target_link_libraries(azah absl::substitute eigen)
+target_link_libraries(azah eigen)
 
 set(NN_ACTIVATION
     nn/activation.h

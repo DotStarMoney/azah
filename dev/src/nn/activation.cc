@@ -1,4 +1,4 @@
-#include "nn/activation.h"
+#include "activation.h"
 
 namespace azah {
 namespace nn {
