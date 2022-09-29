@@ -1,4 +1,4 @@
-#include "activation.h"
+#include "nn/activation.h"
 
 namespace azah {
 namespace nn {
@@ -11,7 +11,7 @@ struct LinearSegment {
 
 // Start of LUTs.
 //
-// Most of the LUT digits get truncated, but they're here because I prefer it.
+// Most of the LUT digits get truncated, but they're here for completeness.
 //
 
 // Swish:
