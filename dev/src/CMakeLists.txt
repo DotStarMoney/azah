@@ -13,8 +13,7 @@ set(NN_OPERATION
 	  nn/data_types.h
     nn/unary_op.h
 	  nn/op.h
-    nn/op/swish.h
-    nn/op/swish.cc)
+    nn/op/swish.h)
 
 target_sources(azah PRIVATE
     main.cc
