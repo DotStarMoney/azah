@@ -1,7 +1,10 @@
 #ifndef AZAH_NN_DATA_TYPES_H_
 #define AZAH_NN_DATA_TYPES_H_
 
-#include "Eigen/Dense"
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+#include "Eigen/Core"
 
 namespace azah {
 namespace nn {
@@ -9,14 +12,8 @@ namespace nn {
 template <int Rows, int Cols>
 using Matrix = Eigen::Matrix<float, Rows, Cols>;
 
-template <int Cols>
-using RowVector = Eigen::Matrix<float, 1, Cols>;
-
-template <int Cols>
-using ColVector = Eigen::Matrix<float, Cols, 1>;
-
-template <int Cols>
-using ColVectorRef = Eigen::MatrixBase<ColVector<Cols>>;
+template <int Rows, int Cols>
+using MatrixRef = Eigen::Ref<const Eigen::Matrix<float, Rows, Cols>>;
 
 }  // namespace nn
 }  // namespace azah

@@ -5,23 +5,23 @@
 
 #include "../activation.h"
 #include "../data_types.h"
-#include "../op.h"
+#include "../node.h"
 #include "../unary_op.h"
 
 namespace azah {
 namespace nn {
 namespace op {
 
-template <int InputDepth, int OutputDepth>
-class Swish : public UnaryOp<InputDepth, OutputDepth> {
+template <int Rows, int Cols>
+class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
  public:
   Swish(const Swish&) = delete;
   Swish& operator=(const Swish&) = delete;
 
-  Swish(Op<InputDepth>& input) : UnaryOp(input) {}
+  Swish(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input) {}
 
-  void backprop(int32_t cycle, ColVectorRef<OutputDepth> output_dx) {
-    ColVector<OutputDepth> x = this->input_.output(cycle);
+  void unary_backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
+    Matrix<Rows, Cols> x = this->input_.output(cycle);
     for (uint32_t i = 0; i < x.size(); ++i) {
       auto element = x.data() + i;
       *element = FastSwishD(*element);

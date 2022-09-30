@@ -4,21 +4,32 @@
 #include <stdint.h>
 
 #include "data_types.h"
+#include "node.h"
 #include "op.h"
 
 namespace azah {
 namespace nn {
 
-template <int InputDepth, int OutputDepth>
-class UnaryOp : public Op<OutputDepth> {
+template <int InputRows, int InputCols, int OutputRows, int OutputCols>
+class UnaryOp : public Op<OutputRows, OutputCols> {
  public:
   UnaryOp(const UnaryOp&) = delete;
   UnaryOp& operator=(const UnaryOp&) = delete;
 
- protected:
-  UnaryOp(Op<InputDepth>& input) : Op(), input_(input) {}
+  void backprop(uint32_t cycle,
+                const MatrixRef<OutputRows, OutputCols>& output_dx) {
+    if (input_.constant) return;
+    unary_backprop(cycle, output_dx);
+  }
 
-  Op<InputDepth>& const input_;
+  virtual void unary_backprop(
+      uint32_t cycle, const MatrixRef<OutputRows, OutputCols>& output_dx) = 0;
+
+ protected:
+  UnaryOp(Node<InputRows, InputCols>& input) 
+      : Op<OutputRows, OutputCols>(input.constant), input_(input) {}
+
+  Node<InputRows, InputCols>& input_;
 };
 
 }  // namespace nn

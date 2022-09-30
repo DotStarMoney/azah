@@ -3,17 +3,22 @@ project(azah)
 set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(azah)
-target_link_libraries(azah eigen)
+target_link_libraries(azah eigen glog)
 
 set(NN_ACTIVATION
     nn/activation.h
     nn/activation.cc)
 
 set(NN_OPERATION
-	  nn/data_types.h
+    nn/binary_op.h
+	nn/constant.h
+    nn/data_types.h
     nn/unary_op.h
-	  nn/op.h
-    nn/op/swish.h)
+	nn/node.h
+	nn/op.h
+    nn/op/multiply.h
+    nn/op/swish.h
+    nn/variable.h)
 
 target_sources(azah PRIVATE
     main.cc
