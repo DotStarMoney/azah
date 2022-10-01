@@ -8,6 +8,14 @@
 #include "nn/op/swish.h"
 #include "nn/variable.h"
 
+
+// Next up...
+// 
+// GroupMatmul
+// GroupNorm
+// Softmax
+
+
 using azah::nn::Matrix;
 
 int main(int argc, char* argv[]) {

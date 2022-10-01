@@ -19,7 +19,9 @@ set(NN_OPERATION
     nn/op/add.h
     nn/op/matmul.h
     nn/op/multiply.h
+    nn/op/sigmoid.h
     nn/op/swish.h
+    nn/op/tanh.h
     nn/variable.h)
 
 target_sources(azah PRIVATE
