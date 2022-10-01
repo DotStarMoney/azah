@@ -11,11 +11,11 @@ set(NN_ACTIVATION
 
 set(NN_OPERATION
     nn/binary_op.h
-	nn/constant.h
+    nn/constant.h
     nn/data_types.h
     nn/unary_op.h
-	nn/node.h
-	nn/op.h
+    nn/node.h
+    nn/op.h
     nn/op/add.h
     nn/op/matmul.h
     nn/op/multiply.h
