@@ -10,8 +10,8 @@ float FastSwishD(float x);
 float FastSigmoid(float x);
 float FastSigmoidD(float x);
 
-float FastTanh(float x);
-float FastTanhD(float x);
+float FastTanH(float x);
+float FastTanHD(float x);
 
 }  // namespace nn
 }  // namespace azah

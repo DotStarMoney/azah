@@ -1,5 +1,5 @@
-#ifndef AZAH_NN_OPS_SWISH_H_
-#define AZAH_NN_OPS_SWISH_H_
+#ifndef AZAH_NN_OPS_TANH_H_
+#define AZAH_NN_OPS_TANH_H_
 
 #include <stdint.h>
 
@@ -13,20 +13,20 @@ namespace nn {
 namespace op {
 
 template <int Rows, int Cols>
-class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
+class TanH : public UnaryOp<Rows, Cols, Rows, Cols> {
  public:
-  Swish(const Swish&) = delete;
-  Swish& operator=(const Swish&) = delete;
+  TanH(const Swish&) = delete;
+  TanH& operator=(const TanH&) = delete;
 
-  Swish(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
-                                   cached_input_dx_(Matrix<Rows, Cols>::Zero()),
-                                   grad_cycle_(-1) {}
+  TanH(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
+      cached_input_dx_(Matrix<Rows, Cols>::Zero()),
+      grad_cycle_(-1) {}
 
   void unary_backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
     if (cycle != grad_cycle_) {
       auto x = this->input_.output(cycle);
       for (uint32_t i = 0; i < x.size(); ++i) {
-        *(cached_input_dx_.data() + i) = FastSwishD(*(x.data() + i));
+        *(cached_input_dx_.data() + i) = FastTanHD(*(x.data() + i));
       }
       grad_cycle_ = cycle;
     }
@@ -37,7 +37,7 @@ class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
   void compute_output(uint32_t cycle) {
     auto x = this->input_.output(cycle);
     for (uint32_t i = 0; i < x.size(); ++i) {
-      *(this->cached_output_.data() + i) = FastSwish(*(x.data() + i));
+      *(this->cached_output_.data() + i) = FastTanH(*(x.data() + i));
     }
   }
 
@@ -50,4 +50,4 @@ class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
 }  // namespace nn
 }  // namespace azah
 
-#endif  // AZAH_NN_OPS_SWISH_H_
+#endif  // AZAH_NN_OPS_TANH_H_

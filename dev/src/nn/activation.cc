@@ -1052,7 +1052,7 @@ constexpr LinearSegment kSigmoidDLut255[] = {
 
 // Hyperbolic Tan:
 
-constexpr LinearSegment kTanhLut255[] = {
+constexpr LinearSegment kTanHLut255[] = {
     {.m = 0, .b = -1},
     {.m = 5.038933846179816e-06, .b = -0.9999596885292306},
     {.m = -6.79211138887581e-07, .b = -1.0000050763050496},
@@ -1310,7 +1310,7 @@ constexpr LinearSegment kTanhLut255[] = {
     {.m = 5.428927511985648e-07, .b = 0.9999954360957904},
     {.m = 0, .b = 1}};
 
-constexpr LinearSegment kTanhDLut255[] = {
+constexpr LinearSegment kTanHDLut255[] = {
     {.m = 0, .b = 0},
     {.m = 1.007787138002053e-05, .b = 8.062297104016424e-05},
     {.m = -1.3584334957977175e-06, .b = -1.0152698911643099e-05},
@@ -1594,12 +1594,12 @@ float FastSigmoidD(float x) {
   return LutFn255(x, kSigmoidDLut255);
 }
 
-float FastTanh(float x) {
-  return LutFn255(x, kTanhLut255);
+float FastTanH(float x) {
+  return LutFn255(x, kTanHLut255);
 }
 
-float FastTanhD(float x) {
-  return LutFn255(x, kTanhDLut255);
+float FastTanHD(float x) {
+  return LutFn255(x, kTanHDLut255);
 }
 
 }  // namespace nn

@@ -3,6 +3,7 @@
 #include "nn/constant.h"
 #include "nn/data_types.h"
 #include "nn/op/add.h"
+#include "nn/op/matmul.h"
 #include "nn/op/multiply.h"
 #include "nn/op/swish.h"
 #include "nn/variable.h"
@@ -10,35 +11,30 @@
 using azah::nn::Matrix;
 
 int main(int argc, char* argv[]) {
-  // Prepare the column vector [[0.1], [0.2], [0.3], [0.4]]
-  Matrix<4, 1> s;
-  s << 0.1,
-       0.2,
-       0.3,
-       0.4;
+  Matrix<2, 2> a;
+  a << 5, 6, 7, 8;
 
-  // Evaluate z = f(2x + f(x))
+  Matrix<2, 2> b;
+  b << 1, 2, 3, 4;
 
-  Matrix<4, 1> two_m;
-  two_m << 2,
-           2,
-           2,
-           2;
-  auto two = azah::nn::Constant<4, 1>(two_m);
-  auto x = azah::nn::Variable<4, 1>(s);
+  Matrix<2, 2> c;
+  c << -1, -2, -3, -4;
 
-  auto fx = azah::nn::op::Swish(x);
-  auto two_x = azah::nn::op::Multiply(two, x);
-  auto xpfx = azah::nn::op::Add(two_x, fx);
-  auto z = azah::nn::op::Swish(xpfx);
+  auto x = azah::nn::Variable<2, 2>(a);
+  auto y = azah::nn::Variable<2, 2>(b);
+  auto q = azah::nn::Variable<2, 2>(c);
 
-  std::cout << "result=\n" << z.output(0) << "\n";
+  auto xy = azah::nn::op::Matmul(x, y);
+  auto xyq = azah::nn::op::Matmul(xy, q);
 
-  // Find the derivative of z with respect to x
-  Matrix<4, 1> ones = Matrix<4, 1>::Constant(1);
-  z.backprop(0, ones);
+  std::cout << "result=\n" << xyq.output(0) << "\n";
 
-  std::cout << "gradient=\n" << x.gradient() << "\n";
+  Matrix<2, 2> ones = Matrix<2, 2>::Constant(1);
+  xyq.backprop(0, ones);
+
+  std::cout << "gradient x=\n" << x.gradient() << "\n";
+  std::cout << "gradient y=\n" << y.gradient() << "\n";
+  std::cout << "gradient q=\n" << q.gradient() << "\n";
 
   return 0;
 }

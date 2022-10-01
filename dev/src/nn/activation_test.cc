@@ -1,4 +1,4 @@
-#include "nn/activation.h"
+#include "activation.h"
 
 #include <math.h>
 
@@ -109,41 +109,41 @@ TEST(ActivationTest, FastSigmoidD) {
   EXPECT_EQ(FastSigmoidD(10), 0.f);
 }
 
-TEST(ActivationTest, FastTanh) {
+TEST(ActivationTest, FastTanH) {
   for (float x = -8.f; x < -2.f; x += 0.1f) {
-    EXPECT_NEAR(tanh(x), FastTanh(x), 0.005f);
+    EXPECT_NEAR(tanh(x), FastTanH(x), 0.005f);
   }
 
   // We're more precise towards zero.
   for (float x = -2.f; x < 2.f; x += 0.1f) {
-    EXPECT_NEAR(tanh(x), FastTanh(x), 0.001f);
+    EXPECT_NEAR(tanh(x), FastTanH(x), 0.001f);
   }
 
   for (float x = 2.f; x < 8.f; x += 0.1f) {
-    EXPECT_NEAR(tanh(x), FastTanh(x), 0.005f);
+    EXPECT_NEAR(tanh(x), FastTanH(x), 0.005f);
   }
 
-  EXPECT_EQ(FastTanh(-10), -1.f);
-  EXPECT_EQ(FastTanh(10), 1.f);
+  EXPECT_EQ(FastTanH(-10), -1.f);
+  EXPECT_EQ(FastTanH(10), 1.f);
 }
 
-TEST(ActivationTest, FastTanhD) {
+TEST(ActivationTest, FastTanHD) {
   for (float x = -8.f; x < -2.f; x += 0.1f) {
-    EXPECT_NEAR(tanh_d(x), FastTanhD(x), 0.005f);
+    EXPECT_NEAR(tanh_d(x), FastTanHD(x), 0.005f);
   }
 
   // We're more precise towards zero, but not by much since the peak is sharper
   // than our linear approximation (double wide at 0) can handle.
   for (float x = -2.f; x < 2.f; x += 0.1f) {
-    EXPECT_NEAR(tanh_d(x), FastTanhD(x), 0.003f);
+    EXPECT_NEAR(tanh_d(x), FastTanHD(x), 0.003f);
   }
 
   for (float x = 2.f; x < 8.f; x += 0.1f) {
-    EXPECT_NEAR(tanh_d(x), FastTanhD(x), 0.005f);
+    EXPECT_NEAR(tanh_d(x), FastTanHD(x), 0.005f);
   }
 
-  EXPECT_EQ(FastTanhD(-10), 0.f);
-  EXPECT_EQ(FastTanhD(10), 0.f);
+  EXPECT_EQ(FastTanHD(-10), 0.f);
+  EXPECT_EQ(FastTanHD(10), 0.f);
 }
 
 }  // namespace nn

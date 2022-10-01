@@ -17,6 +17,7 @@ set(NN_OPERATION
 	nn/node.h
 	nn/op.h
     nn/op/add.h
+    nn/op/matmul.h
     nn/op/multiply.h
     nn/op/swish.h
     nn/variable.h)
