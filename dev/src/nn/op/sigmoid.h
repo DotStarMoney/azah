@@ -14,7 +14,7 @@ namespace op {
 
 template <int Rows, int Cols>
 class Sigmoid : public UnaryOp<Rows, Cols, Rows, Cols> {
-public:
+ public:
   Sigmoid(const Swish&) = delete;
   Sigmoid& operator=(const Sigmoid&) = delete;
 
@@ -33,7 +33,7 @@ public:
     this->input_.backprop(cycle, cached_input_dx_.cwiseProduct(output_dx));
   }
 
-protected:
+ protected:
   void compute_output(uint32_t cycle) {
     auto x = this->input_.output(cycle);
     for (uint32_t i = 0; i < x.size(); ++i) {
@@ -41,7 +41,7 @@ protected:
     }
   }
 
-private:
+ private:
   Matrix<Rows, Cols> cached_input_dx_;
   uint32_t grad_cycle_;
 };
