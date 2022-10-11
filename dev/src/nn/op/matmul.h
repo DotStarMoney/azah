@@ -23,8 +23,10 @@ class Matmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
       BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB, InputRowsA, 
                InputColsB>(input_a, input_b) {}
 
-  void backprop(uint32_t cycle, 
-                const MatrixRef<InputRowsA, InputColsB>& output_dx) {
+  void backprop(
+      uint32_t cycle, 
+      const MatrixRef<InputRowsA, InputColsB>& output_dx = Matrix<
+          InputRowsA, InputColsB>::Constant(1)) {
     if (!this->input_a_.constant) {
       this->input_a_.backprop(
           cycle, 

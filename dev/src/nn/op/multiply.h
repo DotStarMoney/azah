@@ -20,7 +20,9 @@ class Multiply : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
   Multiply(Node<Rows, Cols>& input_a, Node<Rows, Cols>& input_b) :
       BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols>(input_a, input_b) {}
 
-  void backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
+  void backprop(
+      uint32_t cycle, 
+      const MatrixRef<Rows, Cols>& output_dx = Matrix<Rows, Cols>::Constant(1)) {
     if (!this->input_a_.constant) {
       this->input_a_.backprop(
           cycle, this->input_b_.output(cycle).cwiseProduct(output_dx));
