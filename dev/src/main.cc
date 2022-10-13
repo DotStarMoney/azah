@@ -11,9 +11,7 @@
 
 // Next up...
 // 
-// GroupNorm
 // Softmax
-
 
 using azah::nn::Matrix;
 

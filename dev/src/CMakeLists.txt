@@ -18,6 +18,7 @@ set(NN_OPERATION
     nn/op.h
     nn/op/add.h
     nn/op/group_matmul.h
+    nn/op/group_norm.h
     nn/op/matmul.h
     nn/op/multiply.h
     nn/op/sigmoid.h
