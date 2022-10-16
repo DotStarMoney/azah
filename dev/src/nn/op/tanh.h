@@ -15,16 +15,13 @@ namespace op {
 template <int Rows, int Cols>
 class TanH : public UnaryOp<Rows, Cols, Rows, Cols> {
  public:
-  TanH(const Swish&) = delete;
+  TanH(const TanH&) = delete;
   TanH& operator=(const TanH&) = delete;
 
   TanH(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
-      cached_input_dx_(Matrix<Rows, Cols>::Zero()),
       grad_cycle_(-1) {}
 
-  void unary_backprop(
-      uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = Matrix<Rows, Cols>::Constant(1)) {
+  void unary_backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
     if (cycle != grad_cycle_) {
       auto x = this->input_.output(cycle);
       for (uint32_t i = 0; i < x.size(); ++i) {
@@ -35,17 +32,16 @@ class TanH : public UnaryOp<Rows, Cols, Rows, Cols> {
     this->input_.backprop(cycle, cached_input_dx_.cwiseProduct(output_dx));
   }
 
- protected:
+ private:
+  Matrix<Rows, Cols> cached_input_dx_;
+  uint32_t grad_cycle_;
+
   void compute_output(uint32_t cycle) {
     auto x = this->input_.output(cycle);
     for (uint32_t i = 0; i < x.size(); ++i) {
       *(this->cached_output_.data() + i) = FastTanH(*(x.data() + i));
     }
   }
-
- private:
-  Matrix<Rows, Cols> cached_input_dx_;
-  uint32_t grad_cycle_;
 };
 
 }  // namespace op

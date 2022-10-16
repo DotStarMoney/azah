@@ -17,6 +17,7 @@ set(NN_OPERATION
     nn/node.h
     nn/op.h
     nn/op/add.h
+    nn/op/fork.h
     nn/op/group_matmul.h
     nn/op/group_norm.h
     nn/op/matmul.h

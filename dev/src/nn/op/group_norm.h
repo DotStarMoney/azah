@@ -12,7 +12,7 @@ namespace nn {
 namespace op {
 namespace {
 
-constexpr float kEpsilon = 0.0001;
+constexpr float kEpsilon = 0.00001;
 
 }  // namespace
 
