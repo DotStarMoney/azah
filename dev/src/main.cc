@@ -11,6 +11,9 @@
 #include "nn/op/tanh.h"
 #include "nn/variable.h"
 
+#include "nn/op/group.h"
+#include "nn/op/ungroup.h"
+
 // Next up...
 // 
 // Softmax
@@ -47,6 +50,19 @@ int main(int argc, char* argv[]) {
 
   std::cout << "gradient x=\n" << x.gradient() << "\n";
   std::cout << "gradient y=\n" << y.gradient() << "\n";
+
+  Matrix<4, 4> v;
+  v << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16;
+  auto s = azah::nn::Variable<4, 4>(v);
+
+  auto s_grouped = azah::nn::op::Group<2, 4, 4>(s);
+  auto s_ungrouped = azah::nn::op::Ungroup<2, 4, 4>(s_grouped);
+
+  std::cout << "result=\n" << s_ungrouped.output(0) << "\n";
+
+  s_ungrouped.backprop(0);
+
+  std::cout << "gradient x=\n" << s.gradient() << "\n";
 
   return 0;
 }

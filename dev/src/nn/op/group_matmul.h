@@ -6,7 +6,6 @@
 #include "../binary_op.h"
 #include "../data_types.h"
 #include "../node.h"
-#include "Eigen/Core"
 
 namespace azah {
 namespace nn {
@@ -31,7 +30,6 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
       uint32_t cycle,
       const MatrixRef<InputRowsA * Groups, InputColsB>& output_dx = Matrix<
           InputRowsA * Groups, InputColsB>::Constant(1)) {
-    
     if (!this->input_a_.constant) {
       Matrix<InputRowsA, InputColsA> j;
       Matrix<InputColsB, InputRowsB> b_trans =
