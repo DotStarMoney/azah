@@ -34,31 +34,24 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
     
     if (!this->input_a_.constant) {
       Matrix<InputRowsA, InputColsA> j;
+      Matrix<InputColsB, InputRowsB> b_trans =
+          this->input_b_.output(cycle).transpose();
       for (int g = 0; g < Groups; ++g) {
-        Eigen::Map<const Matrix<InputRowsA, InputColsB>> output_dx_group(
-            output_dx.data() + g * InputRowsA * InputColsB);
-        Eigen::Map<
-            const Matrix<InputColsB, InputRowsB / Groups>,
-            0,
-            Eigen::Stride<InputRowsB, 1>> input_b_t_group(
-                this->input_b_.output(cycle).transpose().data()
-                    + g * InputRowsB / Groups);
-        j.middleCols(g * InputColsA / Groups, InputColsA / Groups) = 
-            output_dx_group * input_b_t_group;
+        j.middleCols(g * InputColsA / Groups, InputColsA / Groups) =
+            output_dx.middleRows(g * InputRowsA, InputRowsA) *
+            b_trans.middleCols(g * InputRowsB / Groups, InputRowsB / Groups);
       }
       this->input_a_.backprop(cycle, j);
     }
-    
+
     if (!this->input_b_.constant) {
       Matrix<InputRowsB, InputColsB> j;
+      Matrix<InputColsA, InputRowsA> a_trans =
+          this->input_a_.output(cycle).transpose();
       for (int g = 0; g < Groups; ++g) {
-        Eigen::Map<const Matrix<InputRowsA, InputColsB>> output_dx_group(
-            output_dx.data() + g * InputRowsA * InputColsB);
-        Eigen::Map<const Matrix<InputColsA / Groups, InputRowsA>> input_a_t_group(
-            this->input_a_.output(cycle).transpose().data() 
-                + g * InputRowsA * InputColsA / Groups);
         j.middleRows(g * InputRowsB / Groups, InputRowsB / Groups) =
-            input_a_t_group * output_dx_group;
+            a_trans.middleRows(g * InputColsA / Groups, InputColsA / Groups) *
+            output_dx.middleRows(g * InputRowsA, InputRowsA);
       }
       this->input_b_.backprop(cycle, j);
     }
@@ -69,15 +62,9 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
     auto a = this->input_a_.output(cycle);
     auto b = this->input_b_.output(cycle);
     for (int g = 0; g < Groups; ++g) {
-      Eigen::Map<
-          Matrix<InputRowsA, InputColsA / Groups>, 
-          0, 
-          Eigen::Stride<InputColsA, 1>> group_a(
-              a.data() + g * InputColsA / Groups);
-      Eigen::Map<Matrix<InputRowsB / Groups, InputColsB>> group_b(
-          b.data() + g * InputRowsB / Groups * InputColsB);
       this->cached_output_.middleRows(g * InputRowsA, InputRowsA) = 
-          group_a * group_b;
+          a.middleCols(g * InputColsA / Groups, InputColsA / Groups) * 
+          b.middleRows(g * InputRowsB / Groups, InputRowsB / Groups);
     }
   }
 };
