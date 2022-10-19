@@ -22,15 +22,16 @@ class Ungroup : public UnaryOp<Rows * Cols / Groups, Groups, Rows, Cols> {
       UnaryOp<Rows * Cols / Groups, Groups, Rows, Cols>(input) {}
 
   void unary_backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
+    Matrix<Cols, Rows> x_t = output_dx.transpose();
     this->input_.backprop(
         cycle, 
-        Eigen::Map<const Matrix<Rows * Cols / Groups, Groups>>(output_dx.data()));
+        Eigen::Map<Matrix<Rows * Cols / Groups, Groups>>(x_t.data()));
   }
 
  private:
   void compute_output(uint32_t cycle) {
-    auto x = this->input_.output(cycle);
-    this->cached_output_ = Eigen::Map<const Matrix<Cols, Rows>>(x.data());
+    this->cached_output_ = Eigen::Map<const Matrix<Cols, Rows>>(
+        this->input_.output(cycle).data()).transpose();
   }
 };
 

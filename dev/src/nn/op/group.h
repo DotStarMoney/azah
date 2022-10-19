@@ -1,8 +1,6 @@
 #ifndef AZAH_NN_OPS_GROUP_H_
 #define AZAH_NN_OPS_GROUP_H_
 
-#include <iostream>
-
 #include <stdint.h>
 
 #include "../data_types.h"
@@ -26,14 +24,15 @@ class Group : public UnaryOp<Rows, Cols, Rows * Cols / Groups, Groups> {
   void unary_backprop(uint32_t cycle,
       const MatrixRef<Rows * Cols / Groups, Groups>& output_dx) {
     this->input_.backprop(cycle, 
-                          Eigen::Map<const Matrix<Cols, Rows>>(output_dx.data()));
+                          Eigen::Map<const Matrix<Cols, Rows>>(output_dx.data())
+        .transpose());
   }
 
  private:
   void compute_output(uint32_t cycle) {
-    auto x = this->input_.output(cycle);
-    this->cached_output_ = Eigen::Map<const Matrix<Rows* Cols / Groups, Groups>>(
-        x.data());
+    Matrix<Cols, Rows> x_t = this->input_.output(cycle).transpose();
+    this->cached_output_ = Eigen::Map<Matrix<Rows * Cols / Groups, Groups>>(
+        x_t.data());
   }
 };
 

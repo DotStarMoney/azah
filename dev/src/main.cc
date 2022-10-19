@@ -21,6 +21,7 @@
 using azah::nn::Matrix;
 
 int main(int argc, char* argv[]) {
+  /*
   Matrix<2, 2> a;
   a << 0.5, 0.6, 0.7, 0.8;
 
@@ -50,13 +51,13 @@ int main(int argc, char* argv[]) {
 
   std::cout << "gradient x=\n" << x.gradient() << "\n";
   std::cout << "gradient y=\n" << y.gradient() << "\n";
+  */
+  Matrix<4, 3> v;
+  v << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12;
+  auto s = azah::nn::Variable<4, 3>(v);
 
-  Matrix<4, 4> v;
-  v << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16;
-  auto s = azah::nn::Variable<4, 4>(v);
-
-  auto s_grouped = azah::nn::op::Group<2, 4, 4>(s);
-  auto s_ungrouped = azah::nn::op::Ungroup<2, 4, 4>(s_grouped);
+  auto s_grouped = azah::nn::op::Group<2, 4, 3>(s);
+  auto s_ungrouped = azah::nn::op::Ungroup<2, 4, 3>(s_grouped);
 
   std::cout << "result=\n" << s_ungrouped.output(0) << "\n";
 
