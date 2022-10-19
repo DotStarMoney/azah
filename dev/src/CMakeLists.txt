@@ -18,15 +18,12 @@ set(NN_OPERATION
     nn/op.h
     nn/op/add.h
     nn/op/fork.h
-    nn/op/group.h
     nn/op/group_matmul.h
-    nn/op/group_norm.h
     nn/op/matmul.h
     nn/op/multiply.h
     nn/op/sigmoid.h
     nn/op/swish.h
     nn/op/tanh.h
-    nn/op/ungroup.h
     nn/variable.h)
 
 target_sources(azah PRIVATE
