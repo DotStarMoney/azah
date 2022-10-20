@@ -20,7 +20,10 @@ set(NN_OPERATION
     nn/op/fork.h
     nn/op/group_matmul.h
     nn/op/matmul.h
+    nn/op/mean.h
     nn/op/multiply.h
+    nn/op/scalar_fmadd.h
+    nn/op/scalar_mse.h
     nn/op/sigmoid.h
     nn/op/swish.h
     nn/op/tanh.h

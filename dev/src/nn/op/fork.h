@@ -18,8 +18,11 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
   Fork(const Fork&) = delete;
   Fork& operator=(const Fork&) = delete;
 
-  Fork(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
-      grad_cycle_(-1) {}
+  Fork(Node<Rows, Cols>& input, int forks = 2) 
+      : UnaryOp<Rows, Cols, Rows, Cols>(input),
+        grad_cycle_(-1),
+        forks_(0),
+        n_forks_(forks) {}
 
   void unary_backprop(
       uint32_t cycle,
@@ -27,10 +30,11 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
     if (cycle != grad_cycle_) {
       forked_grad_ = output_dx;
       grad_cycle_ = cycle;
+      forks_ = 1;
     } else {
       forked_grad_ += output_dx;
       this->input_.backprop(cycle, forked_grad_);
-      grad_cycle_ = -1;
+      if (++forks_ >= n_forks_) grad_cycle_ = -1;
     }
   }
   
@@ -41,6 +45,8 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
  private:
   Matrix<Rows, Cols> forked_grad_;
   uint32_t grad_cycle_;
+  uint32_t forks_;
+  const uint32_t n_forks_;
 
   void compute_output(uint32_t cycle) {
     LOG(FATAL) << "compute_output unimplemented for Fork.";

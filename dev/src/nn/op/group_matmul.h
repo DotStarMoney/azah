@@ -55,7 +55,7 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
     }
   }
 
- protected:
+ private:
   void compute_output(uint32_t cycle) {
     auto a = this->input_a_.output(cycle);
     auto b = this->input_b_.output(cycle);
