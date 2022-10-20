@@ -27,6 +27,7 @@ set(NN_OPERATION
     nn/op/sigmoid.h
     nn/op/swish.h
     nn/op/tanh.h
+    nn/op/z_score.h
     nn/variable.h)
 
 target_sources(azah PRIVATE

@@ -25,11 +25,16 @@ int main(int argc, char* argv[]) {
   Matrix<2, 2> xx;
   xx << 1.0, 3.0, 5.0, 3.0;
 
-  Matrix<1, 1> tt;
-  tt << 2.0;
+  Matrix<1, 1> mm;
+  mm << 2.0;
+
+  Matrix<1, 1> vv;
+  vv << 2.0;
 
   auto x = azah::nn::Variable<2, 2>(xx);
-  auto t = azah::nn::Variable<1, 1>(tt);
+  auto mean = azah::nn::Variable<1, 1>(mm);
+  auto var = azah::nn::Variable<1, 1>(vv);
+
 
   auto fmadd = azah::nn::op::ScalarMSE(x, t);
 
