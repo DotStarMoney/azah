@@ -26,7 +26,8 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
 
   void unary_backprop(
       uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = Matrix<Rows, Cols>::Constant(1)) {
+      const MatrixRef<Rows, Cols>& output_dx = 
+          Matrix<Rows, Cols>::Constant(1)) override {
     if (cycle != grad_cycle_) {
       forked_grad_ = output_dx;
       grad_cycle_ = cycle;
@@ -48,7 +49,7 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
   uint32_t forks_;
   const uint32_t n_forks_;
 
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     LOG(FATAL) << "compute_output unimplemented for Fork.";
   }
 };

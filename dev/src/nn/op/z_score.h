@@ -26,7 +26,8 @@ class ZScore : public Op<Rows, Cols> {
 
   void backprop(
       uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = Matrix<Rows, Cols>::Constant(1)) {
+      const MatrixRef<Rows, Cols>& output_dx = 
+          Matrix<Rows, Cols>::Constant(1)) override {
     auto var_inv = (this->var_.output(cycle).array() + kEpsilon).inverse().value();
     auto stddev_inv = std::sqrt(var_inv);
     auto out_dx_sum = output_dx.sum();
@@ -50,7 +51,7 @@ class ZScore : public Op<Rows, Cols> {
   Node<1, 1>& mean_;
   Node<1, 1>& var_;
 
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     auto x = this->input_.output(cycle);
     auto mean = this->mean_.output(cycle);
     auto var = this->var_.output(cycle);

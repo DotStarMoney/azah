@@ -25,8 +25,8 @@ class Matmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
 
   void backprop(
       uint32_t cycle, 
-      const MatrixRef<InputRowsA, InputColsB>& output_dx = Matrix<
-          InputRowsA, InputColsB>::Constant(1)) {
+      const MatrixRef<InputRowsA, InputColsB>& output_dx = 
+          Matrix<InputRowsA, InputColsB>::Constant(1)) override {
     if (!this->input_a_.constant) {
       this->input_a_.backprop(
           cycle, 
@@ -40,7 +40,7 @@ class Matmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
   }
 
  private:
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     auto a = this->input_a_.output(cycle);
     auto b = this->input_b_.output(cycle);
     this->cached_output_ = a * b;

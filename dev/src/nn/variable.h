@@ -21,11 +21,11 @@ class Variable : public Node<Rows, Cols> {
         gradient_(Matrix<Rows, Cols>::Zero()), 
         grad_cycle_(-1) {}
 
-  const Matrix<Rows, Cols>& output(uint32_t cycle) {
+  const Matrix<Rows, Cols>& output(uint32_t cycle) override {
     return value;
   }
 
-  void backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
+  void backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
     if (cycle != grad_cycle_) {
       gradient_ = output_dx;
       grad_cycle_ = cycle;

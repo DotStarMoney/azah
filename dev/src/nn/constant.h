@@ -19,11 +19,11 @@ class Constant : public Node<Rows, Cols> {
   Constant(const MatrixRef<Rows, Cols>& x) : Node<Rows, Cols>(true), 
                                              constant_value(x) {}
 
-  const Matrix<Rows, Cols>& output(uint32_t cycle) {
+  const Matrix<Rows, Cols>& output(uint32_t cycle) override {
     return constant_value;
   }
 
-  void backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
+  void backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
     LOG(FATAL) << "Cannot propagate gradients to a constant.";
   }
 

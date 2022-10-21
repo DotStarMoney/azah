@@ -22,7 +22,8 @@ class Add : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
 
   void backprop(
       uint32_t cycle, 
-      const MatrixRef<Rows, Cols>& output_dx = Matrix<Rows, Cols>::Constant(1)) {
+      const MatrixRef<Rows, Cols>& output_dx = 
+          Matrix<Rows, Cols>::Constant(1)) override {
     if (!this->input_a_.constant) {
       this->input_a_.backprop(cycle, output_dx);
     }
@@ -32,7 +33,7 @@ class Add : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
   }
 
  protected:
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     auto a = this->input_a_.output(cycle);
     auto b = this->input_b_.output(cycle);
     this->cached_output_ = a + b;

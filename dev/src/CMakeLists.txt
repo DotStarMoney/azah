@@ -19,6 +19,7 @@ set(NN_OPERATION
     nn/op/add.h
     nn/op/fork.h
     nn/op/group_matmul.h
+    nn/op/layer_norm.h
     nn/op/matmul.h
     nn/op/mean.h
     nn/op/multiply.h

@@ -28,8 +28,8 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
 
   void backprop(
       uint32_t cycle,
-      const MatrixRef<InputRowsA * Groups, InputColsB>& output_dx = Matrix<
-          InputRowsA * Groups, InputColsB>::Constant(1)) {
+      const MatrixRef<InputRowsA * Groups, InputColsB>& output_dx =
+          Matrix<InputRowsA * Groups, InputColsB>::Constant(1)) override {
     if (!this->input_a_.constant) {
       Matrix<InputRowsA, InputColsA> j;
       Matrix<InputColsB, InputRowsB> b_trans =
@@ -56,7 +56,7 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
   }
 
  private:
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     auto a = this->input_a_.output(cycle);
     auto b = this->input_b_.output(cycle);
     for (int g = 0; g < Groups; ++g) {

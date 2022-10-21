@@ -15,7 +15,7 @@ class Op : public Node<OutputRows, OutputCols> {
   Op(const Op&) = delete;
   Op& operator=(const Op&) = delete;
 
-  virtual const Matrix<OutputRows, OutputCols>& output(uint32_t cycle) {
+  virtual const Matrix<OutputRows, OutputCols>& output(uint32_t cycle) override {
     if (cycle != cached_cycle_) {
       compute_output(cycle);
       cached_cycle_ = cycle;

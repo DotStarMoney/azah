@@ -20,7 +20,7 @@ class Mean : public UnaryOp<Rows, Cols, 1, 1> {
 
   Mean(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, 1, 1>(input) {}
 
-  void unary_backprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) {
+  void unary_backprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) override {
     this->input_.backprop(
         cycle, 
         Matrix<Rows, Cols>::Constant(1.0 / static_cast<float>(Rows * Cols))
@@ -28,7 +28,7 @@ class Mean : public UnaryOp<Rows, Cols, 1, 1> {
   }
 
  private:
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     auto x = this->input_.output(cycle);
     this->cached_output_ = Matrix<1, 1>::Constant(x.mean());
   }

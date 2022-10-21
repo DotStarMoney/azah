@@ -19,7 +19,7 @@ class UnaryOp : public Op<OutputRows, OutputCols> {
   void backprop(
       uint32_t cycle,
       const MatrixRef<OutputRows, OutputCols>& output_dx =
-          Matrix<OutputRows, OutputCols>::Constant(1)) {
+          Matrix<OutputRows, OutputCols>::Constant(1)) override {
     if (input_.constant) return;
     unary_backprop(cycle, output_dx);
   }

@@ -18,14 +18,15 @@ class ScalarFMAdd : public Op<Rows, Cols> {
   ScalarFMAdd& operator=(const ScalarFMAdd&) = delete;
 
   ScalarFMAdd(Node<Rows, Cols>& input, Node<1, 1>& m, Node<1, 1>& b)
-      : Op<Rows, Cols>(input.constant& m.constant& b.constant),
+      : Op<Rows, Cols>(input.constant & m.constant & b.constant),
         input_(input),
         m_(m),
         b_(b) {}
 
   void backprop(
       uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = Matrix<Rows, Cols>::Constant(1)) {
+      const MatrixRef<Rows, Cols>& output_dx = 
+          Matrix<Rows, Cols>::Constant(1)) override {
     if (!this->input_.constant) {
       auto m = this->m_.output(cycle);
       this->input_.backprop(cycle, (output_dx.array() * m.value()).matrix());
@@ -45,7 +46,7 @@ class ScalarFMAdd : public Op<Rows, Cols> {
   Node<1, 1>& m_;
   Node<1, 1>& b_;
 
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     auto x = this->input_.output(cycle);
     auto m = this->m_.output(cycle);
     auto b = this->b_.output(cycle);

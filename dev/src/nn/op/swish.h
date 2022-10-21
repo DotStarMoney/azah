@@ -21,7 +21,8 @@ class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
   Swish(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
                                    grad_cycle_(-1) {}
 
-  void unary_backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) {
+  void unary_backprop(uint32_t cycle, 
+                      const MatrixRef<Rows, Cols>& output_dx) override {
     if (cycle != grad_cycle_) {
       auto x = this->input_.output(cycle);
       for (uint32_t i = 0; i < x.size(); ++i) {
@@ -36,7 +37,7 @@ class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
   Matrix<Rows, Cols> cached_input_dx_;
   uint32_t grad_cycle_;
 
-  void compute_output(uint32_t cycle) {
+  void compute_output(uint32_t cycle) override {
     auto x = this->input_.output(cycle);
     for (uint32_t i = 0; i < x.size(); ++i) {
       *(this->cached_output_.data() + i) = FastSwish(*(x.data() + i));
