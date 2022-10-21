@@ -1,2 +1,2 @@
 # azah
- Alpha Zero At Home
+"Mom can we get Alpha Zero?" "Nah, we got Alpha Zero At Home."
