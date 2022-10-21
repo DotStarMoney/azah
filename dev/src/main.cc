@@ -12,6 +12,7 @@
 #include "nn/op/multiply.h"
 #include "nn/op/swish.h"
 #include "nn/op/tanh.h"
+#include "nn/op/z_score.h"
 #include "nn/variable.h"
 
 // Next up...
@@ -29,21 +30,21 @@ int main(int argc, char* argv[]) {
   mm << 2.0;
 
   Matrix<1, 1> vv;
-  vv << 2.0;
+  vv << 0.4;
 
   auto x = azah::nn::Variable<2, 2>(xx);
   auto mean = azah::nn::Variable<1, 1>(mm);
   auto var = azah::nn::Variable<1, 1>(vv);
 
-
-  auto fmadd = azah::nn::op::ScalarMSE(x, t);
+  auto fmadd = azah::nn::op::ZScore(x, mean, var);
 
   std::cout << "result=\n" << fmadd.output(0) << "\n";
   
   fmadd.backprop(0);
 
   std::cout << "gradient x=\n" << x.gradient() << "\n";
-  std::cout << "gradient t=\n" << t.gradient() << "\n";
+  std::cout << "gradient mean=\n" << mean.gradient() << "\n";
+  std::cout << "gradient var=\n" << var.gradient() << "\n";
 
   return 0;
 }
