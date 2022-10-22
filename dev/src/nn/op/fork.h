@@ -35,9 +35,12 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
       return;
     }
     forked_grad_ += output_dx; 
-    if (++forks_ >= n_forks_) {
+    ++forks_;
+    if (forks_ == n_forks_) {
       this->input_.backprop(cycle, forked_grad_);
-      grad_cycle_ = -1;
+    } else if (forks_ > n_forks_) {
+      LOG(FATAL) << "Too many forks, did you mean to set \"forks\" in the "
+                    "constructor?";
     }
   }
   
