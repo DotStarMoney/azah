@@ -32,10 +32,12 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
       forked_grad_ = output_dx;
       grad_cycle_ = cycle;
       forks_ = 1;
-    } else {
-      forked_grad_ += output_dx;
+      return;
+    }
+    forked_grad_ += output_dx; 
+    if (++forks_ >= n_forks_) {
       this->input_.backprop(cycle, forked_grad_);
-      if (++forks_ >= n_forks_) grad_cycle_ = -1;
+      grad_cycle_ = -1;
     }
   }
   

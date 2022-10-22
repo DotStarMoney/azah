@@ -25,9 +25,9 @@ class LayerNorm : public Op<Rows, Cols> {
 
   LayerNorm(Node<Rows, Cols>& input, Node<1, 1>& beta, Node<1, 1>& gamma)
       : Op<Rows, Cols>(input.constant & beta.constant & gamma.constant),
-        input_fork_op_(input),
+        input_fork_op_(input, 3),
         mean_op_(input_fork_op_),
-        mean_fork_op_(mean_op_),
+        mean_fork_op_(mean_op_, 2),
         scalar_mse_op_(input_fork_op_, mean_fork_op_),
         z_score_op_(input_fork_op_, mean_fork_op_, scalar_mse_op_),
         scalar_fmadd_op_(z_score_op_, gamma, beta) {}

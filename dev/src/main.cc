@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   xx << 3.0, 9.0, 5.0, 10.0;
 
   Matrix<1, 1> mm;
-  mm << 2.0;
+  mm << 0.0;
 
   Matrix<1, 1> vv;
   vv << 1.0;
@@ -37,11 +37,12 @@ int main(int argc, char* argv[]) {
   auto beta = azah::nn::Variable<1, 1>(mm);
   auto gamma = azah::nn::Variable<1, 1>(vv);
 
-  auto fmadd = azah::nn::op::LayerNorm(x, beta, gamma);
+  auto layer_norm = azah::nn::op::LayerNorm(x, beta, gamma);
+  auto z = azah::nn::op::Mean(layer_norm);
 
-  std::cout << "result=\n" << fmadd.output(0) << "\n";
+  std::cout << "result=\n" << z.output(0) << "\n";
   
-  fmadd.backprop(0);
+  z.backprop(0);
 
   std::cout << "gradient x=\n" << x.gradient() << "\n";
   std::cout << "gradient beta=\n" << beta.gradient() << "\n";
