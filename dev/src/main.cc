@@ -23,7 +23,6 @@
 using azah::nn::Matrix;
 
 int main(int argc, char* argv[]) {
-
   Matrix<2, 2> xx;
   xx << 3.0, 9.0, 5.0, 10.0;
 

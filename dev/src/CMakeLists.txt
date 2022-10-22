@@ -26,6 +26,7 @@ set(NN_OPERATION
     nn/op/scalar_fmadd.h
     nn/op/scalar_mse.h
     nn/op/sigmoid.h
+    nn/op/softmax.h
     nn/op/swish.h
     nn/op/tanh.h
     nn/op/z_score.h
