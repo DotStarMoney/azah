@@ -9,6 +9,7 @@
 #include "nn/op/group_matmul.h"
 #include "nn/op/layer_norm.h"
 #include "nn/op/matmul.h"
+#include "nn/op/softmax_cross_ent.h"
 #include "nn/op/mean.h"
 #include "nn/op/multiply.h"
 #include "nn/op/swish.h"
@@ -16,36 +17,24 @@
 #include "nn/op/z_score.h"
 #include "nn/variable.h"
 
-// Next up...
-// 
-// Softmax
-
-using azah::nn::Matrix;
-
 int main(int argc, char* argv[]) {
-  Matrix<2, 2> xx;
-  xx << 3.0, 9.0, 5.0, 10.0;
-
-  Matrix<1, 1> mm;
-  mm << 0.0;
-
-  Matrix<1, 1> vv;
-  vv << 1.0;
-
-  auto x = azah::nn::Variable<2, 2>(xx);
-  auto beta = azah::nn::Variable<1, 1>(mm);
-  auto gamma = azah::nn::Variable<1, 1>(vv);
-
-  auto layer_norm = azah::nn::op::LayerNorm(x, beta, gamma);
-  auto z = azah::nn::op::Mean(layer_norm);
-
-  std::cout << "result=\n" << z.output(0) << "\n";
+  azah::nn::Matrix<2, 2> y_true_m;
+  y_true_m << 0.05, 0.2, 0.6, 0.15;
   
-  z.backprop(0);
+  azah::nn::Matrix<2, 2> y_pred_m;
+  y_pred_m << 30.0, 30.0, 100.0, 10.0;
 
-  std::cout << "gradient x=\n" << x.gradient() << "\n";
-  std::cout << "gradient beta=\n" << beta.gradient() << "\n";
-  std::cout << "gradient gamma=\n" << gamma.gradient() << "\n";
+  auto y_true = azah::nn::Variable<2, 2>(y_true_m);
+  auto y_pred = azah::nn::Variable<2, 2>(y_pred_m);
+
+  auto crossent = azah::nn::op::SoftmaxCrossEnt(y_pred, y_true);
+
+  std::cout << "result=\n" << crossent.output(0) << "\n";
+  
+  crossent.backprop(0);
+
+  std::cout << "gradient y_true=\n" << y_true.gradient() << "\n";
+  std::cout << "gradient y_pred=\n" << y_pred.gradient() << "\n";
 
   return 0;
 }

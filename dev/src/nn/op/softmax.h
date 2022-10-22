@@ -13,7 +13,12 @@ namespace nn {
 namespace op {
 
 template <int Rows, int Cols>
+class SoftmaxCrossEnt;
+
+template <int Rows, int Cols>
 class Softmax : public UnaryOp<Rows, Cols, Rows, Cols> {
+  friend class SoftmaxCrossEnt<Rows, Cols>;
+
  public:
   Softmax(const Softmax&) = delete;
   Softmax& operator=(const Softmax&) = delete;
@@ -28,12 +33,13 @@ class Softmax : public UnaryOp<Rows, Cols, Rows, Cols> {
 
  private:
   void compute_output(uint32_t cycle) override {
-    auto x = this->input_.output(cycle);
-    auto x_exp = (x.array() - x.maxCoeff()).exp();
-    this->cached_output_ = x_exp / (x_exp.sum() + kEpsilon);
+    this->cached_output_ = softmax(this->input_.output(cycle));
   }
 
-  static constexpr float kEpsilon = 1e-5;
+  static inline auto softmax(const MatrixRef<Rows, Cols>& x) {
+    auto x_exp = (x.array() - x.maxCoeff()).exp();
+    return x_exp / x_exp.sum();
+  }
 };
 
 }  // namespace op
