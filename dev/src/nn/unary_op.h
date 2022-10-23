@@ -16,15 +16,15 @@ class UnaryOp : public Op<OutputRows, OutputCols> {
   UnaryOp(const UnaryOp&) = delete;
   UnaryOp& operator=(const UnaryOp&) = delete;
 
-  void backprop(
+  void Backprop(
       uint32_t cycle,
       const MatrixRef<OutputRows, OutputCols>& output_dx =
           Matrix<OutputRows, OutputCols>::Constant(1)) override {
     if (input_.constant) return;
-    unary_backprop(cycle, output_dx);
+    UnaryBackprop(cycle, output_dx);
   }
 
-  virtual void unary_backprop(
+  virtual void UnaryBackprop(
       uint32_t cycle, const MatrixRef<OutputRows, OutputCols>& output_dx) = 0;
 
  protected:

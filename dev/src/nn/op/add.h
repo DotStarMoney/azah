@@ -20,22 +20,22 @@ class Add : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
   Add(Node<Rows, Cols>& input_a, Node<Rows, Cols>& input_b) :
       BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols>(input_a, input_b) {}
 
-  void backprop(
+  void Backprop(
       uint32_t cycle, 
       const MatrixRef<Rows, Cols>& output_dx = 
           Matrix<Rows, Cols>::Constant(1)) override {
     if (!this->input_a_.constant) {
-      this->input_a_.backprop(cycle, output_dx);
+      this->input_a_.Backprop(cycle, output_dx);
     }
     if (!this->input_b_.constant) {
-      this->input_b_.backprop(cycle, output_dx);
+      this->input_b_.Backprop(cycle, output_dx);
     }
   }
 
  protected:
-  void compute_output(uint32_t cycle) override {
-    auto a = this->input_a_.output(cycle);
-    auto b = this->input_b_.output(cycle);
+  void ComputeOutput(uint32_t cycle) override {
+    auto a = this->input_a_.Output(cycle);
+    auto b = this->input_b_.Output(cycle);
     this->cached_output_ = a + b;
   }
 };

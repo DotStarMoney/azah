@@ -32,14 +32,14 @@ class LayerNorm : public Op<Rows, Cols> {
         z_score_op_(input_fork_op_, mean_fork_op_, scalar_mse_op_),
         scalar_fmadd_op_(z_score_op_, gamma, beta) {}
 
-  void backprop(
+  void Backprop(
       uint32_t cycle,
       const MatrixRef<Rows, Cols>& output_dx = 
           Matrix<Rows, Cols>::Constant(1)) override {
-    return this->scalar_fmadd_op_.backprop(cycle, output_dx);
+    return this->scalar_fmadd_op_.Backprop(cycle, output_dx);
   }
 
-  const Matrix<Rows, Cols>& output(uint32_t cycle) override {
+  const Matrix<Rows, Cols>& Output(uint32_t cycle) override {
     return this->scalar_fmadd_op_.output(cycle);
   }
 
@@ -51,7 +51,7 @@ class LayerNorm : public Op<Rows, Cols> {
   ZScore<Rows, Cols> z_score_op_;
   ScalarFMAdd<Rows, Cols> scalar_fmadd_op_;
 
-  void compute_output(uint32_t cycle) override {
+  void ComputeOutput(uint32_t cycle) override {
     LOG(FATAL) << "compute_output unimplemented for LayerNorm.";
   }
 };

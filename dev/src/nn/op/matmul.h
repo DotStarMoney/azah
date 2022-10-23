@@ -23,26 +23,26 @@ class Matmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
       BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB, InputRowsA, 
                InputColsB>(input_a, input_b) {}
 
-  void backprop(
+  void Backprop(
       uint32_t cycle, 
       const MatrixRef<InputRowsA, InputColsB>& output_dx = 
           Matrix<InputRowsA, InputColsB>::Constant(1)) override {
     if (!this->input_a_.constant) {
-      this->input_a_.backprop(
+      this->input_a_.Backprop(
           cycle, 
-          output_dx * this->input_b_.output(cycle).transpose());
+          output_dx * this->input_b_.Output(cycle).transpose());
     }
     if (!this->input_b_.constant) {
-      this->input_b_.backprop(
+      this->input_b_.Backprop(
           cycle,
-          this->input_a_.output(cycle).transpose() * output_dx);
+          this->input_a_.Output(cycle).transpose() * output_dx);
     }
   }
 
  private:
-  void compute_output(uint32_t cycle) override {
-    auto a = this->input_a_.output(cycle);
-    auto b = this->input_b_.output(cycle);
+  void ComputeOutput(uint32_t cycle) override {
+    auto a = this->input_a_.Output(cycle);
+    auto b = this->input_b_.Output(cycle);
     this->cached_output_ = a * b;
   }
 };

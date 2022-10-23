@@ -14,8 +14,8 @@ class Node {
   Node(const Node&) = delete;
   Node& operator=(const Node&) = delete;
 
-  virtual const Matrix<OutputRows, OutputCols>& output(uint32_t cycle) = 0;
-  virtual void backprop(uint32_t cycle, 
+  virtual const Matrix<OutputRows, OutputCols>& Output(uint32_t cycle) = 0;
+  virtual void Backprop(uint32_t cycle, 
                         const MatrixRef<OutputRows, OutputCols>& output_dx) = 0;
 
   const bool constant;

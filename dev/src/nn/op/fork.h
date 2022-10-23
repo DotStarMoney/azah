@@ -18,13 +18,13 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
   Fork(const Fork&) = delete;
   Fork& operator=(const Fork&) = delete;
 
-  Fork(Node<Rows, Cols>& input, int forks = 2) 
+  Fork(Node<Rows, Cols>& input, int forks_n = 2) 
       : UnaryOp<Rows, Cols, Rows, Cols>(input),
         grad_cycle_(-1),
         forks_(0),
-        n_forks_(forks) {}
+        n_forks_(forks_n) {}
 
-  void unary_backprop(
+  void UnaryBackprop(
       uint32_t cycle,
       const MatrixRef<Rows, Cols>& output_dx = 
           Matrix<Rows, Cols>::Constant(1)) override {
@@ -37,15 +37,15 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
     forked_grad_ += output_dx; 
     ++forks_;
     if (forks_ == n_forks_) {
-      this->input_.backprop(cycle, forked_grad_);
+      this->input_.Backprop(cycle, forked_grad_);
     } else if (forks_ > n_forks_) {
-      LOG(FATAL) << "Too many forks, did you mean to set \"forks\" in the "
+      LOG(FATAL) << "Too many forks, did you mean to set \"forks_n\" in the "
                     "constructor?";
     }
   }
   
-  const Matrix<Rows, Cols>& output(uint32_t cycle) {
-    return this->input_.output(cycle);
+  const Matrix<Rows, Cols>& Output(uint32_t cycle) {
+    return this->input_.Output(cycle);
   }
 
  private:
@@ -54,7 +54,7 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
   uint32_t forks_;
   const uint32_t n_forks_;
 
-  void compute_output(uint32_t cycle) override {
+  void ComputeOutput(uint32_t cycle) override {
     LOG(FATAL) << "compute_output unimplemented for Fork.";
   }
 };

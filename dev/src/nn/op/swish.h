@@ -21,24 +21,24 @@ class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
   Swish(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
                                    grad_cycle_(-1) {}
 
-  void unary_backprop(uint32_t cycle, 
+  void UnaryBackprop(uint32_t cycle, 
                       const MatrixRef<Rows, Cols>& output_dx) override {
     if (cycle != grad_cycle_) {
-      auto x = this->input_.output(cycle);
+      auto x = this->input_.Output(cycle);
       for (uint32_t i = 0; i < x.size(); ++i) {
         *(cached_input_dx_.data() + i) = FastSwishD(*(x.data() + i));
       }
       grad_cycle_ = cycle;
     }
-    this->input_.backprop(cycle, cached_input_dx_.cwiseProduct(output_dx));
+    this->input_.Backprop(cycle, cached_input_dx_.cwiseProduct(output_dx));
   }
 
  private:
   Matrix<Rows, Cols> cached_input_dx_;
   uint32_t grad_cycle_;
 
-  void compute_output(uint32_t cycle) override {
-    auto x = this->input_.output(cycle);
+  void ComputeOutput(uint32_t cycle) override {
+    auto x = this->input_.Output(cycle);
     for (uint32_t i = 0; i < x.size(); ++i) {
       *(this->cached_output_.data() + i) = FastSwish(*(x.data() + i));
     }

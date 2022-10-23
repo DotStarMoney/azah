@@ -3,6 +3,7 @@
 #include "nn/constant.h"
 #include "nn/data_types.h"
 #include "nn/op/add.h"
+#include "nn/op/concat.h"
 #include "nn/op/fork.h"
 #include "nn/op/scalar_fmadd.h"
 #include "nn/op/scalar_mse.h"
@@ -27,14 +28,14 @@ int main(int argc, char* argv[]) {
   auto y_true = azah::nn::Variable<2, 2>(y_true_m);
   auto y_pred = azah::nn::Variable<2, 2>(y_pred_m);
 
-  auto crossent = azah::nn::op::SoftmaxCrossEnt(y_pred, y_true);
+  auto cat = azah::nn::op::Concat(y_pred, y_true);
 
-  std::cout << "result=\n" << crossent.output(0) << "\n";
+  std::cout << "result=\n" << cat.Output(0) << "\n";
   
-  crossent.backprop(0);
+  cat.Backprop(0);
 
-  std::cout << "gradient y_true=\n" << y_true.gradient() << "\n";
-  std::cout << "gradient y_pred=\n" << y_pred.gradient() << "\n";
+  std::cout << "gradient y_true=\n" << y_true.Gradient() << "\n";
+  std::cout << "gradient y_pred=\n" << y_pred.Gradient() << "\n";
 
   return 0;
 }

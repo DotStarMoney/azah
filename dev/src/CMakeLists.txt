@@ -13,10 +13,11 @@ set(NN_OPERATION
     nn/binary_op.h
     nn/constant.h
     nn/data_types.h
-    nn/unary_op.h
+    nn/network.h
     nn/node.h
     nn/op.h
     nn/op/add.h
+    nn/op/concat.h
     nn/op/fork.h
     nn/op/group_matmul.h
     nn/op/layer_norm.h
@@ -31,6 +32,7 @@ set(NN_OPERATION
     nn/op/swish.h
     nn/op/tanh.h
     nn/op/z_score.h
+    nn/unary_op.h
     nn/variable.h)
 
 target_sources(azah PRIVATE

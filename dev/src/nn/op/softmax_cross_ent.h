@@ -21,26 +21,28 @@ class SoftmaxCrossEnt : public BinaryOp<Rows, Cols, Rows, Cols, 1, 1> {
   SoftmaxCrossEnt(Node<Rows, Cols>& input_a, Node<Rows, Cols>& input_b)
       : BinaryOp<Rows, Cols, Rows, Cols, 1, 1>(input_a, input_b) {}
 
-  void backprop(
+  void Backprop(
       uint32_t cycle, 
       const MatrixRef<1, 1>& output_dx = Matrix<1, 1>::Constant(1)) override {
     auto c = output_dx.value();
-    auto pred_softmax = Softmax<Rows, Cols>::softmax(this->input_a_.output(cycle));
+    auto pred_softmax = Softmax<Rows, Cols>::SoftmaxExpr(
+        this->input_a_.Output(cycle));
     if (!this->input_a_.constant) {
-      auto troo = this->input_b_.output(cycle);
-      this->input_a_.backprop(
+      auto troo = this->input_b_.Output(cycle);
+      this->input_a_.Backprop(
           cycle, 
           (c * (pred_softmax - troo.array())).matrix());
     }
     if (!this->input_b_.constant) {
-      this->input_b_.backprop(cycle, (c * -pred_softmax.log()).matrix());
+      this->input_b_.Backprop(cycle, (c * -pred_softmax.log()).matrix());
     }
   }
 
  private:
-  void compute_output(uint32_t cycle) override {
-    auto pred_softmax = Softmax<Rows, Cols>::softmax(this->input_a_.output(cycle));
-    auto troo = this->input_b_.output(cycle);
+  void ComputeOutput(uint32_t cycle) override {
+    auto pred_softmax = Softmax<Rows, Cols>::SoftmaxExpr(
+        this->input_a_.Output(cycle));
+    auto troo = this->input_b_.Output(cycle);
     auto log_like = troo.array() * pred_softmax.log();
     this->cached_output_ = Matrix<1, 1>::Constant(-log_like.sum());
   }

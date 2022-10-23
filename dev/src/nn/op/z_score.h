@@ -24,24 +24,24 @@ class ZScore : public Op<Rows, Cols> {
         mean_(mean),
         var_(var) {}
 
-  void backprop(
+  void Backprop(
       uint32_t cycle,
       const MatrixRef<Rows, Cols>& output_dx = 
           Matrix<Rows, Cols>::Constant(1)) override {
-    auto var_inv = (this->var_.output(cycle).array() + kEpsilon).inverse().value();
+    auto var_inv = (this->var_.Output(cycle).array() + kEpsilon).inverse().value();
     auto stddev_inv = std::sqrt(var_inv);
     auto out_dx_sum = output_dx.sum();
     if (!this->input_.constant) {
-      this->input_.backprop(cycle, (output_dx.array() * stddev_inv).matrix());
+      this->input_.Backprop(cycle, (output_dx.array() * stddev_inv).matrix());
     }
     if (!this->mean_.constant) {
-      this->mean_.backprop(cycle, 
+      this->mean_.Backprop(cycle,
                            Matrix<1, 1>::Constant(-out_dx_sum * stddev_inv));
     }
     if (!this->var_.constant) {
-      auto num = this->mean_.output(cycle).array() * out_dx_sum
-          - (this->input_.output(cycle).cwiseProduct(output_dx).array()).sum();
-      this->var_.backprop(cycle, Matrix<1, 1>::Constant(
+      auto num = this->mean_.Output(cycle).array() * out_dx_sum
+          - (this->input_.Output(cycle).cwiseProduct(output_dx).array()).sum();
+      this->var_.Backprop(cycle, Matrix<1, 1>::Constant(
           num.value() * 0.5 * var_inv * stddev_inv));
     }
   }
@@ -51,10 +51,10 @@ class ZScore : public Op<Rows, Cols> {
   Node<1, 1>& mean_;
   Node<1, 1>& var_;
 
-  void compute_output(uint32_t cycle) override {
-    auto x = this->input_.output(cycle);
-    auto mean = this->mean_.output(cycle);
-    auto var = this->var_.output(cycle);
+  void ComputeOutput(uint32_t cycle) override {
+    auto x = this->input_.Output(cycle);
+    auto mean = this->mean_.Output(cycle);
+    auto var = this->var_.Output(cycle);
     this->cached_output_ = (x.array() - mean.value()) 
         / (var.array() + kEpsilon).sqrt().value();
   }

@@ -26,39 +26,39 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
       BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB, InputRowsA * Groups,
                InputColsB>(input_a, input_b) {}
 
-  void backprop(
+  void Backprop(
       uint32_t cycle,
       const MatrixRef<InputRowsA * Groups, InputColsB>& output_dx =
           Matrix<InputRowsA * Groups, InputColsB>::Constant(1)) override {
     if (!this->input_a_.constant) {
       Matrix<InputRowsA, InputColsA> j;
       Matrix<InputColsB, InputRowsB> b_trans =
-          this->input_b_.output(cycle).transpose();
+          this->input_b_.Output(cycle).transpose();
       for (int g = 0; g < Groups; ++g) {
         j.middleCols(g * InputColsA / Groups, InputColsA / Groups) =
             output_dx.middleRows(g * InputRowsA, InputRowsA) *
             b_trans.middleCols(g * InputRowsB / Groups, InputRowsB / Groups);
       }
-      this->input_a_.backprop(cycle, j);
+      this->input_a_.Backprop(cycle, j);
     }
 
     if (!this->input_b_.constant) {
       Matrix<InputRowsB, InputColsB> j;
       Matrix<InputColsA, InputRowsA> a_trans =
-          this->input_a_.output(cycle).transpose();
+          this->input_a_.Output(cycle).transpose();
       for (int g = 0; g < Groups; ++g) {
         j.middleRows(g * InputRowsB / Groups, InputRowsB / Groups) =
             a_trans.middleRows(g * InputColsA / Groups, InputColsA / Groups) *
             output_dx.middleRows(g * InputRowsA, InputRowsA);
       }
-      this->input_b_.backprop(cycle, j);
+      this->input_b_.Backprop(cycle, j);
     }
   }
 
  private:
-  void compute_output(uint32_t cycle) override {
-    auto a = this->input_a_.output(cycle);
-    auto b = this->input_b_.output(cycle);
+  void ComputeOutput(uint32_t cycle) override {
+    auto a = this->input_a_.Output(cycle);
+    auto b = this->input_b_.Output(cycle);
     for (int g = 0; g < Groups; ++g) {
       this->cached_output_.middleRows(g * InputRowsA, InputRowsA) = 
           a.middleCols(g * InputColsA / Groups, InputColsA / Groups) * 

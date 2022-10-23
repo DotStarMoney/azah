@@ -20,26 +20,26 @@ class ScalarMSE : public BinaryOp<Rows, Cols, 1, 1, 1, 1> {
   ScalarMSE(Node<Rows, Cols>& input, Node<1, 1>& target) :
       BinaryOp<Rows, Cols, 1, 1, 1, 1>(input, target) {}
 
-  void backprop(
+  void Backprop(
       uint32_t cycle,
       const MatrixRef<1, 1>& output_dx = Matrix<1, 1>::Constant(1)) override {
-    auto x = this->input_a_.output(cycle);
-    auto target = this->input_b_.output(cycle);
+    auto x = this->input_a_.Output(cycle);
+    auto target = this->input_b_.Output(cycle);
     auto lhs_prod_array = output_dx.value() * (x.array() - target.value())
         * static_cast<float>(2.0 / (Rows * Cols));
     if (!this->input_a_.constant) {
-      this->input_a_.backprop(cycle, lhs_prod_array.matrix());
+      this->input_a_.Backprop(cycle, lhs_prod_array.matrix());
     }
     if (!this->input_b_.constant) {
-      this->input_b_.backprop(cycle, 
+      this->input_b_.Backprop(cycle,
                               Matrix<1, 1>::Constant(-lhs_prod_array.sum()));
     }
   }
 
  private:
-  void compute_output(uint32_t cycle) override {
-    auto x = this->input_a_.output(cycle);
-    auto target = this->input_b_.output(cycle);
+  void ComputeOutput(uint32_t cycle) override {
+    auto x = this->input_a_.Output(cycle);
+    auto target = this->input_b_.Output(cycle);
     this->cached_output_ =
         Matrix<1, 1>::Constant((x.array() - target.value()).square().mean());
   }
