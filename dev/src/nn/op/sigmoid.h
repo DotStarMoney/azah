@@ -18,8 +18,9 @@ class Sigmoid : public UnaryOp<Rows, Cols, Rows, Cols> {
   Sigmoid(const Sigmoid&) = delete;
   Sigmoid& operator=(const Sigmoid&) = delete;
 
-  Sigmoid(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
-      grad_cycle_(-1) {}
+  Sigmoid(Node<Rows, Cols>& input)
+      : UnaryOp<Rows, Cols, Rows, Cols>(input),
+        grad_cycle_(-1) {}
 
   void UnaryBackprop(uint32_t cycle, 
                      const MatrixRef<Rows, Cols>& output_dx) override {

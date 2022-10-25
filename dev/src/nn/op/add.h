@@ -17,8 +17,8 @@ class Add : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
   Add(const Add&) = delete;
   Add& operator=(const Add&) = delete;
 
-  Add(Node<Rows, Cols>& input_a, Node<Rows, Cols>& input_b) :
-      BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols>(input_a, input_b) {}
+  Add(Node<Rows, Cols>& input_a, Node<Rows, Cols>& input_b)
+      : BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols>(input_a, input_b) {}
 
   void Backprop(
       uint32_t cycle, 

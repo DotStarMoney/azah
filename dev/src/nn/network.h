@@ -13,7 +13,8 @@ class Network {
   Network(const Network&) = delete;
   Network& operator=(const Network&) = delete;
 
-  float Gradient(uint32_t output_i);
+  void Forward(uint32_t output_i);
+
 
  protected:
   uint32_t cycle_;

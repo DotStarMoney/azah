@@ -17,8 +17,8 @@ class ScalarMSE : public BinaryOp<Rows, Cols, 1, 1, 1, 1> {
   ScalarMSE(const ScalarMSE&) = delete;
   ScalarMSE& operator=(const ScalarMSE&) = delete;
 
-  ScalarMSE(Node<Rows, Cols>& input, Node<1, 1>& target) :
-      BinaryOp<Rows, Cols, 1, 1, 1, 1>(input, target) {}
+  ScalarMSE(Node<Rows, Cols>& input, Node<1, 1>& target) 
+      : BinaryOp<Rows, Cols, 1, 1, 1, 1>(input, target) {}
 
   void Backprop(
       uint32_t cycle,

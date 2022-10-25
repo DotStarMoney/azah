@@ -18,8 +18,9 @@ class Swish : public UnaryOp<Rows, Cols, Rows, Cols> {
   Swish(const Swish&) = delete;
   Swish& operator=(const Swish&) = delete;
 
-  Swish(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
-                                   grad_cycle_(-1) {}
+  Swish(Node<Rows, Cols>& input)
+      : UnaryOp<Rows, Cols, Rows, Cols>(input),
+        grad_cycle_(-1) {}
 
   void UnaryBackprop(uint32_t cycle, 
                       const MatrixRef<Rows, Cols>& output_dx) override {

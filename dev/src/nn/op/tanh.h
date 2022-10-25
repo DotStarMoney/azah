@@ -18,8 +18,9 @@ class TanH : public UnaryOp<Rows, Cols, Rows, Cols> {
   TanH(const TanH&) = delete;
   TanH& operator=(const TanH&) = delete;
 
-  TanH(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input),
-      grad_cycle_(-1) {}
+  TanH(Node<Rows, Cols>& input) 
+      : UnaryOp<Rows, Cols, Rows, Cols>(input),
+        grad_cycle_(-1) {}
 
   void UnaryBackprop(uint32_t cycle, 
                       const MatrixRef<Rows, Cols>& output_dx) override {
