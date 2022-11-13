@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "data_types.h"
-#include "node.h"
+#include "node_base.h"
 
 namespace azah {
 namespace nn {
@@ -31,8 +31,10 @@ class Network {
 
  protected:
   uint32_t cycle_;
- 
+  std::vector<NodeBase*> outputs_;
+
   Network(uint32_t outputs_n);
+
 };
 
 }  // namespace nn

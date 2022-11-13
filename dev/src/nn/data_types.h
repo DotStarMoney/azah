@@ -16,6 +16,7 @@ template <int Rows, int Cols>
 using MatrixRef = Eigen::Ref<const Eigen::Matrix<float, Rows, Cols>>;
 
 using DynamicMatrixRef = Eigen::Ref<Eigen::MatrixX<float>>;
+using ConstDynamicMatrixRef = Eigen::Ref<const Eigen::MatrixX<float>>;
 
 }  // namespace nn
 }  // namespace azah

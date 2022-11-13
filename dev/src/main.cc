@@ -30,12 +30,12 @@ int main(int argc, char* argv[]) {
 
   auto cat = azah::nn::op::Concat(y_pred, y_true);
 
-  std::cout << "result=\n" << cat.Output(0) << "\n";
+  std::cout << "result=\n" << cat.OutputBase(0) << "\n";
   
-  cat.Backprop(0);
+  cat.BackpropBase(0);
 
-  std::cout << "gradient y_true=\n" << y_true.Gradient() << "\n";
-  std::cout << "gradient y_pred=\n" << y_pred.Gradient() << "\n";
+  std::cout << "gradient y_true=\n" << y_true.gradient_base() << "\n";
+  std::cout << "gradient y_pred=\n" << y_pred.gradient_base() << "\n";
 
   return 0;
 }

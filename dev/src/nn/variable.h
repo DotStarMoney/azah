@@ -5,24 +5,33 @@
 
 #include "data_types.h"
 #include "node.h"
+#include "variable_base.h"
 
 namespace azah {
 namespace nn {
 
 template <int Rows, int Cols>
-class Variable : public Node<Rows, Cols> {
+class Variable : public Node<Rows, Cols>, VariableBase {
  public:
   Variable(const Variable&) = delete;
   Variable& operator=(const Variable&) = delete;
 
   Variable(const MatrixRef<Rows, Cols>& x) 
       : Node<Rows, Cols>(false), 
-        value(x), 
+        value_(x),
         gradient_(Matrix<Rows, Cols>::Zero()), 
         grad_cycle_(-1) {}
 
+  ConstDynamicMatrixRef gradient_base() const override {
+    return gradient_;
+  }
+
+  DynamicMatrixRef value_base() override {
+    return value_;
+  }
+
   const Matrix<Rows, Cols>& Output(uint32_t cycle) override {
-    return value;
+    return value_;
   }
 
   void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
@@ -34,11 +43,9 @@ class Variable : public Node<Rows, Cols> {
     }
   }
 
-  const Matrix<Rows, Cols> Gradient() const {
-    return gradient_;
-  }
+ protected:
+  Matrix<Rows, Cols> value_;
 
-  Matrix<Rows, Cols> value;
  private:
   Matrix<Rows, Cols> gradient_;
   uint32_t grad_cycle_;
