@@ -34,6 +34,7 @@ set(NN_CORE
     nn/op/softmax_cross_ent.h
     nn/op/swish.h
     nn/op/tanh.h
+    nn/op/transpose.h
     nn/op/z_score.h
     nn/unary_op.h
     nn/variable.h

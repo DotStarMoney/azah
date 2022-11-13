@@ -25,15 +25,15 @@ class Softmax : public UnaryOp<Rows, Cols, Rows, Cols> {
 
   Softmax(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, Rows, Cols>(input) {}
 
-  void UnaryBackprop(uint32_t cycle, 
-                     const MatrixRef<Rows, Cols>& output_dx) override {
-    LOG(FATAL) << "Backprop unimplemented for Softmax. Maybe you wanted "
-                  "SoftmaxCrossEnt instead?";
-  }
-
  private:
   void ComputeOutput(uint32_t cycle) override {
     this->cached_output_ = SoftmaxExpr(this->input_.Output(cycle));
+  }
+
+  void UnaryBackprop(uint32_t cycle,
+                     const MatrixRef<Rows, Cols>& output_dx) override {
+    LOG(FATAL) << "Backprop unimplemented for Softmax. Maybe you wanted "
+                  "SoftmaxCrossEnt instead?";
   }
 
   static inline auto SoftmaxExpr(const MatrixRef<Rows, Cols>& x) {

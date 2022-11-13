@@ -24,14 +24,15 @@ class UnaryOp : public Op<OutputRows, OutputCols> {
     UnaryBackprop(cycle, output_dx);
   }
 
-  virtual void UnaryBackprop(
-      uint32_t cycle, const MatrixRef<OutputRows, OutputCols>& output_dx) = 0;
-
  protected:
   UnaryOp(Node<InputRows, InputCols>& input) 
       : Op<OutputRows, OutputCols>(input.constant), input_(input) {}
 
   Node<InputRows, InputCols>& input_;
+
+ private:
+  virtual void UnaryBackprop(
+      uint32_t cycle, const MatrixRef<OutputRows, OutputCols>& output_dx) = 0;
 };
 
 }  // namespace nn

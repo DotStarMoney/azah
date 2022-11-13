@@ -22,18 +22,6 @@ class Sigmoid : public UnaryOp<Rows, Cols, Rows, Cols> {
       : UnaryOp<Rows, Cols, Rows, Cols>(input),
         grad_cycle_(-1) {}
 
-  void UnaryBackprop(uint32_t cycle, 
-                     const MatrixRef<Rows, Cols>& output_dx) override {
-    if (cycle != grad_cycle_) {
-      auto x = this->input_.Output(cycle);
-      for (uint32_t i = 0; i < x.size(); ++i) {
-        *(cached_input_dx_.data() + i) = FastSigmoidD(*(x.data() + i));
-      }
-      grad_cycle_ = cycle;
-    }
-    this->input_.Backprop(cycle, cached_input_dx_.cwiseProduct(output_dx));
-  }
-
  private:
   Matrix<Rows, Cols> cached_input_dx_;
   uint32_t grad_cycle_;
@@ -43,6 +31,18 @@ class Sigmoid : public UnaryOp<Rows, Cols, Rows, Cols> {
     for (uint32_t i = 0; i < x.size(); ++i) {
       *(this->cached_output_.data() + i) = FastSigmoid(*(x.data() + i));
     }
+  }
+
+  void UnaryBackprop(uint32_t cycle,
+                     const MatrixRef<Rows, Cols>& output_dx) override {
+    if (cycle != grad_cycle_) {
+      auto x = this->input_.Output(cycle);
+      for (uint32_t i = 0; i < x.size(); ++i) {
+        *(cached_input_dx_.data() + i) = FastSigmoidD(*(x.data() + i));
+      }
+      grad_cycle_ = cycle;
+    }
+    this->input_.Backprop(cycle, cached_input_dx_.cwiseProduct(output_dx));
   }
 };
 

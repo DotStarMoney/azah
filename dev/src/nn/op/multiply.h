@@ -26,11 +26,11 @@ class Multiply : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
           Matrix<Rows, Cols>::Constant(1)) override {
     if (!this->input_a_.constant) {
       this->input_a_.Backprop(
-          cycle, this->input_b_.output(cycle).cwiseProduct(output_dx));
+          cycle, this->input_b_.Output(cycle).cwiseProduct(output_dx));
     }
     if (!this->input_b_.constant) {
       this->input_b_.Backprop(
-          cycle, this->input_a_.output(cycle).cwiseProduct(output_dx));
+          cycle, this->input_a_.Output(cycle).cwiseProduct(output_dx));
     }
   }
 

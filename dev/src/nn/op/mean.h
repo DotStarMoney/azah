@@ -20,17 +20,17 @@ class Mean : public UnaryOp<Rows, Cols, 1, 1> {
 
   Mean(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, 1, 1>(input) {}
 
+ private:
+  void ComputeOutput(uint32_t cycle) override {
+    auto x = this->input_.Output(cycle);
+    this->cached_output_ = Matrix<1, 1>::Constant(x.mean());
+  }
+
   void UnaryBackprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) override {
     this->input_.Backprop(
         cycle, 
         Matrix<Rows, Cols>::Constant(1.0 / static_cast<float>(Rows * Cols))
             * output_dx.value());
-  }
-
- private:
-  void ComputeOutput(uint32_t cycle) override {
-    auto x = this->input_.Output(cycle);
-    this->cached_output_ = Matrix<1, 1>::Constant(x.mean());
   }
 };
 

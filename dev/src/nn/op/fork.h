@@ -24,29 +24,10 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
         forks_(0),
         n_forks_(forks_n) {}
 
-  void UnaryBackprop(
-      uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = 
-          Matrix<Rows, Cols>::Constant(1)) override {
-    if (cycle != grad_cycle_) {
-      forked_grad_ = output_dx;
-      grad_cycle_ = cycle;
-      forks_ = 1;
-      return;
-    }
-    forked_grad_ += output_dx; 
-    ++forks_;
-    if (forks_ == n_forks_) {
-      this->input_.Backprop(cycle, forked_grad_);
-    } else if (forks_ > n_forks_) {
-      LOG(FATAL) << "Too many forks, did you mean to set \"forks_n\" in the "
-                    "constructor?";
-    }
-  }
-  
   const Matrix<Rows, Cols>& Output(uint32_t cycle) {
     return this->input_.Output(cycle);
   }
+ 
 
  private:
   Matrix<Rows, Cols> forked_grad_;
@@ -56,6 +37,27 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
 
   void ComputeOutput(uint32_t cycle) override {
     LOG(FATAL) << "compute_output unimplemented for Fork.";
+  }
+
+  void UnaryBackprop(
+      uint32_t cycle,
+      const MatrixRef<Rows, Cols>& output_dx =
+          Matrix<Rows, Cols>::Constant(1)) override {
+    if (cycle != grad_cycle_) {
+      forked_grad_ = output_dx;
+      grad_cycle_ = cycle;
+      forks_ = 1;
+      return;
+    }
+    forked_grad_ += output_dx;
+    ++forks_;
+    if (forks_ == n_forks_) {
+      this->input_.Backprop(cycle, forked_grad_);
+    }
+    else if (forks_ > n_forks_) {
+      LOG(FATAL) << "Too many forks, did you mean to set \"forks_n\" in the "
+          "constructor?";
+    }
   }
 };
 

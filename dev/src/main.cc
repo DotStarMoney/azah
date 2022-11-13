@@ -16,6 +16,7 @@
 #include "nn/op/swish.h"
 #include "nn/op/tanh.h"
 #include "nn/op/z_score.h"
+#include "nn/op/transpose.h"
 #include "nn/variable.h"
 
 int main(int argc, char* argv[]) {
@@ -25,16 +26,16 @@ int main(int argc, char* argv[]) {
   azah::nn::Matrix<2, 2> y_pred_m;
   y_pred_m << 30.0, 30.0, 100.0, 10.0;
 
-  auto y_true = azah::nn::Variable<2, 2>(y_true_m);
+  auto y_true = azah::nn::Constant<2, 2>(y_true_m);
   auto y_pred = azah::nn::Variable<2, 2>(y_pred_m);
 
-  auto cat = azah::nn::op::Concat(y_pred, y_true);
+  auto y_pred_t = azah::nn::op::Transpose(y_pred);
+  auto cat = azah::nn::op::Multiply(y_pred_t, y_true);
 
   std::cout << "result=\n" << cat.OutputBase(0) << "\n";
   
   cat.BackpropBase(0);
 
-  std::cout << "gradient y_true=\n" << y_true.gradient_base() << "\n";
   std::cout << "gradient y_pred=\n" << y_pred.gradient_base() << "\n";
 
   return 0;
