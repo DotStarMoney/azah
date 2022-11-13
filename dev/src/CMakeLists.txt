@@ -9,6 +9,10 @@ set(NN_ACTIVATION
     nn/activation.h
     nn/activation.cc)
 
+set(NN_NETWORK
+    nn/network.h
+    nn/network.cc)
+
 set(NN_OPERATION
     nn/binary_op.h
     nn/constant.h
@@ -38,7 +42,8 @@ set(NN_OPERATION
 target_sources(azah PRIVATE
     main.cc
     ${NN_OPERATION}
-    ${NN_ACTIVATION})
+    ${NN_ACTIVATION}
+    ${NN_NETWORK})
 
 # ------------------------------------------------------------------------------
 

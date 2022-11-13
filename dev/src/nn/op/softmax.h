@@ -27,8 +27,8 @@ class Softmax : public UnaryOp<Rows, Cols, Rows, Cols> {
 
   void UnaryBackprop(uint32_t cycle, 
                      const MatrixRef<Rows, Cols>& output_dx) override {
-    LOG(FATAL) << "Backprop through Softmax is unstable. Please use "
-                  "SoftmaxCrossEnt instead.";
+    LOG(FATAL) << "Backprop unimplemented for Softmax. Maybe you wanted "
+                  "SoftmaxCrossEnt instead?";
   }
 
  private:
