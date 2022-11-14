@@ -1,8 +1,6 @@
 #ifndef AZAH_NN_CONSTANT_BASE_H_
 #define AZAH_NN_CONSTANT_BASE_H_
 
-#include <stdint.h>
-
 #include "data_types.h"
 
 namespace azah {

@@ -23,6 +23,10 @@ class Node : public NodeBase {
     Backprop(cycle, Matrix<OutputRows, OutputCols>::Constant(1));
   }
 
+  uint32_t size() const override {
+    return OutputRows * OutputCols;
+  }
+
   virtual const Matrix<OutputRows, OutputCols>& Output(uint32_t cycle) = 0;
   virtual void Backprop(uint32_t cycle, 
                         const MatrixRef<OutputRows, OutputCols>& output_dx) = 0;

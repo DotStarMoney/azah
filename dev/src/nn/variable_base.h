@@ -15,7 +15,8 @@ class VariableBase {
 
   virtual ConstDynamicMatrixRef gradient_base() const = 0;
   virtual DynamicMatrixRef value_base() = 0;
- 
+  virtual bool updated(uint32_t cycle) const = 0;
+
  protected:
   VariableBase() {}
 };

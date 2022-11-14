@@ -30,6 +30,10 @@ class Variable : public Node<Rows, Cols>, VariableBase {
     return value_;
   }
 
+  bool updated(uint32_t cycle) const {
+    return grad_cycle_ == cycle;
+  }
+
   const Matrix<Rows, Cols>& Output(uint32_t cycle) override {
     return value_;
   }

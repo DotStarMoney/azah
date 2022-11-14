@@ -19,6 +19,9 @@
 #include "nn/op/transpose.h"
 #include "nn/variable.h"
 
+// TODO:
+//   Network sub-classes should do the initialization of variables.
+
 int main(int argc, char* argv[]) {
   azah::nn::Matrix<2, 2> y_true_m;
   y_true_m << 0.05, 0.2, 0.6, 0.15;

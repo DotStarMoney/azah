@@ -15,6 +15,7 @@ class NodeBase {
 
   virtual ConstDynamicMatrixRef OutputBase(uint32_t cycle) = 0;
   virtual void BackpropBase(uint32_t cycle) = 0;
+  virtual uint32_t size() const = 0;
 
  protected:
   NodeBase() {}

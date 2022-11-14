@@ -5,8 +5,10 @@
 
 #include <vector>
 
+#include "constant_base.h"
 #include "data_types.h"
 #include "node_base.h"
+#include "variable_base.h"
 
 namespace azah {
 namespace nn {
@@ -17,24 +19,37 @@ class Network {
   Network& operator=(const Network&) = delete;
 
   void Outputs(const std::vector<uint32_t>& outputs_i, 
-               std::vector<DynamicMatrixRef>& outputs);
+               std::vector<ConstDynamicMatrixRef>& outputs);
 
   void Gradients(const std::vector<uint32_t>& targets_i,
-                 std::vector<DynamicMatrixRef>& variables,
+                 std::vector<uint32_t>& variables_i,
+                 std::vector<ConstDynamicMatrixRef>& gradients,
                  std::vector<float>& losses);
 
-  void SetVariables(const std::vector<DynamicMatrixRef>& variables);
-  void GetVariables(std::vector<DynamicMatrixRef>& variables);
+  void SetVariables(const std::vector<uint32_t>& variables_i, 
+                    const std::vector<DynamicMatrixRef>& variables);
+
+  // Leave variables_i empty to retrieve all variables.
+  void GetVariables(const std::vector<uint32_t>& variables_i, 
+                    std::vector<DynamicMatrixRef>& variables);
 
   void SetConstants(const std::vector<uint32_t>& constants_i, 
                     const std::vector<DynamicMatrixRef>& constants);
 
  protected:
+  Network();
+
+  void AddOutput(NodeBase* output);
+  void AddTarget(NodeBase* target);
+  void AddVariable(VariableBase* variable);
+  void AddConstant(ConstantBase* constant);
+
+ private:
   uint32_t cycle_;
   std::vector<NodeBase*> outputs_;
-
-  Network(uint32_t outputs_n);
-
+  std::vector<NodeBase*> targets_;
+  std::vector<VariableBase*> variables_;
+  std::vector<ConstantBase*> constants_;
 };
 
 }  // namespace nn
