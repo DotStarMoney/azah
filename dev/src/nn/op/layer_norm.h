@@ -32,10 +32,7 @@ class LayerNorm : public Op<Rows, Cols> {
         z_score_op_(input_fork_op_, mean_fork_op_, scalar_mse_op_),
         scalar_fmadd_op_(z_score_op_, gamma, beta) {}
 
-  void Backprop(
-      uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = 
-          Matrix<Rows, Cols>::Constant(1)) override {
+  void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
     return this->scalar_fmadd_op_.Backprop(cycle, output_dx);
   }
 

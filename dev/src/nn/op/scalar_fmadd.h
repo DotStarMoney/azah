@@ -23,10 +23,8 @@ class ScalarFMAdd : public Op<Rows, Cols> {
         m_(m),
         b_(b) {}
 
-  void Backprop(
-      uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = 
-          Matrix<Rows, Cols>::Constant(1)) override {
+  void Backprop(uint32_t cycle,
+                const MatrixRef<Rows, Cols>& output_dx) override {
     if (!this->input_.constant) {
       auto m = this->m_.Output(cycle);
       this->input_.Backprop(cycle, (output_dx.array() * m.value()).matrix());

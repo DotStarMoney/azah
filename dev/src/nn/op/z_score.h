@@ -24,10 +24,7 @@ class ZScore : public Op<Rows, Cols> {
         mean_(mean),
         var_(var) {}
 
-  void Backprop(
-      uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx = 
-          Matrix<Rows, Cols>::Constant(1)) override {
+  void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
     auto var_inv = (this->var_.Output(cycle).array() + kEpsilon).inverse().value();
     auto stddev_inv = std::sqrt(var_inv);
     auto out_dx_sum = output_dx.sum();

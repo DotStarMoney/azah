@@ -20,10 +20,8 @@ class Add : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
   Add(Node<Rows, Cols>& input_a, Node<Rows, Cols>& input_b)
       : BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols>(input_a, input_b) {}
 
-  void Backprop(
-      uint32_t cycle, 
-      const MatrixRef<Rows, Cols>& output_dx = 
-          Matrix<Rows, Cols>::Constant(1)) override {
+  void Backprop(uint32_t cycle, 
+                const MatrixRef<Rows, Cols>& output_dx) override {
     if (!this->input_a_.constant) {
       this->input_a_.Backprop(cycle, output_dx);
     }

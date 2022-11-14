@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "data_types.h"
+#include "init.h"
 #include "node_base.h"
 
 namespace azah {
@@ -20,7 +21,7 @@ class Node : public NodeBase {
   }
 
   void BackpropBase(uint32_t cycle) override {
-    Backprop(cycle, Matrix<OutputRows, OutputCols>::Constant(1));
+    Backprop(cycle, init::Ones<OutputRows, OutputCols>());
   }
 
   uint32_t size() const override {

@@ -21,9 +21,7 @@ class SoftmaxCrossEnt : public BinaryOp<Rows, Cols, Rows, Cols, 1, 1> {
   SoftmaxCrossEnt(Node<Rows, Cols>& input_a, Node<Rows, Cols>& input_b)
       : BinaryOp<Rows, Cols, Rows, Cols, 1, 1>(input_a, input_b) {}
 
-  void Backprop(
-      uint32_t cycle, 
-      const MatrixRef<1, 1>& output_dx = Matrix<1, 1>::Constant(1)) override {
+  void Backprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) override {
     auto c = output_dx.value();
     auto pred_softmax = Softmax<Rows, Cols>::SoftmaxExpr(
         this->input_a_.Output(cycle));

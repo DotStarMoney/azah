@@ -37,6 +37,7 @@ set(NN_CORE
     nn/op/transpose.h
     nn/op/z_score.h
     nn/unary_op.h
+    nn/init.h
     nn/variable.h
     nn/variable_base.h)
 

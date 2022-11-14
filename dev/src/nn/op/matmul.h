@@ -25,10 +25,8 @@ class Matmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
                InputColsB>(input_a, input_b),
       transpose_rhs_(transpose_rhs) {}
 
-  void Backprop(
-      uint32_t cycle, 
-      const MatrixRef<InputRowsA, InputColsB>& output_dx = 
-          Matrix<InputRowsA, InputColsB>::Constant(1)) override {
+  void Backprop(uint32_t cycle, 
+                const MatrixRef<InputRowsA, InputColsB>& output_dx) override {
     if (!this->input_a_.constant) {
       auto b = this->input_b_.Output(cycle);
       this->input_a_.Backprop(

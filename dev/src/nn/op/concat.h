@@ -27,8 +27,7 @@ class Concat : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
 
   void Backprop(
       uint32_t cycle,
-      const MatrixRef<InputRowsA + InputRowsB, InputColsA>& output_dx =
-          Matrix<InputRowsA + InputRowsB, InputColsA>::Constant(1)) override {
+      const MatrixRef<InputRowsA + InputRowsB, InputColsA>& output_dx) override {
     if (!this->input_a_.constant) {
       this->input_a_.Backprop(cycle, output_dx.topRows(InputRowsA));
     }
