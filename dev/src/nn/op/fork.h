@@ -27,7 +27,6 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
   const Matrix<Rows, Cols>& Output(uint32_t cycle) {
     return this->input_.Output(cycle);
   }
- 
 
  private:
   Matrix<Rows, Cols> forked_grad_;
