@@ -52,13 +52,13 @@ void Adam::Update(
     float updates = ++(updates_[var_index]);
 
     m1 = (m1 - grad) * beta1_ + grad;
-	auto m1_debias = m1.array() / (1.0f - std::powf(beta1_, updates));
+    auto m1_debias = m1.array() / (1.0f - std::powf(beta1_, updates));
 
-	auto grad_2 = grad.array().square().matrix();
+    auto grad_2 = grad.array().square().matrix();
     m2 = (m2 - grad_2) * beta2_ + grad_2;
     auto m2_debias = m2.array() / (1.0f - std::powf(beta2_, updates));
     
-	var -= lr * (m1_debias / (m2_debias + kEpsilon).sqrt()).matrix();
+    var -= lr * (m1_debias / (m2_debias + kEpsilon).sqrt()).matrix();
   }
 }
 
