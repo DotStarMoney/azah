@@ -8,7 +8,6 @@
 #include "data_types.h"
 #include "glog/logging.h"
 #include "network.h"
-#include "sgd_optimizer.h"
 
 namespace azah {
 namespace nn {
