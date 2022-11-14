@@ -14,6 +14,7 @@ set(NN_CORE
     nn/constant.h
     nn/constant_base.h
     nn/data_types.h
+    nn/init.h
     nn/network.h
     nn/network.cc
     nn/node.h
@@ -36,16 +37,16 @@ set(NN_CORE
     nn/op/tanh.h
     nn/op/transpose.h
     nn/op/z_score.h
+    nn/sgd_optimizer.h
+    nn/adam.cc
     nn/unary_op.h
-    nn/init.h
     nn/variable.h
     nn/variable_base.h)
 
 target_sources(azah PRIVATE
     main.cc
     ${NN_CORE}
-    ${NN_ACTIVATION}
-    ${NN_NETWORK})
+    ${NN_ACTIVATION})
 
 # ------------------------------------------------------------------------------
 

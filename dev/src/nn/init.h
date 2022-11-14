@@ -1,6 +1,8 @@
 #ifndef AZAH_NN_INIT_H_
 #define AZAH_NN_INIT_H_
 
+#include <math.h>
+
 #include "data_types.h"
 
 namespace azah {

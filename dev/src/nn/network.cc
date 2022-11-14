@@ -72,6 +72,21 @@ void Network::GetVariables(const std::vector<uint32_t>& variables_i,
   }
 }
 
+void Network::GetVariables(const std::vector<uint32_t>& variables_i,
+                           std::vector<ConstDynamicMatrixRef>& variables) const {
+  variables.clear();
+  if (variables_i.empty()) {
+    for (auto var : variables_) {
+      variables.push_back(var->value_base());
+    }
+  }
+  else {
+    for (auto var_i : variables_i) {
+      variables.push_back(variables_[var_i]->value_base());
+    }
+  }
+}
+
 void Network::SetConstants(const std::vector<uint32_t>& constants_i,
                            const std::vector<DynamicMatrixRef>& constants) {
   if (constants_i.empty()) {

@@ -33,6 +33,10 @@ class Network {
   void GetVariables(const std::vector<uint32_t>& variables_i, 
                     std::vector<DynamicMatrixRef>& variables);
 
+  // Leave variables_i empty to retrieve all variables.
+  void GetVariables(const std::vector<uint32_t>& variables_i,
+                    std::vector<ConstDynamicMatrixRef>& variables) const;
+  
   void SetConstants(const std::vector<uint32_t>& constants_i, 
                     const std::vector<DynamicMatrixRef>& constants);
 
