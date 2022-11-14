@@ -13,12 +13,12 @@ template <int Rows, int Cols>
 using Matrix = Eigen::Matrix<float, Rows, Cols>;
 
 template <int Rows, int Cols>
-using MatrixRef = Eigen::Ref<const Eigen::Matrix<float, Rows, Cols>>;
+using MatrixRef = Eigen::Ref<const Matrix<Rows, Cols>>;
 
 using DynamicMatrix = Eigen::MatrixX<float>;
 
-using DynamicMatrixRef = Eigen::Ref<Eigen::MatrixX<float>>;
-using ConstDynamicMatrixRef = Eigen::Ref<const Eigen::MatrixX<float>>;
+using DynamicMatrixRef = Eigen::Ref<DynamicMatrix>;
+using ConstDynamicMatrixRef = Eigen::Ref<const DynamicMatrix>;
 
 }  // namespace nn
 }  // namespace azah
