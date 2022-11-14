@@ -11,7 +11,7 @@ namespace nn {
 void Network::Outputs(const std::vector<uint32_t>& outputs_i,
                       std::vector<ConstDynamicMatrixRef>& outputs) {
   if (outputs_i.empty()) {
-    LOG(FATAL) << "outputs_i cannot be empty.";
+    LOG(FATAL) << "\"outputs_i\" cannot be empty.";
   }
   outputs.clear();
   for (auto output_i : outputs_i) {
@@ -25,7 +25,7 @@ void Network::Gradients(const std::vector<uint32_t>& targets_i,
                         std::vector<ConstDynamicMatrixRef>& gradients,
                         std::vector<float>& losses) {
   if (targets_i.empty()) {
-    LOG(FATAL) << "targets_i cannot be empty.";
+    LOG(FATAL) << "\"targets_i\" cannot be empty.";
   }
 
   losses.clear();
@@ -50,7 +50,7 @@ void Network::Gradients(const std::vector<uint32_t>& targets_i,
 void Network::SetVariables(const std::vector<uint32_t>& variables_i,
                            const std::vector<DynamicMatrixRef>& variables) {
   if (variables_i.empty()) {
-    LOG(FATAL) << "variables_i cannot be empty.";
+    LOG(FATAL) << "\"variables_i\" cannot be empty.";
   }
   for (int i = 0; i < variables_i.size(); ++i) {
     auto variable_i = variables_i[i];
@@ -75,7 +75,7 @@ void Network::GetVariables(const std::vector<uint32_t>& variables_i,
 void Network::SetConstants(const std::vector<uint32_t>& constants_i,
                            const std::vector<DynamicMatrixRef>& constants) {
   if (constants_i.empty()) {
-    LOG(FATAL) << "constants_i cannot be empty.";
+    LOG(FATAL) << "\"constants_i\" cannot be empty.";
   }
   for (int i = 0; i < constants_i.size(); ++i) {
     auto constant_i = constants_i[i];

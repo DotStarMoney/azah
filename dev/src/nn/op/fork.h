@@ -53,8 +53,7 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
     ++forks_;
     if (forks_ == n_forks_) {
       this->input_.Backprop(cycle, forked_grad_);
-    }
-    else if (forks_ > n_forks_) {
+    } else if (forks_ > n_forks_) {
       LOG(FATAL) << "Too many forks, did you mean to set \"forks_n\" in the "
           "constructor?";
     }
