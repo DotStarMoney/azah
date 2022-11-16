@@ -10,6 +10,8 @@ set(NN_ACTIVATION
     nn/activation.cc)
 
 set(NN_CORE
+    nn/adam.h
+    nn/adam.cc
     nn/binary_op.h
     nn/constant.h
     nn/constant_base.h
@@ -40,7 +42,6 @@ set(NN_CORE
     nn/op/transpose.h
     nn/op/scalar_inv_sqrt.h
     nn/sgd_optimizer.h
-    nn/adam.cc
     nn/unary_op.h
     nn/variable.h
     nn/variable_base.h)
