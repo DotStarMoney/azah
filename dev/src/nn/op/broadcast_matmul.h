@@ -21,7 +21,7 @@ class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, 1,
   BroadcastMatmul& operator=(const BroadcastMatmul&) = delete;
 
   BroadcastMatmul(Node<InputRowsA, InputColsA>& input_a,
-                  Node<InputRowsB, InputColsB>& input_b) :
+                  Node<InputRowsB, 1>& input_b) :
       BinaryOp<InputRowsA, InputColsA, InputRowsB, 1, InputRowsA / OutputCols,
                OutputColsB>(input_a, input_b) {}
 
