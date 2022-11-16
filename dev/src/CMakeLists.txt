@@ -23,6 +23,7 @@ set(NN_CORE
     nn/node_base.h
     nn/op.h
     nn/op/add.h
+    nn/op/broadcast_matmul.h
     nn/op/concat.h
     nn/op/fork.h
     nn/op/group_matmul.h
@@ -30,6 +31,7 @@ set(NN_CORE
     nn/op/matmul.h
     nn/op/mean.h
     nn/op/multiply.h
+    nn/op/row_mean.h
     nn/op/scalar_fmadd.h
     nn/op/scalar_mse.h
     nn/op/scalar_sub.h

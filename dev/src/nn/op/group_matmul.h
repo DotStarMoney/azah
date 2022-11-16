@@ -16,7 +16,7 @@ template <int Groups, int InputRowsA, int InputColsA, int InputRowsB,
 class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
                                     InputRowsA * Groups, InputColsB> {
   static_assert((InputColsA % Groups == 0) && (InputRowsB % Groups == 0),
-                "Groups must divide the columns of A and rows of B evenly.");
+                "Groups must divide the columns of A and rows of B.");
  public:
   GroupMatmul(const GroupMatmul&) = delete;
   GroupMatmul& operator=(const GroupMatmul&) = delete;
