@@ -19,6 +19,7 @@
 #include "nn/variable.h"
 
 // TODO:
+//   Add subtract + square ops to speed up zscore (only subtract mean once)
 //   Network sub-classes should do the initialization of variables.
 
 int main(int argc, char* argv[]) {

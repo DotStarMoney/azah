@@ -47,12 +47,11 @@ class Variable : public Node<Rows, Cols>, VariableBase {
     }
   }
 
- protected:
-  Matrix<Rows, Cols> value_;
-
  private:
   Matrix<Rows, Cols> gradient_;
   uint32_t grad_cycle_;
+  Matrix<Rows, Cols> value_;
+
 };
 
 }  // namespace nn
