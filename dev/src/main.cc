@@ -15,7 +15,6 @@
 #include "nn/op/multiply.h"
 #include "nn/op/swish.h"
 #include "nn/op/tanh.h"
-#include "nn/op/z_score.h"
 #include "nn/op/transpose.h"
 #include "nn/variable.h"
 
