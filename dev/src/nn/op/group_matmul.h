@@ -31,8 +31,7 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
       const MatrixRef<InputRowsA * Groups, InputColsB>& output_dx) override {
     if (!this->input_a_.constant) {
       Matrix<InputRowsA, InputColsA> j;
-      Matrix<InputColsB, InputRowsB> b_trans =
-          this->input_b_.Output(cycle).transpose();
+      auto b_trans = this->input_b_.Output(cycle).transpose();
       for (int g = 0; g < Groups; ++g) {
         j.middleCols(g * InputColsA / Groups, InputColsA / Groups) =
             output_dx.middleRows(g * InputRowsA, InputRowsA) *
@@ -43,8 +42,7 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
 
     if (!this->input_b_.constant) {
       Matrix<InputRowsB, InputColsB> j;
-      Matrix<InputColsA, InputRowsA> a_trans =
-          this->input_a_.Output(cycle).transpose();
+      auto a_trans = this->input_a_.Output(cycle).transpose();
       for (int g = 0; g < Groups; ++g) {
         j.middleRows(g * InputRowsB / Groups, InputRowsB / Groups) =
             a_trans.middleRows(g * InputColsA / Groups, InputColsA / Groups) *

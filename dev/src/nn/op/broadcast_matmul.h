@@ -5,6 +5,7 @@
 
 #include "../binary_op.h"
 #include "../data_types.h"
+#include "../init.h"
 #include "../node.h"
 
 namespace azah {
@@ -29,12 +30,23 @@ class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, 1,
       uint32_t cycle,
       const MatrixRef<InputRowsA / OutputCols, OutputCols>& output_dx) override {
     if (!this->input_a_.constant) {
-
-
+      Matrix<InputRowsA, InputColsA> j;
+      auto b_trans = this->input_b_.Output(cycle).transpose();
+      for (int c = 0; c < OutputCols; ++c) {
+        j.middleRows(c * (InputRowsA / OutputCols), InputRowsA / OutputCols) = 
+            output_dx.col(c) * b_trans;
+      }
+      this->input_a_.Backprop(cycle, j);
     }
     if (!this->input_b_.constant) {
-
-
+      Matrix<InputRowsB, 1> j = init::Zeros<InputRowsB, 1>();
+      auto a_trans = this->input_a_.Output(cycle).transpose();
+      for (int c = 0; c < OutputCols; ++c) {
+        j += a_trans.middleCols(
+            c * (InputRowsA / OutputCols), 
+            InputRowsA / OutputCols) * output_dx.col(c);
+      }
+      this->input_b_.Backprop(cycle, j);
     }
   }
 
@@ -42,9 +54,10 @@ class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, 1,
   void ComputeOutput(uint32_t cycle) override {
     auto a = this->input_a_.Output(cycle);
     auto b = this->input_b_.Output(cycle);
-    this->cached_output_ = //
-      //
-      //
+    for (int c = 0; c < OutputCols; ++c) {
+      this->cached_output_.col(c) = 
+          a.middleRows(c * (InputRowsA / OutputCols), InputRowsA / OutputCols) * b;
+    }
   }
 };
 
