@@ -16,27 +16,30 @@
 #include "nn/op/swish.h"
 #include "nn/op/tanh.h"
 #include "nn/op/transpose.h"
+#include "nn/op/row_mean.h"
+#include "nn/op/broadcast_matmul.h"
 #include "nn/variable.h"
 
 // TODO:
 //   Network sub-classes should do the initialization of variables.
 
 int main(int argc, char* argv[]) {
-  azah::nn::Matrix<2, 2> y_true_m;
-  y_true_m << 0.05, 0.2, 0.6, 0.15;
+  azah::nn::Matrix<4, 2> y_true_m;
+  y_true_m << 0.05, 0.2, 0.6, 0.15, 10.0, 9.0, 11.0, 12.0;
   
-  azah::nn::Matrix<2, 2> y_pred_m;
-  y_pred_m << 30.0, 30.0, 100.0, 10.0;
+  azah::nn::Matrix<2, 1> y_pred_m;
+  y_pred_m << 0.3, 0.1;
 
-  auto y_true = azah::nn::Constant<2, 2>(y_true_m);
-  auto y_pred = azah::nn::Variable<2, 2>(y_pred_m);
+  auto y_true = azah::nn::Constant<4, 2>(y_true_m);
+  auto y_pred = azah::nn::Variable<2, 1>(y_pred_m);
 
-  auto y_pred_t = azah::nn::op::Transpose(y_pred);
-  auto cat = azah::nn::op::Multiply(y_pred_t, y_true);
+  auto bm = azah::nn::op::BroadcastMatmul<4, 2, 2>(y_true, y_pred);
+  auto s = azah::nn::op::Swish(bm);
+  auto mean = azah::nn::op::Mean(s);
 
-  std::cout << "result=\n" << cat.OutputBase(0) << "\n";
+  std::cout << "result=\n" << mean.OutputBase(0) << "\n";
   
-  cat.BackpropBase(0);
+  mean.BackpropBase(0);
 
   std::cout << "gradient y_pred=\n" << y_pred.gradient_base() << "\n";
 

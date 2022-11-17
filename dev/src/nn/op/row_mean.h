@@ -22,6 +22,7 @@ class RowMean : public UnaryOp<Rows, Cols, Rows, 1> {
  private:
   void ComputeOutput(uint32_t cycle) override {
     auto x = this->input_.Output(cycle);
+    std::cout << x << "\n";
     this->cached_output_ = x.rowwise().mean();
   }
 
@@ -29,7 +30,7 @@ class RowMean : public UnaryOp<Rows, Cols, Rows, 1> {
                      const MatrixRef<Rows, 1>& output_dx) override {
     this->input_.Backprop(
         cycle,
-        (output_dx / static_cast<float>(Cols)).colwise().replicate<1, Cols>());
+        (output_dx / static_cast<float>(Cols)).rowwise().replicate<Cols>());
   }
 };
 

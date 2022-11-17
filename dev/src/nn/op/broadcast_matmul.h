@@ -12,19 +12,19 @@ namespace azah {
 namespace nn {
 namespace op {
 
-template <int InputRowsA, int InputColsA, int InputRowsB, int OutputCols>
-class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, 1,
+template <int InputRowsA, int InputColsA, int OutputCols>
+class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputColsA, 1,
                                         InputRowsA / OutputCols, OutputCols> {
-  static_assert(InputRowsA % InputRowsOut == 0,
-                "Output columns must divide the rows of A.");
+  static_assert(InputRowsA % OutputCols == 0,
+                "The rows of A must divide the output columns.");
  public:
   BroadcastMatmul(const BroadcastMatmul&) = delete;
   BroadcastMatmul& operator=(const BroadcastMatmul&) = delete;
 
   BroadcastMatmul(Node<InputRowsA, InputColsA>& input_a,
-                  Node<InputRowsB, 1>& input_b) :
-      BinaryOp<InputRowsA, InputColsA, InputRowsB, 1, InputRowsA / OutputCols,
-               OutputColsB>(input_a, input_b) {}
+                  Node<InputColsA, 1>& input_b) :
+      BinaryOp<InputRowsA, InputColsA, InputColsA, 1, InputRowsA / OutputCols,
+               OutputCols>(input_a, input_b) {}
 
   void Backprop(
       uint32_t cycle,
@@ -39,7 +39,7 @@ class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, 1,
       this->input_a_.Backprop(cycle, j);
     }
     if (!this->input_b_.constant) {
-      Matrix<InputRowsB, 1> j = init::Zeros<InputRowsB, 1>();
+      Matrix<InputColsA, 1> j = init::Zeros<InputColsA, 1>();
       auto a_trans = this->input_a_.Output(cycle).transpose();
       for (int c = 0; c < OutputCols; ++c) {
         j += a_trans.middleCols(
