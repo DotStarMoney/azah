@@ -22,7 +22,7 @@ public:
   void Update(
       float lr, 
       const std::vector<uint32_t>& variables_i, 
-      const std::vector<ConstDynamicMatrixRef>& grads, 
+      const std::vector<DynamicMatrix>& grads, 
       Network& dest) override;
 
  private:

@@ -19,26 +19,26 @@ class Network {
   Network& operator=(const Network&) = delete;
 
   void Outputs(const std::vector<uint32_t>& outputs_i, 
-               std::vector<ConstDynamicMatrixRef>& outputs);
+               std::vector<DynamicMatrix>& outputs);
 
   void Gradients(const std::vector<uint32_t>& targets_i,
                  std::vector<uint32_t>& variables_i,
-                 std::vector<ConstDynamicMatrixRef>& gradients,
+                 std::vector<DynamicMatrix>& gradients,
                  std::vector<float>& losses);
 
   void SetVariables(const std::vector<uint32_t>& variables_i, 
-                    const std::vector<DynamicMatrixRef>& variables);
+                    const std::vector<DynamicMatrix>& variables);
 
   // Leave variables_i empty to retrieve all variables.
   void GetVariables(const std::vector<uint32_t>& variables_i, 
-                    std::vector<DynamicMatrixRef>& variables);
+                    std::vector<DynamicMatrix>& variables);
 
   // Leave variables_i empty to retrieve all variables.
   void GetVariables(const std::vector<uint32_t>& variables_i,
-                    std::vector<ConstDynamicMatrixRef>& variables) const;
+                    std::vector<DynamicMatrix>& variables) const;
   
   void SetConstants(const std::vector<uint32_t>& constants_i, 
-                    const std::vector<DynamicMatrixRef>& constants);
+                    const std::vector<DynamicMatrix>& constants);
 
  protected:
   Network();

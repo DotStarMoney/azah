@@ -19,7 +19,7 @@ static constexpr float kEpsilon = 1e-5;
 
 Adam::Adam(const Network& src, float beta1, float beta2) 
     : beta1_(beta1), beta2_(beta2) {
-  std::vector<ConstDynamicMatrixRef> vars;
+  std::vector<DynamicMatrix> vars;
   src.GetVariables({}, vars);
   for (auto& var : vars) {
     m1_.push_back(DynamicMatrix::Zero(var.rows(), var.cols()));
@@ -31,7 +31,7 @@ Adam::Adam(const Network& src, float beta1, float beta2)
 void Adam::Update(
     float lr,
     const std::vector<uint32_t>& variables_i,
-    const std::vector<ConstDynamicMatrixRef>& grads,
+    const std::vector<DynamicMatrix>& grads,
     Network& dest) {
   if (variables_i.empty() || grads.empty()) {
     LOG(FATAL) << "\"variables_i\" and \"grads\" cannot be empty.";
@@ -40,7 +40,7 @@ void Adam::Update(
     LOG(FATAL) << "\"variables_i\" and \"grads\" must be the same size.";
   }
 
-  std::vector<DynamicMatrixRef> vars;
+  std::vector<DynamicMatrix> vars;
   dest.GetVariables(variables_i, vars);
   for (int i = 0; i < variables_i.size(); ++i) {
     auto& grad = grads[i];

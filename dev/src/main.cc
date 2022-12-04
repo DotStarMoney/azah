@@ -1,4 +1,7 @@
+#include <math.h>
+
 #include <iostream>
+#include <vector>
 
 #include "nn/constant.h"
 #include "nn/init.h"
@@ -74,32 +77,115 @@ class SpirolNet : public azah::nn::Network {
   azah::nn::op::MSE<3, 1> loss_;
 };
 
+float divide_no_nan(float x, float y) {
+  return (y == 0.0f) ? 0.0f : x / y;
+}
+
+azah::nn::Matrix<3, 1> quad_blend(float x, float y, float alpha,
+                                  const azah::nn::Matrix<3, 1>& c1,
+                                  const azah::nn::Matrix<3, 1>& c2,
+                                  const azah::nn::Matrix<3, 1>& c3) {
+  float angle = std::atan2f(y, x);
+  if (angle < alpha) {
+    float prop = divide_no_nan(angle, alpha) * 0.5f + 0.5f;
+    return ((c2.array() - c3.array()) * prop + c3.array()).matrix();
+  } else if (angle > (1.57079632679f - alpha)) {
+    float prop = divide_no_nan(1.57079632679f - angle, alpha) * 0.5f + 0.5f;
+    return ((c2.array() - c1.array()) * prop + c1.array()).matrix();
+  } else {
+    return c2;
+  } 
+}
+
+azah::nn::Matrix<3, 1> quad_color(
+    float x, 
+    float y, 
+    float alpha, 
+    const std::vector<azah::nn::Matrix<3, 1>>& colors) {
+  if ((x == 0.0) && (y == 0.0)) {
+    azah::nn::Matrix<3, 1> mean;
+    for (const auto& c : colors) {
+      mean = (mean.array() + c.array()).matrix();
+    }
+    mean = mean / static_cast<float>(colors.size());
+    return mean;
+  }
+
+  azah::nn::Matrix<3, 1> c1;
+  azah::nn::Matrix<3, 1> c2;
+  azah::nn::Matrix<3, 1> c3;
+  if (x < 0) {
+    if (y < 0) {
+      c1 = colors[1];
+      c2 = colors[3];
+      c3 = colors[2];
+    } else {
+      c1 = colors[0];
+      c2 = colors[2];
+      c3 = colors[3];
+    }
+  } else {
+    if (y < 0) {
+      c1 = colors[3];
+      c2 = colors[1];
+      c3 = colors[0];
+    } else {
+      c1 = colors[2];
+      c2 = colors[0];
+      c3 = colors[1];
+    }
+  }
+
+  return quad_blend(std::abs(x), std::abs(y), alpha, c1, c2, c3);
+}
+
+unsigned char to_byte(float x) {
+  return static_cast<unsigned char>(
+      std::fmax(std::fmin(x * 255.0f, 255.0f), 0.0f));
+}
+
+void draw_spirol(int w, int h, float alpha, std::vector<float>& dest) {
+  azah::nn::Matrix<3, 1> c1;
+  c1 << 1.0f, 0.25f, 0.0f;
+  azah::nn::Matrix<3, 1> c2;
+  c2 << 0.25f, 0.75f, 0.0f;
+  azah::nn::Matrix<3, 1> c3;
+  c3 << 0.05f, 0.4f, 1.0f;
+  azah::nn::Matrix<3, 1> c4;
+  c4 << 1.0f, 0.75f, 0.25f;
+
+  int offset = 0;
+  for (int y = 0; y < h; ++y) {
+    float yp = static_cast<float>(y) / h * 2.0f - 1.0f;
+    for (int x = 0; x < w; ++x) {
+      float xp = static_cast<float>(x) / w * 2.0f - 1.0f;
+
+      float t = std::atan2f(yp, xp);
+      float r = std::sqrtf(xp * xp + yp * yp);
+      float tn = t + std::sqrtf(r) * 8.0f;
+      
+      float xn = std::cosf(tn) * r;
+      float yn = std::sinf(tn) * r;
+
+      auto color = quad_color(xn, yn, alpha, {c1, c2, c3, c4});
+
+      dest[offset + 0] = color.coeff(2);
+      dest[offset + 1] = color.coeff(1);
+      dest[offset + 2] = color.coeff(0);
+
+      offset += 3;
+    }
+  }
+}
+
 }  // namespace;
 
-// TODO:
-//   Network sub-classes should do the initialization of variables.
-
 int main(int argc, char* argv[]) {
-  SpirolNet model;
-  /*
-  azah::nn::Matrix<4, 2> y_true_m;
-  y_true_m << 0.05, 0.2, 0.6, 0.15, 10.0, 9.0, 11.0, 12.0;
-  
-  azah::nn::Matrix<2, 1> y_pred_m;
-  y_pred_m << 0.3, 0.1;
+  std::vector<float> src(512 * 512 * 3, 0.0f);
+  draw_spirol(512, 512, 0.1f, src);
 
-  auto y_true = azah::nn::Constant<4, 2>(y_true_m);
-  auto y_pred = azah::nn::Variable<2, 1>(y_pred_m);
+  //SpirolNet model;
 
-  auto bm = azah::nn::op::BroadcastMatmul<4, 2, 2>(y_true, y_pred);
-  auto s = azah::nn::op::Swish(bm);
-  auto mean = azah::nn::op::Mean(s);
 
-  std::cout << "result=\n" << mean.OutputBase(0) << "\n";
-  
-  mean.BackpropBase(0);
-
-  std::cout << "gradient y_pred=\n" << y_pred.gradient_base() << "\n";
-  */
   return 0;
 }

@@ -9,7 +9,7 @@ namespace azah {
 namespace nn {
 
 void Network::Outputs(const std::vector<uint32_t>& outputs_i,
-                      std::vector<ConstDynamicMatrixRef>& outputs) {
+                      std::vector<DynamicMatrix>& outputs) {
   if (outputs_i.empty()) {
     LOG(FATAL) << "\"outputs_i\" cannot be empty.";
   }
@@ -22,7 +22,7 @@ void Network::Outputs(const std::vector<uint32_t>& outputs_i,
 
 void Network::Gradients(const std::vector<uint32_t>& targets_i,
                         std::vector<uint32_t>& variables_i,
-                        std::vector<ConstDynamicMatrixRef>& gradients,
+                        std::vector<DynamicMatrix>& gradients,
                         std::vector<float>& losses) {
   if (targets_i.empty()) {
     LOG(FATAL) << "\"targets_i\" cannot be empty.";
@@ -48,7 +48,7 @@ void Network::Gradients(const std::vector<uint32_t>& targets_i,
 }
 
 void Network::SetVariables(const std::vector<uint32_t>& variables_i,
-                           const std::vector<DynamicMatrixRef>& variables) {
+                           const std::vector<DynamicMatrix>& variables) {
   if (variables_i.empty()) {
     LOG(FATAL) << "\"variables_i\" cannot be empty.";
   }
@@ -59,7 +59,7 @@ void Network::SetVariables(const std::vector<uint32_t>& variables_i,
 }
 
 void Network::GetVariables(const std::vector<uint32_t>& variables_i,
-                           std::vector<DynamicMatrixRef>& variables) {
+                           std::vector<DynamicMatrix>& variables) {
   variables.clear();
   if (variables_i.empty()) {
     for (auto var : variables_) {
@@ -73,7 +73,7 @@ void Network::GetVariables(const std::vector<uint32_t>& variables_i,
 }
 
 void Network::GetVariables(const std::vector<uint32_t>& variables_i,
-                           std::vector<ConstDynamicMatrixRef>& variables) const {
+                           std::vector<DynamicMatrix>& variables) const {
   variables.clear();
   if (variables_i.empty()) {
     for (auto var : variables_) {
@@ -88,7 +88,7 @@ void Network::GetVariables(const std::vector<uint32_t>& variables_i,
 }
 
 void Network::SetConstants(const std::vector<uint32_t>& constants_i,
-                           const std::vector<DynamicMatrixRef>& constants) {
+                           const std::vector<DynamicMatrix>& constants) {
   if (constants_i.empty()) {
     LOG(FATAL) << "\"constants_i\" cannot be empty.";
   }
