@@ -39,14 +39,14 @@ class LayerNorm : public Op<Rows, Cols> {
   }
 
   const Matrix<Rows, Cols>& Output(uint32_t cycle) override {
-    return this->scalar_fmadd_op_.output(cycle);
+    return this->scalar_fmadd_op_.Output(cycle);
   }
 
  private:
   Fork<Rows, Cols> input_fork_op_;
   Mean<Rows, Cols> mean_op_;
   ScalarSub<Rows, Cols> debiased_op_;
-  Fork<1, 1> debiased_fork_op_;
+  Fork<Rows, Cols> debiased_fork_op_;
   SquareMean<Rows, Cols> square_mean_op_;
   ScalarInvSqrt<Rows, Cols> scalar_inv_sqrt_op_;
   ScalarFMAdd<Rows, Cols> scalar_fmadd_op_;

@@ -11,7 +11,7 @@ namespace azah {
 namespace nn {
 
 template <int Rows, int Cols>
-class Variable : public Node<Rows, Cols>, VariableBase {
+class Variable : public Node<Rows, Cols>, public VariableBase {
  public:
   Variable(const Variable&) = delete;
   Variable& operator=(const Variable&) = delete;

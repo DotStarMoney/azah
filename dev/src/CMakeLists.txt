@@ -5,11 +5,11 @@ set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 add_executable(azah)
 target_link_libraries(azah eigen glog)
 
-set(NN_ACTIVATION
+set(SRC_NN_ACTIVATION
     nn/activation.h
     nn/activation.cc)
 
-set(NN_CORE
+set(SRC_NN_CORE
     nn/adam.h
     nn/adam.cc
     nn/binary_op.h
@@ -30,6 +30,7 @@ set(NN_CORE
     nn/op/layer_norm.h
     nn/op/matmul.h
     nn/op/mean.h
+		nn/op/mse.h
     nn/op/multiply.h
     nn/op/row_mean.h
     nn/op/scalar_fmadd.h
@@ -48,15 +49,19 @@ set(NN_CORE
     nn/variable.h
     nn/variable_base.h)
 
+set(SRC_MODEL
+    nn/test_mix_mlp.h
+    nn/test_mix_mlp.cc)
+
 target_sources(azah PRIVATE
     main.cc
-    ${NN_CORE}
-    ${NN_ACTIVATION})
+    ${SRC_NN_CORE}
+    ${SRC_NN_ACTIVATION})
 
 # ------------------------------------------------------------------------------
 
 add_executable(azah_nn_activation_test
-    ${NN_ACTIVATION}
+    ${SRC_NN_ACTIVATION}
     nn/activation_test.cc)
 target_link_libraries(azah_nn_activation_test gtest gtest_main)
 add_test(azah azah_nn_activation_test)

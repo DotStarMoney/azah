@@ -12,7 +12,7 @@ namespace azah {
 namespace nn {
 
 template <int Rows, int Cols>
-class Constant : public Node<Rows, Cols>, ConstantBase {
+class Constant : public Node<Rows, Cols>, public ConstantBase {
  public:
   Constant(const Constant&) = delete;
   Constant& operator=(const Constant&) = delete;

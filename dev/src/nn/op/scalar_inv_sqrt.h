@@ -31,9 +31,9 @@ class ScalarInvSqrt : public BinaryOp<Rows, Cols, 1, 1, Rows, Cols> {
                               (output_dx.array() * recip_inv_sqrt).matrix());
     }
     if (!this->input_b_.constant) {
-      auto num = this->input_.Output(cycle).cwiseProduct(output_dx).array();
+      auto num = this->input_a_.Output(cycle).cwiseProduct(output_dx).array();
       this->input_b_.Backprop(cycle, Matrix<1, 1>::Constant(
-          -num.sum().value() * 0.5 * recip_inv * recip_inv_sqrt));
+          -num.sum() * 0.5 * recip_inv * recip_inv_sqrt));
     }
   }
 
