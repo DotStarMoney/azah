@@ -22,7 +22,6 @@ class RowMean : public UnaryOp<Rows, Cols, Rows, 1> {
  private:
   void ComputeOutput(uint32_t cycle) override {
     auto x = this->input_.Output(cycle);
-    std::cout << x << "\n";
     this->cached_output_ = x.rowwise().mean();
   }
 

@@ -11,6 +11,11 @@
 namespace azah {
 namespace nn {
 namespace op {
+namespace {
+
+static constexpr float kEpsilon = 1e-3;
+
+}  // namespace
 
 template <int Rows, int Cols>
 class ScalarInvSqrt : public BinaryOp<Rows, Cols, 1, 1, Rows, Cols> {
@@ -43,8 +48,6 @@ class ScalarInvSqrt : public BinaryOp<Rows, Cols, 1, 1, Rows, Cols> {
     auto recip = this->input_b_.Output(cycle);
     this->cached_output_ = x.array() / (recip.array() + kEpsilon).sqrt().value();
   }
-
-  static constexpr float kEpsilon = 1e-5;
 };
 
 }  // namespace op

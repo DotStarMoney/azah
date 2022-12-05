@@ -9,7 +9,7 @@
 #include "fork.h"
 #include "glog/logging.h"
 #include "mean.h"
-#include "scalar_fmadd.h"
+#include "fmadd.h"
 #include "scalar_inv_sqrt.h"
 #include "scalar_sub.h"
 #include "square_mean.h"
@@ -24,7 +24,8 @@ class LayerNorm : public Op<Rows, Cols> {
   LayerNorm(const LayerNorm&) = delete;
   LayerNorm& operator=(const LayerNorm&) = delete;
 
-  LayerNorm(Node<Rows, Cols>& input, Node<1, 1>& beta, Node<1, 1>& gamma)
+  LayerNorm(Node<Rows, Cols>& input, Node<Rows, Cols>& beta, 
+            Node<Rows, Cols>& gamma)
       : Op<Rows, Cols>(input.constant & beta.constant & gamma.constant),
         input_fork_op_(input, 2),
         mean_op_(input_fork_op_),
@@ -32,14 +33,14 @@ class LayerNorm : public Op<Rows, Cols> {
         debiased_fork_op_(debiased_op_, 2),
         square_mean_op_(debiased_fork_op_),
         scalar_inv_sqrt_op_(debiased_fork_op_, square_mean_op_),
-        scalar_fmadd_op_(scalar_inv_sqrt_op_, gamma, beta) {}
+    fmadd_op_(scalar_inv_sqrt_op_, gamma, beta) {}
 
   void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
-    return this->scalar_fmadd_op_.Backprop(cycle, output_dx);
+    return this->fmadd_op_.Backprop(cycle, output_dx);
   }
 
   const Matrix<Rows, Cols>& Output(uint32_t cycle) override {
-    return this->scalar_fmadd_op_.Output(cycle);
+    return this->fmadd_op_.Output(cycle);
   }
 
  private:
@@ -49,7 +50,7 @@ class LayerNorm : public Op<Rows, Cols> {
   Fork<Rows, Cols> debiased_fork_op_;
   SquareMean<Rows, Cols> square_mean_op_;
   ScalarInvSqrt<Rows, Cols> scalar_inv_sqrt_op_;
-  ScalarFMAdd<Rows, Cols> scalar_fmadd_op_;
+  FMAdd<Rows, Cols> fmadd_op_;
 
   void ComputeOutput(uint32_t cycle) override {
     LOG(FATAL) << "compute_output unimplemented for LayerNorm.";

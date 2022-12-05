@@ -1,8 +1,10 @@
 #include <math.h>
+#include <stdint.h>
 
 #include <iostream>
 #include <vector>
 
+#include "nn/adam.h"
 #include "nn/constant.h"
 #include "nn/init.h"
 #include "nn/network.h"
@@ -20,14 +22,14 @@ class SpirolNet : public azah::nn::Network {
        input_(azah::nn::init::Zeros<2, 1>()),
        dense1_k_(azah::nn::init::GlorotUniform<32, 2>()),
        dense1_(dense1_k_, input_),
-       norm1_b_(azah::nn::init::Zeros<1, 1>()),
-       norm1_g_(azah::nn::init::Ones<1, 1>()),
+       norm1_b_(azah::nn::init::Zeros<32, 1>()),
+       norm1_g_(azah::nn::init::Ones<32, 1>()),
        norm1_(dense1_, norm1_b_, norm1_g_),
        swish1_(norm1_),
        dense2_k_(azah::nn::init::GlorotUniform<32, 32>()),
        dense2_(dense2_k_, swish1_),
-       norm2_b_(azah::nn::init::Zeros<1, 1>()),
-       norm2_g_(azah::nn::init::Ones<1, 1>()),
+       norm2_b_(azah::nn::init::Zeros<32, 1>()),
+       norm2_g_(azah::nn::init::Ones<32, 1>()),
        norm2_(dense2_, norm2_b_, norm2_g_),
        swish2_(norm2_),
        linear_k_(azah::nn::init::GlorotUniform<3, 32>()),
@@ -55,8 +57,8 @@ class SpirolNet : public azah::nn::Network {
   azah::nn::Variable<32, 2> dense1_k_;
   azah::nn::op::Matmul<32, 2, 2, 1> dense1_;
 
-  azah::nn::Variable<1, 1> norm1_b_;
-  azah::nn::Variable<1, 1> norm1_g_;
+  azah::nn::Variable<32, 1> norm1_b_;
+  azah::nn::Variable<32, 1> norm1_g_;
   azah::nn::op::LayerNorm<32, 1> norm1_;
 
   azah::nn::op::Swish<32, 1> swish1_;
@@ -64,8 +66,8 @@ class SpirolNet : public azah::nn::Network {
   azah::nn::Variable<32, 32> dense2_k_;
   azah::nn::op::Matmul<32, 32, 32, 1> dense2_;
 
-  azah::nn::Variable<1, 1> norm2_b_;
-  azah::nn::Variable<1, 1> norm2_g_;
+  azah::nn::Variable<32, 1> norm2_b_;
+  azah::nn::Variable<32, 1> norm2_g_;
   azah::nn::op::LayerNorm<32, 1> norm2_;
 
   azah::nn::op::Swish<32, 1> swish2_;
@@ -178,14 +180,73 @@ void draw_spirol(int w, int h, float alpha, std::vector<float>& dest) {
   }
 }
 
+void Sample(const std::vector<float>& img, int w, int h, 
+            azah::nn::Matrix<2, 1>& x, azah::nn::Matrix<3, 1>& y) {
+  x = azah::nn::Matrix<2, 1>::Random();
+  auto xn = ((x.array() + 1.0f) * 0.49f).matrix();
+  int offset = 3 * (
+      static_cast<int>(std::floorf(xn.coeff(0) * w)) +
+          w * static_cast<int>(std::floorf(xn.coeff(1) * h)));
+  y(0, 0) = img[offset + 0];
+  y(1, 0) = img[offset + 1];
+  y(2, 0) = img[offset + 2];
+}
+
 }  // namespace;
 
 int main(int argc, char* argv[]) {
   std::vector<float> src(512 * 512 * 3, 0.0f);
   draw_spirol(512, 512, 0.1f, src);
 
-  //SpirolNet model;
+  SpirolNet model;
 
+  azah::nn::Matrix<2, 1> x;
+  azah::nn::Matrix<3, 1> y;
+
+  int epochs = 150;
+  int batch_n = 64;
+  int steps_per_epoch = 1024;
+
+  azah::nn::Adam opt(model, 0.9f, 0.999f);
+
+  for (int e = 0; e < epochs; ++e) {
+
+    float epoch_loss = 0.0f;
+    for (int s = 0; s < steps_per_epoch; ++s) {
+      std::vector<azah::nn::DynamicMatrix> grad_acc;
+      float batch_loss = 0.0f;
+      for (int b = 0; b < batch_n; ++b) {
+        Sample(src, 512, 512, x, y);
+        model.SetConstants({0, 1}, {x, y});
+
+        std::vector<azah::nn::DynamicMatrix> grads;
+        std::vector<uint32_t> grads_i;
+        std::vector<float> targets;
+        model.Gradients({0}, grads_i, grads, targets);
+
+        if (grad_acc.empty()) {
+          for (int i = 0; i < grads.size(); ++i) {
+            grad_acc.push_back(grads[i]);
+          }
+        } else {
+          for (int i = 0; i < grads.size(); ++i) {
+            grad_acc[i] = (grad_acc[i].array() + grads[i].array()).matrix();
+          }
+        }
+        batch_loss += targets[0];
+      }
+      for (int i = 0; i < grad_acc.size(); ++i) {
+        grad_acc[i] /= static_cast<float>(batch_n);
+      }
+      batch_loss /= static_cast<float>(batch_n);
+
+      opt.Update(0.001f, {0, 1, 2, 3, 4, 5, 6}, grad_acc, model);
+
+      epoch_loss += batch_loss;
+    }
+    epoch_loss /= static_cast<float>(steps_per_epoch);
+    std::cout << "Epoch " << e << ", loss " << epoch_loss << "\n";
+  }
 
   return 0;
 }
