@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include "nn/adam.h"
@@ -180,6 +181,41 @@ void draw_spirol(int w, int h, float alpha, std::vector<float>& dest) {
   }
 }
 
+void RenderSpirol(SpirolNet& network, int w, int h, 
+                  std::vector<unsigned char>& dest) {
+  azah::nn::Matrix<2, 1> xy;
+  int offset = 0;
+  for (int y = 0; y < h; ++y) {
+    float yp = static_cast<float>(y) / h * 2.0f - 1.0f;
+    for (int x = 0; x < w; ++x) {
+      float xp = static_cast<float>(x) / w * 2.0f - 1.0f;
+
+      xy(0, 0) = xp;
+      xy(1, 0) = yp;
+      network.SetConstants({0}, {xy});
+      std::vector<azah::nn::DynamicMatrix> outputs;
+      network.Outputs({0}, outputs);
+
+      float r = outputs[0].coeff(2);
+      float g = outputs[0].coeff(1);
+      float b = outputs[0].coeff(0);
+
+      unsigned char rb = static_cast<unsigned char>(
+          std::fmax(std::fmin(r * 255.0f, 255.0f), 0.0f));
+      unsigned char gb = static_cast<unsigned char>(
+          std::fmax(std::fmin(g * 255.0f, 255.0f), 0.0f));
+      unsigned char bb = static_cast<unsigned char>(
+          std::fmax(std::fmin(b * 255.0f, 255.0f), 0.0f));
+
+      dest[offset + 0] = rb;
+      dest[offset + 1] = gb;
+      dest[offset + 2] = bb;
+
+      offset += 3;
+    }
+  }
+}
+
 void Sample(const std::vector<float>& img, int w, int h, 
             azah::nn::Matrix<2, 1>& x, azah::nn::Matrix<3, 1>& y) {
   x = azah::nn::Matrix<2, 1>::Random();
@@ -196,6 +232,8 @@ void Sample(const std::vector<float>& img, int w, int h,
 
 int main(int argc, char* argv[]) {
   std::vector<float> src(512 * 512 * 3, 0.0f);
+  std::vector<unsigned char> img(512 * 512 * 3, 0.0f);
+
   draw_spirol(512, 512, 0.1f, src);
 
   SpirolNet model;
@@ -209,6 +247,7 @@ int main(int argc, char* argv[]) {
 
   azah::nn::Adam opt(model, 0.9f, 0.999f);
 
+  std::ofstream imgfile("frames.dat", std::ios::out | std::ios::binary);
   for (int e = 0; e < epochs; ++e) {
 
     float epoch_loss = 0.0f;
@@ -244,9 +283,14 @@ int main(int argc, char* argv[]) {
 
       epoch_loss += batch_loss;
     }
+
+    RenderSpirol(model, 512, 512, img);
+    imgfile.write(reinterpret_cast<char*>(img.data()), sizeof(unsigned char) * img.size());
+
     epoch_loss /= static_cast<float>(steps_per_epoch);
     std::cout << "Epoch " << e << ", loss " << epoch_loss << "\n";
   }
+  imgfile.close();
 
   return 0;
 }
