@@ -31,7 +31,7 @@ set(SRC_NN_CORE
     nn/op/layer_norm.h
     nn/op/matmul.h
     nn/op/mean.h
-	nn/op/mse.h
+	  nn/op/mse.h
     nn/op/multiply.h
     nn/op/row_mean.h
     nn/op/scalar_fmadd.h
@@ -49,7 +49,7 @@ set(SRC_NN_CORE
     nn/unary_op.h
     nn/variable.h
     nn/variable_base.h
-	${SRC_NN_ACTIVATION})
+	  ${SRC_NN_ACTIVATION})
 
 set(SRC_MCTS
     mcts/state_cache.h)
@@ -57,7 +57,7 @@ set(SRC_MCTS
 target_sources(azah PRIVATE
     main.cc
     ${SRC_NN_CORE}
-	${SRC_MCTS})
+	  ${SRC_MCTS})
 
 # ------------------------------------------------------------------------------
 
