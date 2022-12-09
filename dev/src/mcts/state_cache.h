@@ -1,14 +1,14 @@
 #ifndef AZAH_MCTS_STATE_CACHE_H_
 #define AZAH_MCTS_STATE_CACHE_H_
 
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
+#include <atomic>
 #include <limits>
-#include <mutex>
-#include <tuple>
-#include <vector>
+#include <shared_mutex>
 
 #include "absl/hash/hash.h"
 #include "glog/logging.h"
@@ -16,16 +16,15 @@
 namespace azah {
 namespace mcts {
 
-template <typename HashKey, typename Value, int Blocks, int BlockDataBytes, 
-          int RowsPerBlock>
+template <typename HashKey, typename Value, int Blocks, int RowsPerBlock,
+          int ValuesPerRow>
 class StateCache {
-  static_assert(
-      (BlockDataBytes % sizeof(Value) == 0) 
-          && (BlockDataBytes >= sizeof(Value)), 
-      "Size of Value must evenly divide BlockDataBytes");
-
+  static_assert(ValuesPerRow <= 65536, "ValuesPerRow cannot exceed uint16 max.");
+ 
  public:
-  StateCache() : blocks_(new Block[Blocks]) {}
+  StateCache() : blocks_(new Block[Blocks]) {
+    Clear();
+  }
  
   class Key {
     friend class StateCache;
@@ -36,21 +35,21 @@ class StateCache {
     std::size_t hashed_key_;
   };
 
-  bool TryLoad(const Key& key, Value* dest, uint16_t dest_size_elements) {
+  bool TryLoad(const Key& key, Value* dest, int dest_size_elements) {
     Block& block = KeyToBlock(key);
-    std::unique_lock<std::mutex> lock(block.m);
+    std::shared_lock<std::shared_mutex> read_lock(block.m);
 
     for (int row_i = 0; row_i < block.rows_n; ++row_i) {
       Row& row = block.rows[row_i];
       if ((row.hash != key.hashed_key_) || (row.key != key.key_ref_)) continue;
-      if (row.data_size_elements != dest_size_elements) {
+      if (row.elements_n != dest_size_elements) {
         LOG(FATAL) << "Cached data size elements does not match requested. " 
-            << row.data_size_elements << " vs. " << dest_size_elements;
+            << row.elements_n << " vs. " << dest_size_elements;
       }
-      ++row.hit_count;
+      row.hit_count.fetch_add(1, std::memory_order_relaxed);
       std::memcpy(
           static_cast<void*>(dest), 
-          static_cast<void*>(&(block.data[row.data_offset_elements])), 
+          static_cast<const void*>(&(block.data[row_i * ValuesPerRow])),
           dest_size_elements * sizeof(Value));
       return true;
     }
@@ -58,26 +57,57 @@ class StateCache {
     return false;
   }
 
-  bool TryStore(const Key& key, const Value* src, uint16_t src_size_elements) {
-    if (src_size_elements > (BlockDataBytes / sizeof(Value))) {
-      LOG(FATAL) << "Store byte limit is " << BlockDataBytes;
+  bool TryStore(const Key& key, const Value* src, int src_size_elements) {
+    if (src_size_elements > ValuesPerRow) {
+      LOG(FATAL) << "Store element limit is " << ValuesPerRow;
     }
     Block& block = KeyToBlock(key);
-    std::unique_lock<std::mutex> lock(block.m);
+    std::unique_lock<std::shared_mutex> read_write_lock(block.m);
 
+    int dest_row_i;
+    if (block.rows_n < RowsPerBlock) {
+      dest_row_i = block.rows_n++;
+    } else {
+      int i_preference = (key.hashed_key_ ^ kPreferenceSalt) % RowsPerBlock;
 
-    // Check to see if there's a hole in the array that fits.
-    // If there is, store ourselves there, leave.
-    // If there would be if we defragged:
-    //   defrag
-    //   store ourselves in the hole, leave
-    // If there isn't room at all, from biggest to smallest, make a list of what
-    //   we would have to kick. Decrease the hit_count on those things. If all
-    //   hit 0, overwrite. Otherweise, set hit counts on list to no smaller than
-    //   1. Return false
+      int fewest_hit_n = block.rows[0].hit_count.load(std::memory_order_relaxed);
+      int fewest_hit_i = 0;
+      int fewest_hit_prox = i_preference;
 
+      for (int row_i = 1; row_i < RowsPerBlock; ++row_i) {
+        Row& row = block.rows[row_i];
+        
+        int proximity = std::abs(row_i - i_preference);
+        uint32_t hit_count = row.hit_count.load(std::memory_order_relaxed);
 
+        if ((hit_count < fewest_hit_n)
+            || ((hit_count == fewest_hit_n) && (proximity < fewest_hit_prox))) {
+          fewest_hit_n = hit_count;
+          fewest_hit_i = row_i;
+          fewest_hit_prox = proximity;
+        }
+      }
 
+      if (fewest_hit_n > 1) {
+        block.rows[fewest_hit_i].hit_count.fetch_sub(1, std::memory_order_relaxed);
+        return false;
+      }
+
+      dest_row_i = fewest_hit_i;
+    }
+    Row& dest_row = block.rows[dest_row_i];
+
+    dest_row.key = key.key_ref_;
+    dest_row.hash = key.hashed_key_;
+    dest_row.hit_count.store(1, std::memory_order_relaxed);
+    dest_row.elements_n = src_size_elements;
+
+    std::memcpy(
+        static_cast<void*>(&(block.data[dest_row_i * ValuesPerRow])),
+        static_cast<const void*>(src),
+        src_size_elements * sizeof(Value));
+
+    return true;
   }
 
   void Clear() {
@@ -86,31 +116,19 @@ class StateCache {
     }
   }
 
-  static constexpr std::size_t cache_size() {
-    return Blocks * sizeof(Block) + sizeof(StateCache);
-  }
-
-  static constexpr std::size_t block_size() {
-    return sizeof(Block);
-  }
-
  private:
-
   struct Row {
-    std::size_t hash;
     HashKey key;
-    uint32_t hit_count;
-
-    uint16_t data_offset_elements;
-    uint16_t data_size_elements;
+    std::size_t hash;
+    std::atomic<uint32_t> hit_count;
+    uint16_t elements_n;
   };
 
   struct Block {
-    Value data[BlockDataBytes];
+    Value data[RowsPerBlock * ValuesPerRow];
     Row rows[RowsPerBlock];
-
-    uint16_t rows_n = 0;
-    std::mutex m;
+    uint16_t rows_n;
+    std::shared_mutex m;
   };
 
   static constexpr std::size_t KeyToBlockHash(const Key& key) {
@@ -120,6 +138,8 @@ class StateCache {
   Block& KeyToBlock(const Key& key) {
     return blocks_.get()[KeyToBlockHash(key)];
   }
+
+  static constexpr std::size_t kPreferenceSalt = 0xED68495EE063E1D9;
 
   std::unique_ptr<Block[]> blocks_;
 };

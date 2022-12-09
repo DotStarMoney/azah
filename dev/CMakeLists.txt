@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # For MSVC; gives a nice project layout.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast /arch:AVX2")
 
 define_property(
   TARGET
