@@ -19,7 +19,7 @@ class VisitTable {
   VisitTable() : table_shards_(new TableShard[Shards]) {}
 
   // Thread safe.
-  int FetchInc(const HashKey& key) {
+  int Inc(const HashKey& key) {
     TableShard& shard = table_shards_[absl::HashOf(key) % Shards];
     std::unique_lock<std::mutex> read_write_lock(shard.m);
     auto [iter, is_new] = shard.table.insert({key, 1});
