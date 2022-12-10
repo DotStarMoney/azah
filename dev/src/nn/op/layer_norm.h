@@ -33,7 +33,7 @@ class LayerNorm : public Op<Rows, Cols> {
         debiased_fork_op_(debiased_op_, 2),
         square_mean_op_(debiased_fork_op_),
         scalar_inv_sqrt_op_(debiased_fork_op_, square_mean_op_),
-    fmadd_op_(scalar_inv_sqrt_op_, gamma, beta) {}
+        fmadd_op_(scalar_inv_sqrt_op_, gamma, beta) {}
 
   void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
     return this->fmadd_op_.Backprop(cycle, output_dx);
