@@ -92,7 +92,8 @@ class StateCache {
       }
 
       if (fewest_hit_n > 1) {
-        block.rows[fewest_hit_i].hit_count.fetch_sub(1, std::memory_order_relaxed);
+        block.rows[fewest_hit_i].hit_count.store(fewest_hit_n - 1, 
+                                                 std::memory_order_relaxed);
         return false;
       }
 
