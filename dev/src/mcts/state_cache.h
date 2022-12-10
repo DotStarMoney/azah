@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <limits>
+#include <memory>
 #include <shared_mutex>
 
 #include "absl/hash/hash.h"
@@ -20,22 +21,23 @@ template <typename HashKey, typename Value, int Blocks, int RowsPerBlock,
           int ValuesPerRow>
 class StateCache {
   static_assert(ValuesPerRow <= 65536, "ValuesPerRow cannot exceed uint16 max.");
- 
+
  public:
   StateCache() : blocks_(new Block[Blocks]) {
     Clear();
   }
- 
-  class Key {
+
+  class TempKey {
     friend class StateCache;
    public:
-    Key(const HashKey& key) : key_ref_(key), hashed_key_(absl::HashOf(key)) {}
+    TempKey(const HashKey& key) : key_ref_(key), hashed_key_(absl::HashOf(key)) {}
    private:
     const HashKey& key_ref_;
     std::size_t hashed_key_;
   };
 
-  bool TryLoad(const Key& key, Value* dest, int dest_size_elements) {
+  // Thread safe.
+  bool TryLoad(const TempKey& key, Value* dest, int dest_size_elements) {
     Block& block = KeyToBlock(key);
     std::shared_lock<std::shared_mutex> read_lock(block.m);
 
@@ -57,7 +59,8 @@ class StateCache {
     return false;
   }
 
-  bool TryStore(const Key& key, const Value* src, int src_size_elements) {
+  // Thread safe.
+  bool TryStore(const TempKey& key, const Value* src, int src_size_elements) {
     if (src_size_elements > ValuesPerRow) {
       LOG(FATAL) << "Store element limit is " << ValuesPerRow;
     }
@@ -110,9 +113,10 @@ class StateCache {
     return true;
   }
 
+  // Not thread safe.
   void Clear() {
     for (int block_i = 0; block_i < Blocks; ++block_i) {
-      blocks_.get()[block_i].rows_n = 0;
+      blocks_[block_i].rows_n = 0;
     }
   }
 
@@ -131,12 +135,12 @@ class StateCache {
     std::shared_mutex m;
   };
 
-  static constexpr std::size_t KeyToBlockHash(const Key& key) {
+  static constexpr std::size_t KeyToBlockHash(const TempKey& key) {
     return key.hashed_key_ % Blocks;
   }
 
-  Block& KeyToBlock(const Key& key) {
-    return blocks_.get()[KeyToBlockHash(key)];
+  Block& KeyToBlock(const TempKey& key) {
+    return blocks_[KeyToBlockHash(key)];
   }
 
   static constexpr std::size_t kPreferenceSalt = 0xED68495EE063E1D9;

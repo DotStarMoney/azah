@@ -3,7 +3,7 @@ project(azah)
 set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(azah)
-target_link_libraries(azah eigen glog absl_hash)
+target_link_libraries(azah eigen glog absl_flat_hash_map absl_hash)
 
 set(SRC_NN_ACTIVATION
     nn/activation.h
@@ -31,7 +31,7 @@ set(SRC_NN_CORE
     nn/op/layer_norm.h
     nn/op/matmul.h
     nn/op/mean.h
-	  nn/op/mse.h
+    nn/op/mse.h
     nn/op/multiply.h
     nn/op/row_mean.h
     nn/op/scalar_fmadd.h
@@ -49,15 +49,16 @@ set(SRC_NN_CORE
     nn/unary_op.h
     nn/variable.h
     nn/variable_base.h
-	  ${SRC_NN_ACTIVATION})
+    ${SRC_NN_ACTIVATION})
 
 set(SRC_MCTS
-    mcts/state_cache.h)
+    mcts/state_cache.h
+    mcts/visit_table.h)
 
 target_sources(azah PRIVATE
     main.cc
     ${SRC_NN_CORE}
-	  ${SRC_MCTS})
+    ${SRC_MCTS})
 
 # ------------------------------------------------------------------------------
 
