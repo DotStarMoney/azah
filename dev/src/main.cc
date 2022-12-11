@@ -1,37 +1,32 @@
+#include <chrono>
 #include <iostream>
 #include <tuple>
+#include <thread>
 
-#include "mcts/state_cache.h"
-#include "mcts/visit_table.h"
+#include "mcts/lock_by_key.h"
 
 int main(int argc, char* argv[]) {
-  azah::mcts::VisitTable<std::tuple<int, int>, 3> table;
+  azah::mcts::LockByKey<std::tuple<int, int>, 32> locks;
 
-  std::cout << table.Inc({1, 2}) << "\n";
-  std::cout << table.Inc({2, 3}) << "\n";
-  std::cout << table.Inc({3, 4}) << "\n";
-  std::cout << table.Inc({4, 5}) << "\n";
-  std::cout << table.Inc({5, 6}) << "\n";
+  std::thread t1([&locks]() {
+        std::cout << "Thread stalling for 2s." << "\n";
+        auto lock1 = locks.Lock({1, 2});
+        std::cout << "Thread got lock." << "\n";
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        std::cout << "Thread done." << "\n";
+      });
 
-  std::cout << table.Inc({1, 2}) << "\n";
-  std::cout << table.Inc({2, 3}) << "\n";
-  std::cout << table.Inc({3, 4}) << "\n";
-  std::cout << table.Inc({4, 5}) << "\n";
-  std::cout << table.Inc({5, 6}) << "\n";
+  {
+    std::cout << "Main stalling for 2s." << "\n";
+    auto lock1 = locks.Lock({2, 3});
+    std::cout << "Main got lock." << "\n";
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::cout << "Main done." << "\n";
+  }
 
-  table.Clear();
+  t1.join();
 
-  std::cout << table.Inc({1, 2}) << "\n";
-  std::cout << table.Inc({2, 3}) << "\n";
-  std::cout << table.Inc({3, 4}) << "\n";
-  std::cout << table.Inc({4, 5}) << "\n";
-  std::cout << table.Inc({5, 6}) << "\n";
-
-  std::cout << table.Inc({1, 2}) << "\n";
-  std::cout << table.Inc({2, 3}) << "\n";
-  std::cout << table.Inc({3, 4}) << "\n";
-  std::cout << table.Inc({4, 5}) << "\n";
-  std::cout << table.Inc({5, 6}) << "\n";
+  std::cout << "All done.";
 
   return 0;
 }

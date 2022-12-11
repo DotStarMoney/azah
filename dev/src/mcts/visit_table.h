@@ -2,7 +2,6 @@
 #define AZAH_MCTS_VISIT_TABLE_H_
 
 #include "stdint.h"
-#include "stdlib.h"
 
 #include <memory>
 #include <mutex>
@@ -19,12 +18,20 @@ class VisitTable {
   VisitTable() : table_shards_(new TableShard[Shards]) {}
 
   // Thread safe.
-  int Inc(const HashKey& key) {
+  void Inc(const HashKey& key) {
     TableShard& shard = table_shards_[absl::HashOf(key) % Shards];
     std::unique_lock<std::mutex> read_write_lock(shard.m);
     auto [iter, is_new] = shard.table.insert({key, 1});
-    if (is_new) return 1;
-    return ++(iter->second);
+    if (!is_new) ++(iter->second);
+  }
+ 
+  // Thread safe.
+  int Get(const HashKey& key) {
+    TableShard& shard = table_shards_[absl::HashOf(key) % Shards];
+    std::unique_lock<std::mutex> read_write_lock(shard.m);
+    auto iter = shard.table.find(key);
+    if (iter == shard.table.end()) return 0;
+    return iter->second;
   }
 
   // Not thread safe.

@@ -53,7 +53,8 @@ set(SRC_NN_CORE
 
 set(SRC_MCTS
     mcts/state_cache.h
-    mcts/visit_table.h)
+    mcts/visit_table.h
+    mcts/lock_by_key.h)
 
 target_sources(azah PRIVATE
     main.cc
