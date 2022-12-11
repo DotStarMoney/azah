@@ -56,10 +56,15 @@ set(SRC_MCTS
     mcts/visit_table.h
     mcts/lock_by_key.h)
 
+set(SRC_GAMES
+    games/tictactoe/model.h
+    games/tictactoe/model.cc)
+
 target_sources(azah PRIVATE
     main.cc
     ${SRC_NN_CORE}
-    ${SRC_MCTS})
+    ${SRC_MCTS}
+    ${SRC_GAMES})
 
 # ------------------------------------------------------------------------------
 
