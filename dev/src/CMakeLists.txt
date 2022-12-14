@@ -5,11 +5,20 @@ set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 add_executable(azah)
 target_link_libraries(azah eigen glog absl_flat_hash_map absl_hash)
 
+set(SRC_GAMES
+    games/tictactoe/model.h
+    games/tictactoe/model.cc)
+
+set(SRC_MCTS
+    mcts/state_cache.h
+    mcts/visit_table.h
+    mcts/lock_by_key.h)
+
 set(SRC_NN_ACTIVATION
     nn/activation.h
     nn/activation.cc)
 
-set(SRC_NN_CORE
+set(SRC_NN
     nn/adam.h
     nn/adam.cc
     nn/binary_op.h
@@ -51,20 +60,20 @@ set(SRC_NN_CORE
     nn/variable_base.h
     ${SRC_NN_ACTIVATION})
 
-set(SRC_MCTS
-    mcts/state_cache.h
-    mcts/visit_table.h
-    mcts/lock_by_key.h)
-
-set(SRC_GAMES
-    games/tictactoe/model.h
-    games/tictactoe/model.cc)
+set(SRC_THREAD
+    thread/gateway.h
+    thread/gateway.cc
+		thread/semaphore.h
+    thread/semaphore.cc
+		thread/dispatch_queue.h
+		thread/dispatch_queue.cc)
 
 target_sources(azah PRIVATE
     main.cc
-    ${SRC_NN_CORE}
-    ${SRC_MCTS}
-    ${SRC_GAMES})
+		${SRC_GAMES}
+		${SRC_MCTS}
+    ${SRC_NN}
+		${SRC_THREAD})
 
 # ------------------------------------------------------------------------------
 
