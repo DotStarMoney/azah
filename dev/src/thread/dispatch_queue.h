@@ -45,7 +45,7 @@ class DispatchQueue {
       LOG(FATAL) << "Queue full: adding items may cause deadlock.";
     }
     WorkElement& work_element =
-        buffer_[slot_.fetch_add(1, std::memory_order_seq_cst) % buffer_.size()];
+        buffer_[slot_.fetch_add(1, std::memory_order_relaxed) % buffer_.size()];
     work_element.work = std::move(work);
     work_element.ready.exchange(true, std::memory_order_acquire);
     buffer_elem_remain_.V();
@@ -74,7 +74,7 @@ class DispatchQueue {
               buffer_elem_remain_.P();
               if (exit_) return;
               WorkElement& work_element =
-                  buffer_[slot_working_.fetch_add(1, std::memory_order_seq_cst)
+                  buffer_[slot_working_.fetch_add(1, std::memory_order_relaxed)
                       % buffer_.size()];
               while (!work_element.ready.load(std::memory_order_relaxed)) {}
               (*(work_element.work))(this->thread_state_[i]);
