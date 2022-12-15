@@ -25,20 +25,26 @@ void Semaphore::P() {
   if (r_.fetch_add(-1, std::memory_order_acquire) <= 0) cv_.wait(s_lock);
 }
 
-bool Semaphore::TryP() {
-  if (r_.fetch_add(-1, std::memory_order_acquire) <= 0) {
-    std::unique_lock<std::shared_mutex> lock(m_);
-    r_.fetch_add(1, std::memory_order_release);
-    cv_.notify_one();
-    return false;
-  }
-  return true;
-}
-
 void Semaphore::V() {
   if (r_.fetch_add(1, std::memory_order_release) < 0) {
     std::unique_lock<std::shared_mutex> lock(m_);
     cv_.notify_one();
+  }
+}
+
+void Semaphore::Wait() {
+  std::shared_lock<std::shared_mutex> s_lock(m_);
+  if (r_.load(std::memory_order_acquire) <= 0) cv_.wait(s_lock);
+}
+
+void Semaphore::Dec() {
+  r_.fetch_add(-1, std::memory_order_acquire);
+}
+
+void Semaphore::Inc() {
+  if (r_.fetch_add(1, std::memory_order_release) == 0) {
+    std::unique_lock<std::shared_mutex> lock(m_);
+    cv_.notify_all();
   }
 }
 

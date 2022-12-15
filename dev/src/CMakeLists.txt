@@ -61,8 +61,6 @@ set(SRC_NN
     ${SRC_NN_ACTIVATION})
 
 set(SRC_THREAD
-    thread/gateway.h
-    thread/gateway.cc
     thread/semaphore.h
     thread/semaphore.cc
     thread/dispatch_queue.h)

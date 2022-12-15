@@ -24,6 +24,7 @@ class DispatchQueue {
       buffer_avail_(queue_length),
       buffer_elem_remain_(0),
       exit_(false),
+      drain_(1),
       slot_(0),
       slot_working_(0),
       buffer_(queue_length),
@@ -31,18 +32,36 @@ class DispatchQueue {
     if (queue_length <= 0) {
       LOG(FATAL) << "Queue length must be greater than 0.";
     }
-    Reload();
+    for (int i = 0; i < threads; ++i) {
+      auto dispatch_fn = [this, i] {
+        for (;;) {
+          buffer_elem_remain_.P();
+          if (exit_) return;
+          WorkElement& work_element =
+              buffer_[slot_working_++ % buffer_.size()];
+          while (!work_element.ready.load(std::memory_order_relaxed)) {}
+          work_element(this->thread_state_[i]);
+          drain_.Inc();
+          work_element.ready.exchange(false, std::memory_order_release);
+          buffer_avail_.V();
+        }
+      };
+      workers_.emplace_back(dispatch_fn);
+    }
   }
 
   ~DispatchQueue() {
-    Evacuate();
+    exit_ = true;
+    buffer_elem_remain_.Drain();
+    for (auto& worker : workers_) {
+      worker.join();
+    }
   }
 
   // Thread safe.
   void AddWork(std::unique_ptr<CallableWorkItem> work) {
-    if (!buffer_avail_.TryP()) {
-      LOG(FATAL) << "Queue full: adding items may cause deadlock.";
-    }
+    drain_.Dec();
+    buffer_avail_.P();
     WorkElement& work_element =
         buffer_[slot_.fetch_add(1, std::memory_order_acquire) % buffer_.size()];
     work_element.work = std::move(work);
@@ -50,49 +69,22 @@ class DispatchQueue {
     buffer_elem_remain_.V();
   }
 
+  // Thread safe.
+  void Drain() {
+    drain_.Wait();
+  }
+
   // Not thread safe.
   void SetThreadState(uint32_t thread, ThreadState* state) {
     thread_state_[thread] = state;
   }
 
-  // Not thread safe.
-  void BlockUntilEmpty() {
-    Evacuate();
-    Reload();
-  }
-
  private:
-  void Evacuate() {
-    exit_ = true;
-    buffer_elem_remain_.Drain();
-    for (auto& worker : workers_) {
-      worker.join();
-    }
-    exit_ = false;
-  }
-
-  void Reload() {
-    workers_.clear();
-    for (int i = 0; i < threads; ++i) {
-      auto dispatch_fn = [this, i] {
-            for (;;) {
-              buffer_elem_remain_.P();
-              if (exit_) return;
-              WorkElement& work_element =
-                buffer_[slot_working_++ % buffer_.size()];
-              while (!work_element.ready.load(std::memory_order_relaxed)) {}
-              work_element(this->thread_state_[i]);
-              work_element.ready.exchange(false, std::memory_order_release);
-              buffer_avail_.V();
-            }
-          };
-      workers_.emplace_back(dispatch_fn);
-    }
-  }
-
   Semaphore buffer_avail_;
   Semaphore buffer_elem_remain_;
   std::atomic_bool exit_;
+
+  Semaphore drain_;
 
   std::atomic_uint32_t slot_;
   uint32_t slot_working_;

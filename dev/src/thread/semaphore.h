@@ -15,11 +15,31 @@ class Semaphore {
 
   Semaphore(int32_t init_resource);
 
-  void P();
-  bool TryP();
+  // Mode 1: limited resource synchronization
+  //
 
+  // Take one resource, wait if count is <= 0.
+  void P();
+  
+  // Return one resource.
   void V();
 
+  // Mode 2: wait for completion
+  //
+ 
+  // Wait for counter to be > 0.
+  void Wait();
+
+  // Increment counter.
+  void Inc();
+
+  // Decrement counter.
+  void Dec();
+
+  //
+  //
+
+  // Release all waiters, destroying the semaphore.
   void Drain();
 
  private:
