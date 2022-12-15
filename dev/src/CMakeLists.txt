@@ -63,17 +63,16 @@ set(SRC_NN
 set(SRC_THREAD
     thread/gateway.h
     thread/gateway.cc
-		thread/semaphore.h
+    thread/semaphore.h
     thread/semaphore.cc
-		thread/dispatch_queue.h
-		thread/dispatch_queue.cc)
+    thread/dispatch_queue.h)
 
 target_sources(azah PRIVATE
     main.cc
-		${SRC_GAMES}
-		${SRC_MCTS}
+    ${SRC_GAMES}
+    ${SRC_MCTS}
     ${SRC_NN}
-		${SRC_THREAD})
+    ${SRC_THREAD})
 
 # ------------------------------------------------------------------------------
 
