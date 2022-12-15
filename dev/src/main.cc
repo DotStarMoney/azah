@@ -3,6 +3,8 @@
 
 #include "thread/dispatch_queue.h"
 
+// ADD WARM UP WITH STRAIGHT MCTS
+
 std::mutex m;
 
 class State {
@@ -49,6 +51,16 @@ int main(int argc, char* argv[]) {
   queue.SetThreadState(1, &(local_state[1]));
   queue.SetThreadState(2, &(local_state[2]));
   queue.SetThreadState(3, &(local_state[3]));
+
+  queue.AddWork(std::make_unique<Work>(&queue, true, 1));
+  queue.AddWork(std::make_unique<Work>(&queue, true, 2));
+  queue.AddWork(std::make_unique<Work>(&queue, true, 3));
+  queue.AddWork(std::make_unique<Work>(&queue, true, 4));
+  queue.AddWork(std::make_unique<Work>(&queue, true, 5));
+
+  queue.Drain();
+
+  std::cout << "NEXT" << std::endl;
 
   queue.AddWork(std::make_unique<Work>(&queue, true, 1));
   queue.AddWork(std::make_unique<Work>(&queue, true, 2));
