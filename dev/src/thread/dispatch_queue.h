@@ -27,7 +27,8 @@ class DispatchQueue {
       slot_(0),
       slot_working_(0),
       buffer_(queue_length),
-      thread_state_(threads, nullptr) {
+      thread_state_(threads, nullptr),
+      threads_(threads) {
     if (queue_length <= 0) {
       LOG(FATAL) << "Queue length must be greater than 0.";
     }
@@ -44,7 +45,7 @@ class DispatchQueue {
       LOG(FATAL) << "Queue full: adding items may cause deadlock.";
     }
     WorkElement& work_element =
-        buffer_[slot_.fetch_add(1, std::memory_order_acquire) % buffer_.size()];
+        buffer_[slot_.fetch_add(1, std::memory_order_seq_cst) % buffer_.size()];
     work_element.work = std::move(work);
     work_element.ready.exchange(true, std::memory_order_acquire);
     buffer_elem_remain_.V();
@@ -53,12 +54,6 @@ class DispatchQueue {
   // Not thread safe.
   void SetThreadState(uint32_t thread, ThreadState* state) {
     thread_state_[thread] = state;
-  }
-
-  // Not thread safe.
-  void BlockUntilEmpty() {
-    Evacuate();
-    Reload();
   }
 
  private:
@@ -73,15 +68,16 @@ class DispatchQueue {
 
   void Reload() {
     workers_.clear();
-    for (int i = 0; i < threads; ++i) {
+    for (int i = 0; i < threads_; ++i) {
       auto dispatch_fn = [this, i] {
             for (;;) {
               buffer_elem_remain_.P();
               if (exit_) return;
               WorkElement& work_element =
-                buffer_[slot_working_++ % buffer_.size()];
+                  buffer_[slot_working_.fetch_add(1, std::memory_order_seq_cst)
+                      % buffer_.size()];
               while (!work_element.ready.load(std::memory_order_relaxed)) {}
-              work_element(this->thread_state_[i]);
+              (*(work_element.work))(this->thread_state_[i]);
               work_element.ready.exchange(false, std::memory_order_release);
               buffer_avail_.V();
             }
@@ -95,7 +91,7 @@ class DispatchQueue {
   std::atomic_bool exit_;
 
   std::atomic_uint32_t slot_;
-  uint32_t slot_working_;
+  std::atomic_uint32_t slot_working_;
 
   struct WorkElement {
     WorkElement() : ready(false) {}
@@ -106,6 +102,7 @@ class DispatchQueue {
 
   std::vector<std::thread> workers_;
   std::vector<ThreadState*> thread_state_;
+  const uint32_t threads_;
 };
 
 }  // namespace thread
