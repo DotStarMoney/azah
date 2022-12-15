@@ -1,8 +1,5 @@
-#include <chrono>
 #include <iostream>
-#include <memory>
 #include <mutex>
-#include <thread>
 
 #include "thread/dispatch_queue.h"
 
@@ -42,12 +39,16 @@ class Work {
 };
 
 int main(int argc, char* argv[]) {
-  azah::thread::DispatchQueue<Work, State> queue(2, 16);
+  azah::thread::DispatchQueue<Work, State> queue(4, 16);
 
-  State local_state[] = {0, 1};
+  std::cout << "Starting..." << std::endl;
+
+  State local_state[] = {0, 1, 2, 3};
 
   queue.SetThreadState(0, &(local_state[0]));
   queue.SetThreadState(1, &(local_state[1]));
+  queue.SetThreadState(2, &(local_state[2]));
+  queue.SetThreadState(3, &(local_state[3]));
 
   queue.AddWork(std::make_unique<Work>(&queue, true, 1));
   queue.AddWork(std::make_unique<Work>(&queue, true, 2));
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]) {
   queue.AddWork(std::make_unique<Work>(&queue, true, 4));
   queue.AddWork(std::make_unique<Work>(&queue, true, 5));
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  queue.Drain();
 
   return 0;
 }

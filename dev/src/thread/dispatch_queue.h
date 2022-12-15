@@ -28,8 +28,7 @@ class DispatchQueue {
       slot_(0),
       slot_working_(0),
       buffer_(queue_length),
-      thread_state_(threads, nullptr),
-      threads_(threads) {
+      thread_state_(threads, nullptr) {
     if (queue_length <= 0) {
       LOG(FATAL) << "Queue length must be greater than 0.";
     }
@@ -38,10 +37,11 @@ class DispatchQueue {
         for (;;) {
           buffer_elem_remain_.P();
           if (exit_) return;
-          WorkElement& work_element =
-              buffer_[slot_working_++ % buffer_.size()];
+          WorkElement& work_element = buffer_[
+              slot_working_.fetch_add(1, std::memory_order_relaxed) 
+                  % buffer_.size()];
           while (!work_element.ready.load(std::memory_order_relaxed)) {}
-          work_element(this->thread_state_[i]);
+          (*(work_element.work))(this->thread_state_[i]);
           drain_.Inc();
           work_element.ready.exchange(false, std::memory_order_release);
           buffer_avail_.V();
@@ -99,7 +99,6 @@ class DispatchQueue {
 
   std::vector<std::thread> workers_;
   std::vector<ThreadState*> thread_state_;
-  const uint32_t threads_;
 };
 
 }  // namespace thread
