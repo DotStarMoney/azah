@@ -16,13 +16,20 @@ class Game {
 
   virtual const std::string& state_uid() const = 0;
 
-  virtual int current_player_i() const = 0;
-  virtual int current_moves_n() const = 0;
-  virtual bool game_over() const = 0;
-  virtual int winning_player_i() const = 0;
+  virtual int CurrentPlayerI() const = 0;
+  virtual int CurrentMovesN() const = 0;
+
+  enum class GameState {
+    kOngoing = 0,
+    kWinner = 1,
+    kTie = 2
+  };
+  virtual GameState State() const = 0;
+  
+  virtual int WinningPlayerI() const = 0;
   virtual int PolicyToMoveI(const std::span<float>& policy) const = 0;
 
-  virtual Game MakeMove(int move_i) = 0;
+  virtual void MakeMove(int move_i) = 0;
 };
 
 }  // namespace games

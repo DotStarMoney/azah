@@ -1,4 +1,4 @@
-#include "model.h"
+#include "tictactoe_network.h"
 
 namespace azah {
 namespace games {

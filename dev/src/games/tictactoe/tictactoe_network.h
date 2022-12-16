@@ -1,5 +1,5 @@
-#ifndef AZAH_GAMES_TICTACTOE_MODEL_H_
-#define AZAH_GAMES_TICTACTOE_MODEL_H_
+#ifndef AZAH_GAMES_TICTACTOE_TICTACTOE_NETWORK_H_
+#define AZAH_GAMES_TICTACTOE_TICTACTOE_NETWORK_H_
 
 #include "../../nn/constant.h"
 #include "../../nn/init.h"
@@ -23,7 +23,7 @@ class TictactoeNetwork : public nn::Network {
   static constexpr int kLayer1Depth = 32;
   static constexpr int kLayer2Depth = 32;
 
-  // HW flattened board. 1 = X, 0 = N/A, -1 = O.
+  // HW flattened board. 1 = P1, 0 = N/A, -1 = P2.
   nn::Constant<9, 1> input_;
 
   // Layer 1
@@ -71,4 +71,4 @@ class TictactoeNetwork : public nn::Network {
 }  // namespace games
 }  // namespace azah
 
-#endif  // AZAH_GAMES_TICTACTOE_MODEL_H_
+#endif  // AZAH_GAMES_TICTACTOE_TICTACTOE_NETWORK_H_

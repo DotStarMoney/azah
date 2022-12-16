@@ -6,10 +6,10 @@ add_executable(azah)
 target_link_libraries(azah eigen glog absl_flat_hash_map absl_hash)
 
 set(SRC_GAMES_TICTACTOE_H
-    games/tictactoe/game.h
-    games/tictactoe/model.h)
+    games/tictactoe/tictactoe.h
+    games/tictactoe/tictactoe_network.h)
 set(SRC_GAMES_TICTACTOE_C
-    games/tictactoe/model.cc)
+    games/tictactoe/tictactoe_network.cc)
 source_group("Header Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_H})
 source_group("Source Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_C})
 set(SRC_GAMES_TICTACTOE
