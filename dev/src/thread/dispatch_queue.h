@@ -34,19 +34,19 @@ class DispatchQueue {
     }
     for (int i = 0; i < threads; ++i) {
       auto dispatch_fn = [this, i] {
-        for (;;) {
-          buffer_elem_remain_.P();
-          if (exit_) return;
-          WorkElement& work_element = buffer_[
-              slot_working_.fetch_add(1, std::memory_order_relaxed) 
-                  % buffer_.size()];
-          while (!work_element.ready.load(std::memory_order_relaxed)) {}
-          (*(work_element.work))(this->thread_state_[i]);
-          drain_.Inc();
-          work_element.ready.exchange(false, std::memory_order_release);
-          buffer_avail_.V();
-        }
-      };
+            for (;;) {
+              buffer_elem_remain_.P();
+              if (exit_) return;
+              WorkElement& work_element = buffer_[
+                  slot_working_.fetch_add(1, std::memory_order_relaxed) 
+                      % buffer_.size()];
+              while (!work_element.ready.load(std::memory_order_relaxed)) {}
+              (*(work_element.work))(this->thread_state_[i]);
+              drain_.Inc();
+              work_element.ready.exchange(false, std::memory_order_release);
+              buffer_avail_.V();
+            }
+          };
       workers_.emplace_back(dispatch_fn);
     }
   }

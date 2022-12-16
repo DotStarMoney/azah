@@ -5,29 +5,50 @@ set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 add_executable(azah)
 target_link_libraries(azah eigen glog absl_flat_hash_map absl_hash)
 
-set(SRC_GAMES
-    games/tictactoe/model.h
+set(SRC_GAMES_TICTACTOE_H
+    games/tictactoe/game.h
+    games/tictactoe/model.h)
+set(SRC_GAMES_TICTACTOE_C
     games/tictactoe/model.cc)
+source_group("Header Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_H})
+source_group("Source Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_C})
+set(SRC_GAMES_TICTACTOE
+    ${SRC_GAMES_TICTACTOE_H}
+    ${SRC_GAMES_TICTACTOE_C})
+    
+set(SRC_GAMES_H
+    games/game.h)
+source_group("Header Files\\games" FILES ${SRC_GAMES_H})
+set(SRC_GAMES
+    ${SRC_GAMES_H}
+    ${SRC_GAMES_TICTACTOE})
 
-set(SRC_MCTS
+set(SRC_MCTS_H
     mcts/state_cache.h
     mcts/visit_table.h
     mcts/lock_by_key.h)
+source_group("Header Files\\mcts" FILES ${SRC_MCTS_H})
+set(SRC_MCTS
+    ${SRC_MCTS_H})
 
-set(SRC_NN_ACTIVATION
-    nn/activation.h
+set(SRC_NN_ACTIVATION_H
+    nn/activation.h)
+set(SRC_NN_ACTIVATION_C
     nn/activation.cc)
+source_group("Header Files\\nn" FILES ${SRC_NN_ACTIVATION_H})
+source_group("Source Files\\nn" FILES ${SRC_NN_ACTIVATION_C})
+set(SRC_NN_ACTIVATION
+    ${SRC_NN_ACTIVATION_H}
+    ${SRC_NN_ACTIVATION_C})
 
-set(SRC_NN
+set(SRC_NN_H
     nn/adam.h
-    nn/adam.cc
     nn/binary_op.h
     nn/constant.h
     nn/constant_base.h
     nn/data_types.h
     nn/init.h
     nn/network.h
-    nn/network.cc
     nn/node.h
     nn/node_base.h
     nn/op.h
@@ -57,13 +78,27 @@ set(SRC_NN
     nn/sgd_optimizer.h
     nn/unary_op.h
     nn/variable.h
-    nn/variable_base.h
+    nn/variable_base.h)
+set(SRC_NN_C
+    nn/adam.cc
+    nn/network.cc)
+source_group("Header Files\\nn" FILES ${SRC_NN_H})
+source_group("Source Files\\nn" FILES ${SRC_NN_C})
+set(SRC_NN
+    ${SRC_NN_H}
+    ${SRC_NN_C}
     ${SRC_NN_ACTIVATION})
 
-set(SRC_THREAD
+set(SRC_THREAD_H
     thread/semaphore.h
-    thread/semaphore.cc
     thread/dispatch_queue.h)
+set(SRC_THREAD_C
+    thread/semaphore.cc)
+source_group("Header Files\\thread" FILES ${SRC_THREAD_H})
+source_group("Source Files\\thread" FILES ${SRC_THREAD_C})
+set(SRC_THREAD
+    ${SRC_THREAD_H}
+    ${SRC_THREAD_C})
 
 target_sources(azah PRIVATE
     main.cc
