@@ -20,7 +20,8 @@ namespace mcts {
 template <typename HashKey, typename Value, int Blocks, int RowsPerBlock,
           int ValuesPerRow>
 class StateCache {
-  static_assert(ValuesPerRow <= 65536, "ValuesPerRow cannot exceed uint16 max.");
+  static_assert(ValuesPerRow <= 65536, 
+                "ValuesPerRow cannot exceed uint16 max.");
 
  public:
   StateCache() : blocks_(new Block[Blocks]) {
@@ -30,7 +31,8 @@ class StateCache {
   class TempKey {
     friend class StateCache;
    public:
-    TempKey(const HashKey& key) : key_ref_(key), hashed_key_(absl::HashOf(key)) {}
+    TempKey(const HashKey& key) : 
+        key_ref_(key), hashed_key_(absl::HashOf(key)) {}
    private:
     const HashKey& key_ref_;
     std::size_t hashed_key_;
@@ -73,7 +75,8 @@ class StateCache {
     } else {
       int i_preference = (key.hashed_key_ ^ kPreferenceSalt) % RowsPerBlock;
 
-      int fewest_hit_n = block.rows[0].hit_count.load(std::memory_order_relaxed);
+      int fewest_hit_n = block.rows[0].hit_count.load(
+          std::memory_order_relaxed);
       int fewest_hit_i = 0;
       int fewest_hit_prox = i_preference;
 

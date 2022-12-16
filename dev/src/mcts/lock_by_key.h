@@ -16,7 +16,8 @@ class LockByKey {
 
   // Thread safe.
   std::unique_lock<std::mutex> Lock(const HashKey& key) {
-    return std::unique_lock<std::mutex>(lock_shards_[absl::HashOf(key) % Shards]);
+    return std::unique_lock<std::mutex>(
+        lock_shards_[absl::HashOf(key) % Shards]);
   }
 
  private:
