@@ -10,9 +10,10 @@ namespace tictactoe {
 
 Tictactoe::Tictactoe() : 
     board_{Mark::kNone, Mark::kNone, Mark::kNone,
-            Mark::kNone, Mark::kNone, Mark::kNone,
-            Mark::kNone, Mark::kNone, Mark::kNone},
-    x_move_(true) {
+           Mark::kNone, Mark::kNone, Mark::kNone,
+           Mark::kNone, Mark::kNone, Mark::kNone},
+    x_move_(true),
+    uid_("_________") {
   UpdateUid();
 }
 
@@ -160,12 +161,9 @@ void Tictactoe::MakeMove(int move_i) {
 }
 
 void Tictactoe::UpdateUid() {
-  char repr[10];
   for (int i = 0; i < 9; ++i) {
-    repr[i] = static_cast<char>(board_[i]);
+    uid_[i] = static_cast<char>(board_[i]);
   }
-  repr[9] = '\0';
-  uid_ = repr;
 }
 
 }  // namespace tictactoe
