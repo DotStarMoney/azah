@@ -27,7 +27,8 @@ set(SRC_GAMES
 set(SRC_MCTS_H
     mcts/state_cache.h
     mcts/visit_table.h
-    mcts/lock_by_key.h)
+    mcts/lock_by_key.h
+    mcts/self_player.h)
 source_group("Header Files\\mcts" FILES ${SRC_MCTS_H})
 set(SRC_MCTS
     ${SRC_MCTS_H})
