@@ -1,5 +1,9 @@
 #include "tictactoe.h"
 
+#include <array>
+#include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "glog/logging.h"
@@ -47,76 +51,55 @@ int Tictactoe::CurrentMovesN() const {
   return total_moves;
 }
 
-Game::GameState Tictactoe::State() const {
-  for (int row = 0; row < 3; ++row) {
-    if ((board_[row * 3 + 0] != Mark::kNone) 
-        && (board_[row * 3 + 0] == board_[row * 3 + 1])
-        && (board_[row * 3 + 1] == board_[row * 3 + 2])) {
-      return GameState::kWinner;
-    }
-  }
-
-  for (int col = 0; col < 3; ++col) {
-    if ((board_[col] != Mark::kNone) 
-        && (board_[col + 0] == board_[col + 3])
-        && (board_[col + 3] == board_[col + 6])) {
-      return GameState::kWinner;
-    }
-  }
-  
-  if ((board_[0] != Mark::kNone)
-      && (board_[0] == board_[4])
-      && (board_[4] == board_[8])) {
-    return GameState::kWinner;
-  }
-  
-  if ((board_[2] != Mark::kNone)
-      && (board_[2] == board_[4])
-      && (board_[4] == board_[6])) {
-    return GameState::kWinner;
-  }
-
+Game<2>::GameState Tictactoe::State() const {
   for (int i = 0; i < 9; ++i) {
     if (board_[i] == Mark::kNone) return GameState::kOngoing;
   }
-
-  return GameState::kTie;
+  return GameState::kOver;
 }
 
-int Tictactoe::WinningPlayerI() const {
-  if (State() != GameState::kWinner) {
+std::array<float, 2> Tictactoe::Outcome() const {
+  if (State() != GameState::kOver) {
     LOG(FATAL) << "The game is still going or it was a tie.";
   }
 
   for (int row = 0; row < 3; ++row) {
     if ((board_[row * 3 + 0] != Mark::kNone)
-      && (board_[row * 3 + 0] == board_[row * 3 + 1])
-      && (board_[row * 3 + 1] == board_[row * 3 + 2])) {
-      return (board_[row * 3 + 0] == Mark::kX) ? 0 : 1;
+        && (board_[row * 3 + 0] == board_[row * 3 + 1])
+        && (board_[row * 3 + 1] == board_[row * 3 + 2])) {
+      return (board_[row * 3 + 0] == Mark::kX) 
+          ? std::array{1.0f, 0.0f} 
+          : std::array{0.0f, 1.0f};
     }
   }
 
   for (int col = 0; col < 3; ++col) {
     if ((board_[col] != Mark::kNone)
-      && (board_[col + 0] == board_[col + 3])
-      && (board_[col + 3] == board_[col + 6])) {
-      return (board_[col] == Mark::kX) ? 0 : 1;
+        && (board_[col + 0] == board_[col + 3])
+        && (board_[col + 3] == board_[col + 6])) {
+      return (board_[col] == Mark::kX) 
+          ? std::array{1.0f, 0.0f}
+          : std::array{0.0f, 1.0f};
     }
   }
 
   if ((board_[0] != Mark::kNone)
     && (board_[0] == board_[4])
     && (board_[4] == board_[8])) {
-    return (board_[0] == Mark::kX) ? 0 : 1;
+    return (board_[0] == Mark::kX)
+        ? std::array{1.0f, 0.0f}
+        : std::array{0.0f, 1.0f};
   }
 
   if ((board_[2] != Mark::kNone)
-    && (board_[2] == board_[4])
-    && (board_[4] == board_[6])) {
-    return (board_[2] == Mark::kX) ? 0 : 1;
+      && (board_[2] == board_[4])
+      && (board_[4] == board_[6])) {
+    return (board_[2] == Mark::kX)
+        ? std::array{1.0f, 0.0f}
+        : std::array{0.0f, 1.0f};
   }
 
-  LOG(FATAL) << "Assert... nobody won!";
+  return std::array{0.5f, 0.5f};
 }
 
 int Tictactoe::PolicyToMoveI(const std::span<float>& policy) const {
@@ -138,6 +121,10 @@ int Tictactoe::PolicyToMoveI(const std::span<float>& policy) const {
   }
 
   return max_index;
+}
+
+int Tictactoe::PolicyClassI() const {
+  return 0;
 }
 
 void Tictactoe::MakeMove(int move_i) {

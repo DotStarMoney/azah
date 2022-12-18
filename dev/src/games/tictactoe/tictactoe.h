@@ -11,7 +11,7 @@ namespace azah {
 namespace games {
 namespace tictactoe {
 
-class Tictactoe : public Game {
+class Tictactoe : public Game<2> {
  public:
   Tictactoe();
   const std::string_view name() const;
@@ -23,8 +23,9 @@ class Tictactoe : public Game {
   int CurrentPlayerI() const;
   int CurrentMovesN() const;
   GameState State() const;
-  int WinningPlayerI() const;
+  std::array<float, 2> Outcome() const;
   int PolicyToMoveI(const std::span<float>& policy) const;
+  int PolicyClassI() const;
 
   void MakeMove(int move_i);
 

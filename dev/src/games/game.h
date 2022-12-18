@@ -1,6 +1,7 @@
 #ifndef AZAH_GAMES_GAME_H_
 #define AZAH_GAMES_GAME_H_
 
+#include <array>
 #include <span>
 #include <string>
 #include <string_view>
@@ -8,6 +9,7 @@
 namespace azah {
 namespace games {
 
+template <int PlayersN>
 class Game {
  public:
   virtual const std::string_view name() const = 0;
@@ -20,14 +22,16 @@ class Game {
   virtual int CurrentMovesN() const = 0;
 
   enum class GameState {
-    kOngoing = 0,
-    kWinner = 1,
-    kTie = 2
+    kUnknown = 0,
+    kOngoing = 1,
+    kOver = 2,
   };
   virtual GameState State() const = 0;
   
-  virtual int WinningPlayerI() const = 0;
+  std::array<float, PlayersN> Outcome() const = 0;
+
   virtual int PolicyToMoveI(const std::span<float>& policy) const = 0;
+  virtual int PolicyClassI() const = 0;
 
   virtual void MakeMove(int move_i) = 0;
 };
