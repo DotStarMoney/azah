@@ -5,6 +5,9 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
+
+#include "../nn/data_types.h"
 
 namespace azah {
 namespace games {
@@ -30,7 +33,7 @@ class Game {
   
   virtual std::array<float, PlayersN> Outcome() const = 0;
 
-  virtual void StateToVector(std::span<float> out) const = 0;
+  virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;
   virtual int PolicyToMoveI(std::span<float const> policy) const = 0;
   virtual int PolicyClassI() const = 0;
 

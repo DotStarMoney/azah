@@ -5,7 +5,9 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include "../../nn/data_types.h"
 #include "../game.h"
 
 namespace azah {
@@ -26,7 +28,7 @@ class Tictactoe : public Game<2> {
   GameState State() const;
   std::array<float, 2> Outcome() const;
 
-  void StateToVector(std::span<float> out) const;
+  std::vector<nn::DynamicMatrix> StateToMatrix() const;
   int PolicyToMoveI(std::span<float const> policy) const;
   int PolicyClassI() const;
 

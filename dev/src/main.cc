@@ -54,12 +54,9 @@ int main(int argc, char* argv[]) {
   std::cout << game3.Outcome()[0] << ", " << game3.Outcome()[1] << std::endl;
 
   std::vector<float> input(9, 5);
-  game3.StateToVector(input);
+  std::vector<std::span<float>> inputs{input};
 
-  for (int i = 0; i < 9; ++i) {
-    std::cout << input[i] << ", ";
-  }
-  std::cout << std::endl;
+  std::cout << game3.StateToMatrix()[0] << std::endl;
 
   return 0;
 }

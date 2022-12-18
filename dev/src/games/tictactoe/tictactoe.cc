@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "../../nn/data_types.h"
 #include "glog/logging.h"
 
 namespace azah {
@@ -131,10 +132,13 @@ std::array<float, 2> Tictactoe::Outcome() const {
   return std::array{0.5f, 0.5f};
 }
 
-void Tictactoe::StateToVector(std::span<float> out) const {
+std::vector<nn::DynamicMatrix> Tictactoe::StateToMatrix() const {
+  nn::Matrix<9, 1> out;
   for (int i = 0; i < 9; ++i) {
-    out[i] = std::array{0.0f, 1.0f, -1.0f}[static_cast<int>(board_[i])];
+    out(i, 0) =
+        std::array{0.0f, 1.0f, -1.0f}[static_cast<int>(board_[i])];
   }
+  return {std::move(out)};
 }
 
 int Tictactoe::PolicyToMoveI(std::span<float const> policy) const {
