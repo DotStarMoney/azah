@@ -84,8 +84,8 @@ std::array<float, 2> Tictactoe::Outcome() const {
   }
 
   if ((board_[0] != Mark::kNone)
-    && (board_[0] == board_[4])
-    && (board_[4] == board_[8])) {
+      && (board_[0] == board_[4])
+      && (board_[4] == board_[8])) {
     return (board_[0] == Mark::kX)
         ? std::array{1.0f, 0.0f}
         : std::array{0.0f, 1.0f};
@@ -107,7 +107,7 @@ int Tictactoe::PolicyToMoveI(const std::span<float>& policy) const {
   float max_value = 0;
 
   int move_index = 0;
-  for (int i = 1; i < 9; ++i) {
+  for (int i = 0; i < 9; ++i) {
     if (board_[i] != Mark::kNone) continue;
     if (policy[i] > max_value) {
       max_index = move_index;
@@ -133,7 +133,7 @@ void Tictactoe::MakeMove(int move_i) {
   }
 
   int move_index = 0;
-  for (int i = 1; i < 9; ++i) {
+  for (int i = 0; i < 9; ++i) {
     if (board_[i] != Mark::kNone) continue;
     if (move_index == move_i) {
       board_[i] = x_move_ ? Mark::kX : Mark::kO;
