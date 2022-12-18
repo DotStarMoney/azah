@@ -9,6 +9,7 @@ set(SRC_GAMES_TICTACTOE_H
     games/tictactoe/tictactoe.h
     games/tictactoe/tictactoe_network.h)
 set(SRC_GAMES_TICTACTOE_C
+    games/tictactoe/tictactoe.cc
     games/tictactoe/tictactoe_network.cc)
 source_group("Header Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_H})
 source_group("Source Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_C})

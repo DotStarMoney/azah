@@ -2,6 +2,7 @@
 #define AZAH_GAMES_TICTACTOE_TICTACTOE_H_
 
 #include <array>
+#include <span>
 #include <string>
 #include <string_view>
 

@@ -7,6 +7,7 @@
 int main(int argc, char* argv[]) {
   azah::games::tictactoe::Tictactoe game;
   
+  std::cout << game.CurrentMovesN() << std::endl;
 
 
   return 0;

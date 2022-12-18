@@ -28,7 +28,7 @@ class Game {
   };
   virtual GameState State() const = 0;
   
-  std::array<float, PlayersN> Outcome() const = 0;
+  virtual std::array<float, PlayersN> Outcome() const = 0;
 
   virtual int PolicyToMoveI(const std::span<float>& policy) const = 0;
   virtual int PolicyClassI() const = 0;

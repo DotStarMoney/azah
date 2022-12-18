@@ -1,5 +1,7 @@
 #include "tictactoe_network.h"
 
+#include "../../nn/init.h"
+
 namespace azah {
 namespace games {
 namespace tictactoe {
