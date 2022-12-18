@@ -52,9 +52,38 @@ int Tictactoe::CurrentMovesN() const {
 }
 
 Game<2>::GameState Tictactoe::State() const {
+  for (int row = 0; row < 3; ++row) {
+    if ((board_[row * 3 + 0] != Mark::kNone)
+        && (board_[row * 3 + 0] == board_[row * 3 + 1])
+        && (board_[row * 3 + 1] == board_[row * 3 + 2])) {
+      return GameState::kOver;
+    }
+  }
+
+  for (int col = 0; col < 3; ++col) {
+    if ((board_[col] != Mark::kNone)
+        && (board_[col + 0] == board_[col + 3])
+        && (board_[col + 3] == board_[col + 6])) {
+      return GameState::kOver;
+    }
+  }
+
+  if ((board_[0] != Mark::kNone)
+      && (board_[0] == board_[4])
+      && (board_[4] == board_[8])) {
+    return GameState::kOver;
+  }
+
+  if ((board_[2] != Mark::kNone)
+      && (board_[2] == board_[4])
+      && (board_[4] == board_[6])) {
+    return GameState::kOver;
+  }
+
   for (int i = 0; i < 9; ++i) {
     if (board_[i] == Mark::kNone) return GameState::kOngoing;
   }
+
   return GameState::kOver;
 }
 
