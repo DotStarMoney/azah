@@ -30,7 +30,8 @@ class Game {
   
   virtual std::array<float, PlayersN> Outcome() const = 0;
 
-  virtual int PolicyToMoveI(const std::span<float>& policy) const = 0;
+  virtual void StateToVector(std::span<float> out) const = 0;
+  virtual int PolicyToMoveI(std::span<float const> policy) const = 0;
   virtual int PolicyClassI() const = 0;
 
   virtual void MakeMove(int move_i) = 0;

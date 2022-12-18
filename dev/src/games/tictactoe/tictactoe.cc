@@ -131,7 +131,13 @@ std::array<float, 2> Tictactoe::Outcome() const {
   return std::array{0.5f, 0.5f};
 }
 
-int Tictactoe::PolicyToMoveI(const std::span<float>& policy) const {
+void Tictactoe::StateToVector(std::span<float> out) const {
+  for (int i = 0; i < 9; ++i) {
+    out[i] = std::array{0.0f, 1.0f, -1.0f}[static_cast<int>(board_[i])];
+  }
+}
+
+int Tictactoe::PolicyToMoveI(std::span<float const> policy) const {
   int max_index = -1;
   float max_value = 0;
 

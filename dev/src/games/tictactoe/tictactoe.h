@@ -25,7 +25,9 @@ class Tictactoe : public Game<2> {
   int CurrentMovesN() const;
   GameState State() const;
   std::array<float, 2> Outcome() const;
-  int PolicyToMoveI(const std::span<float>& policy) const;
+
+  void StateToVector(std::span<float> out) const;
+  int PolicyToMoveI(std::span<float const> policy) const;
   int PolicyClassI() const;
 
   void MakeMove(int move_i);
