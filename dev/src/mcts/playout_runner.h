@@ -1,6 +1,9 @@
 #ifndef AZAH_MCTS_PLAYOUT_RUNNER_H_
 #define AZAH_MCTS_PLAYOUT_RUNNER_H_
 
+#include <stdint.h>
+#include <string.h>
+
 #include <algorithm>
 #include <atomic>
 #include <memory>
@@ -16,23 +19,24 @@
 #include "visit_table.h"
 #include "network_work_item.h"
 
-//
-// Need to add a better way to reference certain parts of a model from Game
-// subclasses
-//
 // Then have to finish running the model in the evaluate fn and storing it.
 
 namespace azah {
 namespace mcts {
 
 template <typename GameSubclass, typename GameNetworkSubclass, int Shards, 
-          int CacheBlocks, int CacheRowsPerBlock, int CacheValuesPerRow>
+          int CacheBlocks, int CacheRowsPerBlock>
 class PlayoutRunner {
+ private:
+  // We combine the outcome estimation and policy together in each cache row.
+  static constexpr int kCacheValuesPerRow =
+      GameSubclass::players_n() + GameSubclass::max_move_options_cache_hint();
+
   using Cache = StateCache<std::string, float, CacheBlocks, CacheRowsPerBlock,
-                           CacheValuesPerRow>;
+                           kCacheValuesPerRow>;
   using TempCacheKey = StateCache<std::string, float, CacheBlocks,
                                   CacheRowsPerBlock, 
-                                  CacheValuesPerRow>::TempKey;
+                                  kCacheValuesPerRow>::TempKey;
  public:
   PlayoutRunner(const PlayoutRunner&) = delete;
   PlayoutRunner& operator=(const PlayoutRunner&) = delete;
@@ -87,12 +91,12 @@ class PlayoutRunner {
     PlayoutResult result;
 
     result.outcome = nn::init::Zeros<GameSubclass::players_n(), 1>();
-    // The accumulated chance that the player who's move it currently is wins
+    // The accumulated chance that the player who's turn it currently is wins
     // after making one of the possible moves. We'll later divide this by the
     // number of visits to each move and select the highest one.
     std::vector<float> move_totals(0, config.game.CurrentMovesN());
     for (auto& state : playout_states) {
-      // Rotate the outcome array to move the player who's move it currently is
+      // Rotate the outcome array to move the player who's turn it currently is
       // into the first position.
       std::rotate(
           state.outcome, 
@@ -165,7 +169,7 @@ class PlayoutRunner {
   //     counter.
 
 
-  class PlayoutWorkElement : public NetworkWorkItem<GameNetworkSubclass> {
+  class PlayoutWorkElement : public GameNetworkWorkItem<GameNetworkSubclass> {
    public:
     PlayoutWorkElement(const PlayoutWorkElement&) = delete;
     PlayoutWorkElement& operator=(const PlayoutWorkElement&) = delete;
@@ -221,8 +225,6 @@ class PlayoutRunner {
     }
   };
 
-  static constexpr int kOutcomeNetworkOutput = 0;
-
   class EvaluateWorkElement : public PlayoutWorkElement {
    public:
     EvaluateWorkElement(const EvaluateWorkElement&) = delete;
@@ -242,49 +244,41 @@ class PlayoutRunner {
       int policy_n = 0;
       std::vector<nn::DynamicMatrixRef> outputs;
       if (game_.State() == GameSubclass::kOngoing) {
-        //local_network->GetVariables({game_.PolicyClassI()}, outputs);
-        //policy_n = outputs[0].size();
- 
-        //
-        // Network needs way to return size of outputs. Get this for policy_n
-        //
-
-        //
-        // Need better ways to indicate specific inputs and outputs. Should add
-        // a few methods to game which allow you to index specific inputs / 
-        // targets / policy output / outcome output / etc... 
-        //
+        policy_n = local_network->PolicyOutputSize(game_.PolicyClassI());
       }
 
-      TempCacheKey temp_key(game_.state_uid());
-      int cached_values_n = 1 + policy_n;
+      // We cache the current state's outcome + policy predictions by stacking
+      // them together.
+      int cached_values_n = GameSubclass::players_n() + policy_n;
       auto cached_output = std::make_unique<float[]>(cached_values_n);
-      if (this->runner_.state_lock_.TryLoad(temp_key, &(cached_output[0]),
-                                            cached_values_n)) {
-        this->playout_state_.eval_results_[eval_index_] = cached_output[0];
-      } else {
-        auto inputs = game_.StateToMatrix();
-        std::vector<nn::DynamicMatrixRef> model_inputs;
-        local_network->GetConstantsByTag(game_.inputs_model_tag(), 
-                                         model_inputs);
-        if (inputs.size() != model_inputs.size()) {
-          LOG(FATAL) << "Count of network constants with inputs_model_tag() "
-                     << "does not match that returned by game StateToMatrix()";
+      TempCacheKey temp_key(game_.state_uid());
+      if (!this->runner_.cache_.TryLoad(temp_key, cached_output, 
+                                        cached_values_n)) {
+        local_network->SetConstants(local_network->InputConstantIndices(),
+                                    game_.StateToMatrix());
+        std::vector<nn::DynamicMatrix> model_outputs;
+        local_network->Outputs(
+            {local_network->OutcomeOutputIndex(),
+             local_network->PolicyOutputIndices()[game_.PolicyClassI()]},
+            model_outputs);
+
+        std::memcpy(
+            cached_output.get(), 
+            model_outputs[0].data(), 
+            GameSubclass::players_n());
+
+        if (policy_n != 0) {
+          std::memcpy(
+              cached_output.get() + GameSubclass::players_n(),
+              model_outputs[1].data(),
+              policy_n);
         }
-        for (int i = 0; i < model_inputs.size(); ++i) {
-          model_inputs[i] = inputs[i];
-        }
-        std::vector<nn::DynamicMatrix> outcome;
-        local_network->Output({kOutcomeNetworkOutput}, outcome);
 
-
-
+        // If this fails, too bad.
+        this->runner_.cache_.TryStore(temp_key, cached_output, cached_values_n);
       }
 
-      // Use current game policy class to stash policy as well.
-
-
-
+      this->playout_state_.eval_results_[eval_index_] = cached_output[0];
       uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
           -1, std::memory_order_relaxed);
       if (evals_remaining > 0) return;

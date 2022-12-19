@@ -99,28 +99,6 @@ void Network::SetConstants(const std::vector<uint32_t>& constants_i,
   }
 }
 
-void Network::GetConstantsByTag(int tag, std::vector<int>& constants_i,
-                                std::vector<DynamicMatrixRef>& constants) {
-  constants_i.clear();
-  constants.clear();
-  for (int i = 0; i < constant_tags_.size(); ++i) {
-    if (constant_tags_[i] == tag) {
-      constants_i.push_back(i);
-      constants.push_back(constants_[i]->value_base());
-    }
-  }
-}
-
-void Network::GetConstantsByTag(int tag, 
-                                std::vector<DynamicMatrixRef>& constants) {
-  constants.clear();
-  for (int i = 0; i < constant_tags_.size(); ++i) {
-    if (constant_tags_[i] == tag) {
-      constants.push_back(constants_[i]->value_base());
-    }
-  }
-}
-
 Network::Network() : cycle_(0) {}
 
 void Network::AddOutput(NodeBase* output) {
@@ -138,9 +116,8 @@ void Network::AddVariable(VariableBase* variable) {
   variables_.push_back(variable);
 }
 
-void Network::AddConstant(ConstantBase* constant, int tag) {
+void Network::AddConstant(ConstantBase* constant) {
   constants_.push_back(constant);
-  constant_tags_.push_back(tag);
 }
 
 }  // namespace nn

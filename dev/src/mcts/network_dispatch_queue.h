@@ -13,19 +13,19 @@
 namespace azah {
 namespace mcts {
 
-template <typename NetworkSubclass>
+template <typename GameNetworkSubclass>
 class NetworkDispatchQueue : 
-    public thread::DispatchQueue<NetworkWorkItem<NetworkSubclass>, 
-                                 NetworkSubclass> {
+    public thread::DispatchQueue<GameNetworkWorkItem<GameNetworkSubclass>,
+                                 GameNetworkSubclass> {
  public:
   NetworkDispatchQueue(const NetworkDispatchQueue&) = delete;
   NetworkDispatchQueue& operator=(const NetworkDispatchQueue&) = delete;
 
   NetworkDispatchQueue(uint32_t threads, uint32_t queue_length) : 
-      thread::DispatchQueue<NetworkWorkItem<NetworkSubclass>, NetworkSubclass>(
-          threads, queue_length) {
+      thread::DispatchQueue<GameNetworkWorkItem<GameNetworkSubclass>, 
+                            GameNetworkSubclass>(threads, queue_length) {
     for (int i = 0; i < this->threads_n(); ++i) {
-      networks_.push_back(std::make_unique<NetworkSubclass>());
+      networks_.push_back(std::make_unique<GameNetworkSubclass>());
       SetThreadState(i, networks_.back().get());
     }
   }
@@ -45,8 +45,7 @@ class NetworkDispatchQueue :
   }
 
  private:
-  std::vector<std::unique_ptr<NetworkSubclass>> networks_;
-
+  std::vector<std::unique_ptr<GameNetworkSubclass>> networks_;
 };
 
 }  // namespace mcts

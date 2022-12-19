@@ -4,10 +4,10 @@
 namespace azah {
 namespace mcts {
 
-template <typename NetworkSubclass>
-class NetworkWorkItem {
+template <typename GameNetworkSubclass>
+class GameNetworkWorkItem {
  public:
-  virtual void operator()(NetworkSubclass* local_network) const = 0;
+  virtual void operator()(GameNetworkSubclass* local_network) const = 0;
 };
 
 }  // namespace mcts
