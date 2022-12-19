@@ -8,6 +8,7 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "../nn/data_types.h"
@@ -157,17 +158,11 @@ class PlayoutRunner {
     std::atomic<uint32_t> evals_remaining;
   };
 
-  // EvalWorkElement
-  //   - Run the model with the game vector. Deposit the est. win outcome and
-  //     visit count into the table. If we've deposited all outcomes, push
-  //     SelectWorkElement.
-  //
   // SelectWorkElement
   //   - Gather the visit counts for each move tried in a locking fashion, use 
   //     the table to select the next move. Make that move, and pass /
   //     push FanoutWorkElement(non-root). If root, increment atomic moves
   //     counter.
-
 
   class PlayoutWorkElement : public GameNetworkWorkItem<GameNetworkSubclass> {
    public:
@@ -225,6 +220,54 @@ class PlayoutRunner {
     }
   };
 
+  // Runs the model and collects the outcome and current policy. These two 1D
+  // vector values are concatenated together in the returned pointer. This also
+  // returns the size of the policy vector (the outcome vector is known by
+  // GameState::players_n()).
+  static std::tuple<std::unique_ptr<float[]>, int> QueryModelForGameState(
+      const GameSubclass& game, 
+      GameNetworkSubclass& local_network,
+      Cache& cache) {
+    int policy_n = 0;
+    std::vector<nn::DynamicMatrixRef> outputs;
+    if (game.State() == GameSubclass::kOngoing) {
+      policy_n = local_network.PolicyOutputSize(game.PolicyClassI());
+    }
+
+    // We cache the current state's outcome + policy predictions by stacking
+    // them together.
+    int cached_values_n = GameSubclass::players_n() + policy_n;
+    auto cached_output = std::make_unique<float[]>(cached_values_n);
+    TempCacheKey temp_key(game.state_uid());
+    if (!cache.TryLoad(temp_key, cached_output.get(), cached_values_n)) {
+      local_network.SetConstants(local_network.InputConstantIndices(),
+                                 game.StateToMatrix());
+      std::vector<nn::DynamicMatrix> model_outputs;
+      local_network.Outputs(
+          {
+              local_network.OutcomeOutputIndex(),
+              local_network.PolicyOutputIndices()[game.PolicyClassI()]
+          },
+          model_outputs);
+
+      std::memcpy(
+          cached_output.get(),
+          model_outputs[0].data(),
+          GameSubclass::players_n());
+
+      if (policy_n != 0) {
+        std::memcpy(
+            cached_output.get() + GameSubclass::players_n(),
+            model_outputs[1].data(),
+            policy_n);
+      }
+
+      // If this fails, too bad.
+      cache.TryStore(temp_key, cached_output.get(), cached_values_n);
+    }
+    return {std::move(cached_output), policy_n};
+  }
+
   class EvaluateWorkElement : public PlayoutWorkElement {
    public:
     EvaluateWorkElement(const EvaluateWorkElement&) = delete;
@@ -241,55 +284,45 @@ class PlayoutRunner {
             eval_index_(eval_index) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
-      int policy_n = 0;
-      std::vector<nn::DynamicMatrixRef> outputs;
-      if (game_.State() == GameSubclass::kOngoing) {
-        policy_n = local_network->PolicyOutputSize(game_.PolicyClassI());
-      }
+      auto model_output = PlayoutRunner::QueryModelForGameState(
+          game_, *local_network, this->runner_.cache_);
 
-      // We cache the current state's outcome + policy predictions by stacking
-      // them together.
-      int cached_values_n = GameSubclass::players_n() + policy_n;
-      auto cached_output = std::make_unique<float[]>(cached_values_n);
-      TempCacheKey temp_key(game_.state_uid());
-      if (!this->runner_.cache_.TryLoad(temp_key, cached_output, 
-                                        cached_values_n)) {
-        local_network->SetConstants(local_network->InputConstantIndices(),
-                                    game_.StateToMatrix());
-        std::vector<nn::DynamicMatrix> model_outputs;
-        local_network->Outputs(
-            {local_network->OutcomeOutputIndex(),
-             local_network->PolicyOutputIndices()[game_.PolicyClassI()]},
-            model_outputs);
-
-        std::memcpy(
-            cached_output.get(), 
-            model_outputs[0].data(), 
-            GameSubclass::players_n());
-
-        if (policy_n != 0) {
-          std::memcpy(
-              cached_output.get() + GameSubclass::players_n(),
-              model_outputs[1].data(),
-              policy_n);
-        }
-
-        // If this fails, too bad.
-        this->runner_.cache_.TryStore(temp_key, cached_output, cached_values_n);
-      }
-
-      this->playout_state_.eval_results_[eval_index_] = cached_output[0];
+      // Since we store the policy and outcome together with the outcome first,
+      // we only care about the first GameSubclass::player_n() values from the
+      // output, and from these we only care about the predicted odds for the
+      // player who's turn it is.
+      this->playout_state_.eval_results_[eval_index_] = 
+          model_output[game_.CurrentPlayerI()];
       uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
           -1, std::memory_order_relaxed);
       if (evals_remaining > 0) return;
 
-      // Add select work item
-
+      this->work_queue_.AddWork(
+          std::make_unique<SelectWorkElement>(
+              this->playout_state_, this->runner_, this->work_queue_);
     }
    
    private:
     const GameSubclass game_;
     int eval_index_;
+  };
+
+  class SelectWorkElement : public PlayoutWorkElement {
+   public:
+    SelectWorkElement(const SelectWorkElement&) = delete;
+    SelectWorkElement& operator=(const SelectWorkElement&) = delete;
+
+    SelectWorkElement(
+        PlayoutState& playout_state,
+        PlayoutRunner& runner,
+        NetworkDispatchQueue<GameNetworkSubclass>& work_queue) :
+            PlayoutWorkElement(playout_state, runner, work_queue) {}
+
+    void operator()(GameNetworkSubclass* local_network) const {
+      //
+      //
+      //
+    }
   };
 };
 
