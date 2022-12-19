@@ -1,6 +1,7 @@
 #ifndef AZAH_MCTS_PLAYOUT_RUNNER_H_
 #define AZAH_MCTS_PLAYOUT_RUNNER_H_
 
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -14,6 +15,12 @@
 #include "state_cache.h"
 #include "visit_table.h"
 #include "network_work_item.h"
+
+//
+// Need to add a better way to reference certain parts of a model from Game
+// subclasses
+//
+// Then have to finish running the model in the evaluate fn and storing it.
 
 namespace azah {
 namespace mcts {
@@ -51,8 +58,15 @@ class PlayoutRunner {
   };
 
   struct PlayoutResult {
+    // The outcome order-rotated s.t. the player who's move it is to make is in
+    // the first row.
     nn::Matrix<GameSubclass::players_n(), 1> outcome;
+
+    // The search proportion across predicted options actually made.
     nn::DynamicMatrix policy;
+
+    // The move option with the greatest average win proportion across playouts.
+    int max_option_i;
   };
 
   PlayoutResult Playout(const PlayoutConfig& config,
@@ -70,19 +84,41 @@ class PlayoutRunner {
     PlayoutResult result;
 
     result.outcome = nn::init::Zeros<GameSubclass::players_n(), 1>();
-    for (const auto& state : playout_states) {
+    // The accumulated chance that the player who's move it currently is wins
+    // after making one of the possible moves. We'll later divide this by the
+    // number of visits to each move and select the highest one.
+    std::vector<float> move_totals(0, config.game.CurrentMovesN());
+    for (auto& state : playout_states) {
+      // Rotate the outcome array to move the player who's move it currently is
+      // into the first position.
+      std::rotate(
+          state.outcome, 
+          state.outcome + config.game.CurrentPlayerI(), 
+          state.outcome + GameSubclass::players_n());
+
+      move_totals[state.move_index] += state.outcome[0];
+
       result.outcome = (result.outcome.array()
           + Eigen::Map<nn::Matrix<GameSubclass::players_n(), 1>>(state.outcome))
               .matrix();
     }
     result.outcome /= static_cast<float>(config.n);
-
+    
+    // The number of times each move at the root state was visited across
+    // playouts.
     std::vector<int> moves_searched(0, config.game.CurrentMovesN());
     for (const auto& state : playout_states) {
       ++(moves_searched[state.move_index]);
     }
     result.policy = config.game.MoveVisitCountToPolicy(moves_searched);
     
+    for (int i = 0; i < config.game.CurrentMovesN(); ++i) {
+      move_totals[i] /= static_cast<float>(moves_searched[i]);
+    }
+    result.max_option_i = std::distance(
+        move_totals.begin(), 
+        std::max_element(move_totals.begin(), move_totals.end()));
+
     return result;
   }
 
@@ -101,9 +137,6 @@ class PlayoutRunner {
     // Index of the move made after fanning out the root for this playout.
     int move_index;
 
-    // Number of completed evaluations in the current fanout for this playout.
-    std::atomic<uint32_t> evals_remaining;
-
     // Whether or not the playout is currently evaluating the root.
     bool on_root;
 
@@ -111,7 +144,10 @@ class PlayoutRunner {
     GameSubclass game;
 
     // The results of evaluating each move in the current game state.
-    float eval_results[GameSubclass::max_move_options_n()];
+    std::vector<float> eval_results;
+
+    // Number of completed evaluations in the current fanout for this playout.
+    std::atomic<uint32_t> evals_remaining;
   };
 
   // EvalWorkElement
@@ -169,6 +205,7 @@ class PlayoutRunner {
       }
 
       this->playout_state_.evals_remaining.store(0, std::memory_order_relaxed);
+      this->playout_state_.eval_results.resize(game.CurrentMovesN());
       for (int i = 0; i < game.CurrentMovesN(); ++i) {
         GameSubclass game_w_move(game);
         game_w_move.MakeMove(i);

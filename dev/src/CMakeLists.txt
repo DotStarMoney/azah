@@ -18,10 +18,15 @@ set(SRC_GAMES_TICTACTOE
     ${SRC_GAMES_TICTACTOE_C})
     
 set(SRC_GAMES_H
-    games/game.h)
+    games/game.h
+    games/game_network.h)
+set(SRC_GAMES_C
+    games/game_network.cc)
 source_group("Header Files\\games" FILES ${SRC_GAMES_H})
+source_group("Source Files\\games" FILES ${SRC_GAMES_C})
 set(SRC_GAMES
     ${SRC_GAMES_H}
+    ${SRC_GAMES_C}
     ${SRC_GAMES_TICTACTOE})
 
 set(SRC_MCTS_H

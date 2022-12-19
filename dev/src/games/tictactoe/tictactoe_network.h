@@ -10,12 +10,13 @@
 #include "../../nn/op/softmax_cross_ent.h"
 #include "../../nn/op/swish.h"
 #include "../../nn/variable.h"
+#include "../game_network.h"
 
 namespace azah {
 namespace games {
 namespace tictactoe {
 
-class TictactoeNetwork : public nn::Network {
+class TictactoeNetwork : public GameNetwork {
  public:
   TictactoeNetwork(const TictactoeNetwork&) = delete;
   TictactoeNetwork& operator=(const TictactoeNetwork&) = delete;

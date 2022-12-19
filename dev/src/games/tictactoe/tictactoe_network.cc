@@ -1,12 +1,14 @@
 #include "tictactoe_network.h"
 
 #include "../../nn/init.h"
+#include "../game_network.h"
 
 namespace azah {
 namespace games {
 namespace tictactoe {
 
 TictactoeNetwork::TictactoeNetwork() :
+    GameNetwork({0}, {1}, 2, {1}, 2, {0}, 1, {9}),
     input_(nn::init::Zeros<9, 1>()),
     dense1_k_(nn::init::GlorotUniform<kLayer1Depth, 9>()),
     dense1_(dense1_k_, input_),

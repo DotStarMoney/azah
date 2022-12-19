@@ -18,25 +18,24 @@ namespace tictactoe {
 class Tictactoe : public Game<2, 9> {
  public:
   Tictactoe();
-  const std::string_view name() const;
+  const std::string_view name() const override;
 
-  const std::string& state_uid() const;
+  const std::string& state_uid() const override;
 
-  int inputs_model_tag() const;
-  int target_policies_model_tag() const;
-  int target_outcomes_model_tag() const;
+  int CurrentPlayerI() const override;
+  int CurrentMovesN() const override;
+  GameState State() const override;
+  std::array<float, 2> Outcome() const override;
 
-  int CurrentPlayerI() const;
-  int CurrentMovesN() const;
-  GameState State() const;
-  std::array<float, 2> Outcome() const;
+  std::vector<nn::DynamicMatrix> StateToMatrix() const override;
+  int PolicyClassI() const override;
+  float PolicyForMoveI(std::span<float const> policy, 
+                       int move_i) const override;
+  
+  nn::DynamicMatrix MoveVisitCountToPolicy(
+      std::span<int const> visits) const override;
 
-  std::vector<nn::DynamicMatrix> StateToMatrix() const;
-  int PolicyToMoveI(std::span<float const> policy) const;
-  int PolicyClassI() const;
-  nn::DynamicMatrix MoveVisitCountToPolicy(std::span<int const> visits) const;
-
-  void MakeMove(int move_i);
+  void MakeMove(int move_i) override;
 
  private:
   static constexpr std::string_view kName = "TicTacToe";

@@ -32,18 +32,6 @@ const std::string& Tictactoe::state_uid() const {
   return uid_;
 }
 
-int Tictactoe::inputs_model_tag() const {
-  return 1;
-}
-
-int Tictactoe::target_policies_model_tag() const {
-  return 2;
-}
-
-int Tictactoe::target_outcomes_model_tag() const {
-  return 3;
-}
-
 int Tictactoe::CurrentPlayerI() const {
   if (State() != GameState::kOngoing) {
     LOG(FATAL) << "Game is over, there is no current player.";
@@ -148,28 +136,20 @@ std::vector<nn::DynamicMatrix> Tictactoe::StateToMatrix() const {
     out(i, 0) =
         std::array{0.0f, 1.0f, -1.0f}[static_cast<int>(board_[i])];
   }
+  if (!x_move_) out *= -1.0f;
   return {std::move(out)};
 }
 
-int Tictactoe::PolicyToMoveI(std::span<float const> policy) const {
-  int max_index = -1;
-  float max_value = 0;
-
+float Tictactoe::PolicyForMoveI(std::span<float const> policy, 
+                                int move_i) const {
   int move_index = 0;
   for (int i = 0; i < 9; ++i) {
     if (board_[i] != Mark::kNone) continue;
-    if (policy[i] > max_value) {
-      max_index = move_index;
-      max_value = policy[i];
-    }
+    if (move_index == move_i) return policy[i];
     ++move_index;
   }
 
-  if (max_index == -1) {
-    LOG(FATAL) << "Assert... there was no move to make!";
-  }
-
-  return max_index;
+  LOG(FATAL) << "There is no move_i";
 }
 
 int Tictactoe::PolicyClassI() const {
