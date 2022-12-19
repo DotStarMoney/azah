@@ -13,8 +13,9 @@ namespace op {
 
 template <int Groups, int InputRowsA, int InputColsA, int InputRowsB, 
           int InputColsB>
-class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
-                                    InputRowsA * Groups, InputColsB> {
+class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, 
+                                    InputColsB, InputRowsA * Groups, 
+                                    InputColsB> {
   static_assert((InputColsA % Groups == 0) && (InputRowsB % Groups == 0),
                 "Groups must divide the columns of A and rows of B.");
  public:
@@ -23,8 +24,8 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputCol
 
   GroupMatmul(Node<InputRowsA, InputColsA>& input_a,
               Node<InputRowsB, InputColsB>& input_b) :
-      BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB, InputRowsA * Groups,
-               InputColsB>(input_a, input_b) {}
+      BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
+               InputRowsA * Groups, InputColsB>(input_a, input_b) {}
 
   void Backprop(
       uint32_t cycle,

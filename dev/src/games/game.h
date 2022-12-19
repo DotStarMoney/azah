@@ -17,7 +17,7 @@ class Game {
  public:
   virtual const std::string_view name() const = 0;
 
-  virtual const int players_n() const = 0;
+  static constexpr int players_n() { return PlayersN; }
 
   virtual const std::string& state_uid() const = 0;
 
@@ -36,6 +36,9 @@ class Game {
   virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;
   virtual int PolicyToMoveI(std::span<float const> policy) const = 0;
   virtual int PolicyClassI() const = 0;
+
+  virtual nn::DynamicMatrix MoveVisitCountToPolicy(
+      std::span<int const> visits) const = 0;
 
   virtual void MakeMove(int move_i) = 0;
 };

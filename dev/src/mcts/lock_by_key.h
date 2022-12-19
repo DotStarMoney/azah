@@ -12,6 +12,9 @@ namespace mcts {
 template <typename HashKey, int Shards = 1>
 class LockByKey {
  public:
+  LockByKey(const LockByKey&) = delete;
+  LockByKey& operator=(const LockByKey&) = delete;
+
   LockByKey() : lock_shards_(new std::mutex[Shards]) {}
 
   // Thread safe.

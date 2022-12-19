@@ -5,6 +5,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 #include "../../nn/data_types.h"
@@ -19,8 +20,6 @@ class Tictactoe : public Game<2> {
   Tictactoe();
   const std::string_view name() const;
 
-  const int players_n() const;
-
   const std::string& state_uid() const;
 
   int CurrentPlayerI() const;
@@ -31,6 +30,7 @@ class Tictactoe : public Game<2> {
   std::vector<nn::DynamicMatrix> StateToMatrix() const;
   int PolicyToMoveI(std::span<float const> policy) const;
   int PolicyClassI() const;
+  nn::DynamicMatrix MoveVisitCountToPolicy(std::span<int const> visits) const;
 
   void MakeMove(int move_i);
 

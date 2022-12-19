@@ -17,6 +17,9 @@ namespace tictactoe {
 
 class TictactoeNetwork : public nn::Network {
  public:
+  TictactoeNetwork(const TictactoeNetwork&) = delete;
+  TictactoeNetwork& operator=(const TictactoeNetwork&) = delete;
+
   TictactoeNetwork();
 
  private:

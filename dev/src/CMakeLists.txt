@@ -25,10 +25,12 @@ set(SRC_GAMES
     ${SRC_GAMES_TICTACTOE})
 
 set(SRC_MCTS_H
-    mcts/state_cache.h
-    mcts/visit_table.h
     mcts/lock_by_key.h
-    mcts/self_player.h)
+    mcts/network_dispatch_queue.h
+    mcts/network_work_item.h)
+    mcts/playout_runner.h
+    mcts/state_cache.h
+    mcts/visit_table.h)
 source_group("Header Files\\mcts" FILES ${SRC_MCTS_H})
 set(SRC_MCTS
     ${SRC_MCTS_H})
@@ -92,8 +94,8 @@ set(SRC_NN
     ${SRC_NN_ACTIVATION})
 
 set(SRC_THREAD_H
-    thread/semaphore.h
-    thread/dispatch_queue.h)
+    thread/dispatch_queue.h
+    thread/semaphore.h)
 set(SRC_THREAD_C
     thread/semaphore.cc)
 source_group("Header Files\\thread" FILES ${SRC_THREAD_H})

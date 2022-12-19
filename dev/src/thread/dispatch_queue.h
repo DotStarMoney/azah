@@ -80,6 +80,10 @@ class DispatchQueue {
     thread_state_[thread] = state;
   }
 
+  uint32_t threads_n() const {
+    return thread_size_.size();
+  }
+
  private:
   Semaphore buffer_avail_;
   Semaphore buffer_elem_remain_;

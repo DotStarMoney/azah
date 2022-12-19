@@ -24,6 +24,9 @@ class StateCache {
                 "ValuesPerRow cannot exceed uint16 max.");
 
  public:
+  StateCache(const StateCache&) = delete;
+  StateCache& operator=(const StateCache&) = delete;
+
   StateCache() : blocks_(new Block[Blocks]) {
     Clear();
   }

@@ -15,6 +15,9 @@ namespace mcts {
 template <typename HashKey, int Shards = 1>
 class VisitTable {
  public:
+  VisitTable(const VisitTable&) = delete;
+  VisitTable& operator=(const VisitTable&) = delete;
+
   VisitTable() : table_shards_(new TableShard[Shards]) {}
 
   // Thread safe.

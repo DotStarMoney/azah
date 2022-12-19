@@ -4,9 +4,11 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 #include "../../nn/data_types.h"
+#include "../../nn/init.h"
 #include "glog/logging.h"
 
 namespace azah {
@@ -24,10 +26,6 @@ Tictactoe::Tictactoe() :
 
 const std::string_view Tictactoe::name() const {
   return kName;
-}
-
-const int Tictactoe::players_n() const {
-  return 2;
 }
 
 const std::string& Tictactoe::state_uid() const {
@@ -164,6 +162,24 @@ int Tictactoe::PolicyToMoveI(std::span<float const> policy) const {
 
 int Tictactoe::PolicyClassI() const {
   return 0;
+}
+
+nn::DynamicMatrix Tictactoe::MoveVisitCountToPolicy(
+    std::span<int const> visits) const {
+  if (visits.size() != CurrentMovesN()) {
+    LOG(FATAL) << "Visit counts should match available moves";
+  }
+
+  nn::Matrix<9, 1> policy = nn::init::Zeros<9, 1>();
+  int move_index = 0;
+  for (int i = 0; i < 9; ++i) {
+    if (board_[i] != Mark::kNone) continue;
+    policy(i, 0) = static_cast<float>(visits[move_index]);
+    ++move_index;
+  }
+  policy /= policy.sum();
+
+  return std::move(policy);
 }
 
 void Tictactoe::MakeMove(int move_i) {
