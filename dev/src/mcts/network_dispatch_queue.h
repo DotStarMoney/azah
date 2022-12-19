@@ -22,9 +22,9 @@ class NetworkDispatchQueue :
   NetworkDispatchQueue& operator=(const NetworkDispatchQueue&) = delete;
 
   NetworkDispatchQueue(uint32_t threads, uint32_t queue_length) : 
-      thread::DispatchQueue<CallableWorkItem, NetworkSubclass>(
-          uint32_t threads, uint32_t queue_length) {
-    for (int i = 0; i < threads_n(); ++i) {
+      thread::DispatchQueue<NetworkWorkItem<NetworkSubclass>, NetworkSubclass>(
+          threads, queue_length) {
+    for (int i = 0; i < this->threads_n(); ++i) {
       networks_.push_back(std::make_unique<NetworkSubclass>());
       SetThreadState(i, networks_.back().get());
     }

@@ -81,7 +81,7 @@ class DispatchQueue {
   }
 
   uint32_t threads_n() const {
-    return thread_size_.size();
+    return thread_state_.size();
   }
 
  private:

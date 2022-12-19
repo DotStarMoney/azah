@@ -59,7 +59,8 @@ class PlayoutRunner {
     std::vector<PlayoutState> playout_states(config.n, 
                                              PlayoutState(config.game));
     for (auto& state : playout_states) {
-      work_queue.AddWork(std::make_unique<FanoutWorkElement>(state));
+      work_queue.AddWork(std::make_unique<FanoutWorkElement>(state, *this, 
+                                                             work_queue));
     }
     work_queue.Drain();
     visit_table_.Clear();
@@ -76,7 +77,7 @@ class PlayoutRunner {
 
     std::vector<int> moves_searched(0, config.game.CurrentMovesN());
     for (const auto& state : playout_states) {
-      ++(moves_searched[state.move_index])
+      ++(moves_searched[state.move_index]);
     }
     result.policy = config.game.MoveVisitCountToPolicy(moves_searched);
     
@@ -94,7 +95,7 @@ class PlayoutRunner {
         move_index(-1), fanout_count(-1), on_root(true), game(game) {}
 
     // The playout's outcome.
-    array<float, GameSubclass::players_n()> outcome;
+    std::array<float, GameSubclass::players_n()> outcome;
 
     // Index of the move made after fanning out the root for this playout.
     int move_index;
@@ -102,45 +103,106 @@ class PlayoutRunner {
     // Number of completed evaluations in the current fanout for this playout.
     std::atomic<uint32_t> fanout_count;
 
-    // Whether the playout is currently evaluating the root.
+    // Whether or not the playout is currently evaluating the root.
     bool on_root;
 
     // The state of the game currently being evaluated in this playout.
     GameSubclass game;
+
+    // The results of evaluating each move in the current game state.
+    std::vector<float>& eval_results;
   };
-  
-  // FanoutWorkElement
-  //   - Checks to see if over, if so:
-  //     + If its the root, fail.
-  //     + If its not the root, accumulate the win result + source index into
-  //       the table, ret.
-  //   - else:
-  //     + For all possible moves:
-  //       + push EvalWorkElement. Each should have a copy of an atomic
-  //         counter, and a vector + index to deposit their outcome.
-  //
+
   // EvalWorkElement
-  //   - Run the model with the game vector. Deposit the win outcome into the
-  //     table, and the visit count. If we've deposited all outcomes, push
+  //   - Run the model with the game vector. Deposit the est. win outcome and
+  //     visit count into the table. If we've deposited all outcomes, push
   //     SelectWorkElement.
   //
   // SelectWorkElement
-  //   - Use the table to select the next move. Make that move, and pass /
+  //   - Gather the visit counts for each move tried in a locking fashion, use 
+  //     the table to select the next move. Make that move, and pass /
   //     push FanoutWorkElement(non-root). If root, increment atomic moves
   //     counter.
 
-  class FanoutWorkElement : public NetworkWorkItem {
-   public:
-    FanoutWorkElement(const FanoutWorkElement&) = delete;
-    FanoutWorkElement& operator=(const FanoutWorkElement&) = delete;
 
-    FanoutWorkElement(PlayoutState& playout_state) : 
-       playout_state_(playout_state) {
+  class PlayoutWorkElement : public NetworkWorkItem<GameNetworkSubclass> {
+   public:
+    PlayoutWorkElement(const PlayoutWorkElement&) = delete;
+    PlayoutWorkElement& operator=(const PlayoutWorkElement&) = delete;
+
+    PlayoutWorkElement(
+        PlayoutState& playout_state,
+        PlayoutRunner& runner,
+        NetworkDispatchQueue<GameNetworkSubclass>& work_queue) :
+            playout_state_(playout_state),
+            runner_(runner),
+            work_queue_(work_queue) {}
+
+    virtual void operator()(GameNetworkSubclass* local_network) const = 0;
+
+   protected:
+    PlayoutState& playout_state_;
+    PlayoutRunner& runner_;
+    NetworkDispatchQueue<GameNetworkSubclass>& work_queue_;
+  };
+
+  class FanoutWorkElement : public PlayoutWorkElement {
+   public:
+     FanoutWorkElement(const FanoutWorkElement&) = delete;
+     FanoutWorkElement& operator=(const FanoutWorkElement&) = delete;
+
+     FanoutWorkElement(
+        PlayoutState& playout_state, 
+        PlayoutRunner& runner, 
+        NetworkDispatchQueue<GameNetworkSubclass>& work_queue) : 
+            PlayoutWorkElement(playout_state, runner, work_queue) {}
+
+    void operator()(GameNetworkSubclass* local_network) const {
+      const GameSubclass& game(this->playout_state_.game);
+      if (game.State() == GameSubclass::GameState::kOver) {
+        if (this->playout_state_.on_root) {
+          LOG(FATAL) << "Cannot begin fanout from leaf.";
+        }
+        this->playout_state_.outcome = std::move(game.Outcome());
+        return;
+      }
+
+      this->playout_state_.fanout_count.store(0, std::memory_order_relaxed);
+      this->playout_state_.eval_results.resize(game.CurrentMovesN());
+      for (int i = 0; i < game.CurrentMovesN(); ++i) {
+        GameSubclass game_w_move(game);
+        game_w_move.MakeMove(i);
+
+        this->work_queue_.AddWork(
+            std::make_unique<EvaluateWorkElement>(
+                this->playout_state_, this->runner_, this->work_queue_,
+                std::move(game_w_move), this->playout_state_.eval_results[i]));
+      }
+    }
+  };
+
+  class EvaluateWorkElement : public PlayoutWorkElement {
+   public:
+    EvaluateWorkElement(const EvaluateWorkElement&) = delete;
+    EvaluateWorkElement& operator=(const EvaluateWorkElement&) = delete;
+
+    EvaluateWorkElement(
+        PlayoutState& playout_state,
+        PlayoutRunner& runner,
+        NetworkDispatchQueue<GameNetworkSubclass>& work_queue,
+        GameSubclass&& game,
+        float& eval_result_ref) :
+            PlayoutWorkElement(playout_state, runner, work_queue),
+            game_(std::move(game),
+            eval_result_ref_(eval_result_ref)) {}
+
+    void operator()(GameNetworkSubclass* local_network) const {
       
     }
-
+   
    private:
-    PlayoutState& playout_state_;
+    const GameSubclass game_;
+    float& eval_result_ref_;
   };
 };
 

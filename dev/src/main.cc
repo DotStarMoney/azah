@@ -1,24 +1,18 @@
 #include <iostream>
-#include <memory>
 
-struct A {
-  int x;
-};
-
-struct B : public A {
-  int y;
-};
-
-void f(std::unique_ptr<A> arg) {
-  //
-}
+#include "games/tictactoe/tictactoe.h"
+#include "games/tictactoe/tictactoe_network.h"
+#include "mcts/playout_runner.h"
 
 int main(int argc, char* argv[]) {
- 
+  azah::mcts::PlayoutRunner<
+      azah::games::tictactoe::Tictactoe, 
+      azah::games::tictactoe::TictactoeNetwork, 
+      256, 
+      131072, 
+      4, 
+      17> runner;
 
-  auto q = std::make_unique<B>();
-
-  f(std::move(q));
 
   return 0;
 }

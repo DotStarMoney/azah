@@ -27,7 +27,7 @@ set(SRC_GAMES
 set(SRC_MCTS_H
     mcts/lock_by_key.h
     mcts/network_dispatch_queue.h
-    mcts/network_work_item.h)
+    mcts/network_work_item.h
     mcts/playout_runner.h
     mcts/state_cache.h
     mcts/visit_table.h)
