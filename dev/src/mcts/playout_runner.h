@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <memory>
 #include <string>
@@ -20,7 +21,8 @@
 #include "visit_table.h"
 #include "network_work_item.h"
 
-// Then have to finish running the model in the evaluate fn and storing it.
+// - Fill out SelectWorkElement
+// - Add a work element for pure MCTS
 
 namespace azah {
 namespace mcts {
@@ -140,7 +142,7 @@ class PlayoutRunner {
         move_index(-1), evals_remaining(-1), on_root(true), game(game) {}
 
     // The playout's outcome.
-    float outcome[GameSubclass::players_n()];
+    std::array<float, GameSubclass::players_n()> outcome;
 
     // Index of the move made after fanning out the root for this playout.
     int move_index;
@@ -157,12 +159,6 @@ class PlayoutRunner {
     // Number of completed evaluations in the current fanout for this playout.
     std::atomic<uint32_t> evals_remaining;
   };
-
-  // SelectWorkElement
-  //   - Gather the visit counts for each move tried in a locking fashion, use 
-  //     the table to select the next move. Make that move, and pass /
-  //     push FanoutWorkElement(non-root). If root, increment atomic moves
-  //     counter.
 
   class PlayoutWorkElement : public GameNetworkWorkItem<GameNetworkSubclass> {
    public:
@@ -284,7 +280,7 @@ class PlayoutRunner {
             eval_index_(eval_index) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
-      auto model_output = PlayoutRunner::QueryModelForGameState(
+      auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
           game_, *local_network, this->runner_.cache_);
 
       // Since we store the policy and outcome together with the outcome first,
@@ -293,19 +289,26 @@ class PlayoutRunner {
       // player who's turn it is.
       this->playout_state_.eval_results_[eval_index_] = 
           model_output[game_.CurrentPlayerI()];
+
       uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
           -1, std::memory_order_relaxed);
       if (evals_remaining > 0) return;
 
       this->work_queue_.AddWork(
           std::make_unique<SelectWorkElement>(
-              this->playout_state_, this->runner_, this->work_queue_);
+              this->playout_state_, this->runner_, this->work_queue_));
     }
    
    private:
     const GameSubclass game_;
     int eval_index_;
   };
+
+  // SelectWorkElement
+  //   - Gather the visit counts for each move tried in a locking fashion, use 
+  //     the table to select the next move. Make that move, and pass /
+  //     push FanoutWorkElement(non-root). If root, increment atomic moves
+  //     counter.
 
   class SelectWorkElement : public PlayoutWorkElement {
    public:

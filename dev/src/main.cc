@@ -10,8 +10,7 @@ int main(int argc, char* argv[]) {
       azah::games::tictactoe::TictactoeNetwork, 
       256, 
       131072, 
-      4, 
-      17> runner;
+      4> runner;
 
 
   return 0;

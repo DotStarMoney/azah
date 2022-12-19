@@ -47,9 +47,9 @@ TictactoeNetwork::TictactoeNetwork() :
   AddVariable(&policy_linear_k_);
   AddVariable(&outcome_linear_k_);
 
-  AddConstant(&input_, TictactoeNetwork::kInput);
-  AddConstant(&policy_target_, TictactoeNetwork::kPolicyTarget);
-  AddConstant(&outcome_target_, TictactoeNetwork::kOutcomeTarget);
+  AddConstant(&input_);
+  AddConstant(&policy_target_);
+  AddConstant(&outcome_target_);
 }
 
 }  // namespace tictactoe
