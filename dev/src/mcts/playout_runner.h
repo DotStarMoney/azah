@@ -21,6 +21,8 @@ namespace mcts {
 template <typename GameSubclass, typename GameNetworkSubclass, int Shards, 
           int CacheBlocks, int CacheRowsPerBlock, int CacheValuesPerRow>
 class PlayoutRunner {
+  using Cache = StateCache<std::string, float, CacheBlocks, CacheRowsPerBlock,
+                           CacheValuesPerRow>;
  public:
   PlayoutRunner(const PlayoutRunner&) = delete;
   PlayoutRunner& operator=(const PlayoutRunner&) = delete;
@@ -70,8 +72,8 @@ class PlayoutRunner {
     result.outcome = nn::init::Zeros<GameSubclass::players_n(), 1>();
     for (const auto& state : playout_states) {
       result.outcome = (result.outcome.array()
-          + Eigen::Map<nn::Matrix<GameSubclass::players_n(), 1>>(
-                state.outcome.data())).matrix();
+          + Eigen::Map<nn::Matrix<GameSubclass::players_n(), 1>>(state.outcome))
+              .matrix();
     }
     result.outcome /= static_cast<float>(config.n);
 
@@ -85,8 +87,7 @@ class PlayoutRunner {
   }
 
  private:
-  StateCache<std::string, float, CacheBlocks, CacheRowsPerBlock, 
-             CacheValuesPerRow> cache_;
+  Cache cache_;
   VisitTable<std::string, Shards> visit_table_;
   LockByKey<std::string, Shards> state_lock_;
 
@@ -95,7 +96,7 @@ class PlayoutRunner {
         move_index(-1), fanout_count(-1), on_root(true), game(game) {}
 
     // The playout's outcome.
-    std::array<float, GameSubclass::players_n()> outcome;
+    float outcome[GameSubclass::players_n()];
 
     // Index of the move made after fanning out the root for this playout.
     int move_index;
@@ -110,7 +111,7 @@ class PlayoutRunner {
     GameSubclass game;
 
     // The results of evaluating each move in the current game state.
-    std::vector<float>& eval_results;
+    float eval_results[GameSubclass::max_move_options_n()];
   };
 
   // EvalWorkElement
@@ -168,7 +169,6 @@ class PlayoutRunner {
       }
 
       this->playout_state_.evals_remaining.store(0, std::memory_order_relaxed);
-      this->playout_state_.eval_results.resize(game.CurrentMovesN());
       for (int i = 0; i < game.CurrentMovesN(); ++i) {
         GameSubclass game_w_move(game);
         game_w_move.MakeMove(i);
@@ -180,6 +180,8 @@ class PlayoutRunner {
       }
     }
   };
+
+  static constexpr int kOutcomeNetworkOutput = 0;
 
   class EvaluateWorkElement : public PlayoutWorkElement {
    public:
@@ -197,6 +199,48 @@ class PlayoutRunner {
             eval_index_(eval_index)) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
+      int policy_n = 0;
+      std::vector<nn::DynamicMatrixRef> outputs;
+      if (game_.State() == GameSubclass::kOngoing) {
+        //local_network->GetVariables({game_.PolicyClassI()}, outputs);
+        //policy_n = outputs[0].size();
+ 
+        //
+        // Network needs way to return size of outputs. Get this for policy_n
+        //
+
+        //
+        // Need better ways to indicate specific inputs and outputs. Should add
+        // a few methods to game which allow you to index specific inputs / 
+        // targets / policy output / outcome output / etc... 
+        //
+      }
+
+      Cache::TempKey temp_key(game_.state_uid());
+      int cached_values_n = 1 + policy_n;
+      auto cached_output = std::make_unique<float[]>(cached_values_n);
+      if (this->runner_.state_lock_.TryLoad(temp_key, &(cached_output[0]),
+                                            cached_values_n)) {
+        this->playout_state_.eval_results_[eval_index_] = cached_output[0];
+      } else {
+        auto inputs = game_.StateToMatrix();
+        std::vector<nn::DynamicMatrixRef> model_inputs;
+        local_network->GetConstantsByTag(game_.inputs_model_tag(), 
+                                         model_inputs);
+        if (inputs.size() != model_inputs.size()) {
+          LOG(FATAL) << "Count of network constants with inputs_model_tag() "
+                     << "does not match that returned by game StateToMatrix()";
+        }
+        for (int i = 0; i < model_inputs.size(); ++i) {
+          model_inputs[i] = inputs[i];
+        }
+        std::vector<nn::DynamicMatrix> outcome;
+        local_network->Output({kOutcomeNetworkOutput}, outcome);
+
+
+
+      }
+
       // Use current game policy class to stash policy as well.
 
 

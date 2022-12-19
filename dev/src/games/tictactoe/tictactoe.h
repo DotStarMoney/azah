@@ -15,12 +15,16 @@ namespace azah {
 namespace games {
 namespace tictactoe {
 
-class Tictactoe : public Game<2> {
+class Tictactoe : public Game<2, 9> {
  public:
   Tictactoe();
   const std::string_view name() const;
 
   const std::string& state_uid() const;
+
+  int inputs_model_tag() const;
+  int target_policies_model_tag() const;
+  int target_outcomes_model_tag() const;
 
   int CurrentPlayerI() const;
   int CurrentMovesN() const;

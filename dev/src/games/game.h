@@ -12,7 +12,7 @@
 namespace azah {
 namespace games {
 
-template <int PlayersN>
+template <int PlayersN, int MaxMoveOptions>
 class Game {
  public:
   virtual const std::string_view name() const = 0;
@@ -20,6 +20,12 @@ class Game {
   static constexpr int players_n() { return PlayersN; }
 
   virtual const std::string& state_uid() const = 0;
+
+  static constexpr int max_move_options_n() { return MaxMoveOptions; }
+
+  virtual int inputs_model_tag() const = 0;
+  virtual int target_policies_model_tag() const = 0;
+  virtual int target_outcomes_model_tag() const = 0;
 
   virtual int CurrentPlayerI() const = 0;
   virtual int CurrentMovesN() const = 0;

@@ -32,6 +32,18 @@ const std::string& Tictactoe::state_uid() const {
   return uid_;
 }
 
+int Tictactoe::inputs_model_tag() const {
+  return 1;
+}
+
+int Tictactoe::target_policies_model_tag() const {
+  return 2;
+}
+
+int Tictactoe::target_outcomes_model_tag() const {
+  return 3;
+}
+
 int Tictactoe::CurrentPlayerI() const {
   if (State() != GameState::kOngoing) {
     LOG(FATAL) << "Game is over, there is no current player.";
@@ -50,7 +62,7 @@ int Tictactoe::CurrentMovesN() const {
   return total_moves;
 }
 
-Game<2>::GameState Tictactoe::State() const {
+Tictactoe::GameState Tictactoe::State() const {
   for (int row = 0; row < 3; ++row) {
     if ((board_[row * 3 + 0] != Mark::kNone)
         && (board_[row * 3 + 0] == board_[row * 3 + 1])

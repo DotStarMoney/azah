@@ -40,20 +40,31 @@ class Network {
   void SetConstants(const std::vector<uint32_t>& constants_i, 
                     const std::vector<DynamicMatrix>& constants);
 
+  void GetConstantsByTag(int tag,
+                         std::vector<int>& constants_i,
+                         std::vector<DynamicMatrixRef>& constants);
+
+  void GetConstantsByTag(int tag, std::vector<DynamicMatrixRef>& constants);
+
  protected:
   Network();
 
   void AddOutput(NodeBase* output);
   void AddTarget(NodeBase* target);
   void AddVariable(VariableBase* variable);
-  void AddConstant(ConstantBase* constant);
+  void AddConstant(ConstantBase* constant, int tag);
 
  private:
   uint32_t cycle_;
+  
   std::vector<NodeBase*> outputs_;
+  
   std::vector<NodeBase*> targets_;
+  
   std::vector<VariableBase*> variables_;
+
   std::vector<ConstantBase*> constants_;
+  std::vector<int> constant_tags_;
 };
 
 }  // namespace nn

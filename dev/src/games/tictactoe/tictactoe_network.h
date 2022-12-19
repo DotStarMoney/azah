@@ -22,6 +22,13 @@ class TictactoeNetwork : public nn::Network {
 
   TictactoeNetwork();
 
+  enum InputTags : int {
+    kUnknown = 0,
+    kInput = 1,
+    kPolicyTarget = 2,
+    kOutcomeTarget = 3
+  };
+
  private:
   static constexpr int kLayer1Depth = 32;
   static constexpr int kLayer2Depth = 32;

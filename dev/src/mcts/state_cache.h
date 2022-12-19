@@ -127,6 +127,8 @@ class StateCache {
     }
   }
 
+  static constexpr int values_per_row_n() { return ValuesPerRow; }
+
  private:
   struct Row {
     HashKey key;
