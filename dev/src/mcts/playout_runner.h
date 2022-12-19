@@ -101,7 +101,7 @@ class PlayoutRunner {
     int move_index;
 
     // Number of completed evaluations in the current fanout for this playout.
-    std::atomic<uint32_t> fanout_count;
+    std::atomic<uint32_t> evals_remaining;
 
     // Whether or not the playout is currently evaluating the root.
     bool on_root;
@@ -167,7 +167,7 @@ class PlayoutRunner {
         return;
       }
 
-      this->playout_state_.fanout_count.store(0, std::memory_order_relaxed);
+      this->playout_state_.evals_remaining.store(0, std::memory_order_relaxed);
       this->playout_state_.eval_results.resize(game.CurrentMovesN());
       for (int i = 0; i < game.CurrentMovesN(); ++i) {
         GameSubclass game_w_move(game);
@@ -176,7 +176,7 @@ class PlayoutRunner {
         this->work_queue_.AddWork(
             std::make_unique<EvaluateWorkElement>(
                 this->playout_state_, this->runner_, this->work_queue_,
-                std::move(game_w_move), this->playout_state_.eval_results[i]));
+                std::move(game_w_move), i));
       }
     }
   };
@@ -191,18 +191,27 @@ class PlayoutRunner {
         PlayoutRunner& runner,
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue,
         GameSubclass&& game,
-        float& eval_result_ref) :
+        int eval_index) :
             PlayoutWorkElement(playout_state, runner, work_queue),
             game_(std::move(game),
-            eval_result_ref_(eval_result_ref)) {}
+            eval_index_(eval_index)) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
-      
+      // Use current game policy class to stash policy as well.
+
+
+
+      uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
+          -1, std::memory_order_relaxed);
+      if (evals_remaining > 0) return;
+
+      // Add select work item
+
     }
    
    private:
     const GameSubclass game_;
-    float& eval_result_ref_;
+    int eval_index_;
   };
 };
 
