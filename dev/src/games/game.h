@@ -68,7 +68,7 @@ class Game {
   // Xs and -1s for Os.
   //
   // E.g.: For Chinese checkers when using six matrices to describe the 6
-  // players board positions, the order of these matrices as returned by
+  // player's board positions, the order of these matrices as returned by
   // StateToMatrix() should be rotated such that CurrentPlayerI()'s board matrix
   // is always in the first array position.
   virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;

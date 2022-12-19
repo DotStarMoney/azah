@@ -30,6 +30,9 @@ template <typename GameSubclass, typename GameNetworkSubclass, int Shards,
 class PlayoutRunner {
   using Cache = StateCache<std::string, float, CacheBlocks, CacheRowsPerBlock,
                            CacheValuesPerRow>;
+  using TempCacheKey = StateCache<std::string, float, CacheBlocks,
+                                  CacheRowsPerBlock, 
+                                  CacheValuesPerRow>::TempKey;
  public:
   PlayoutRunner(const PlayoutRunner&) = delete;
   PlayoutRunner& operator=(const PlayoutRunner&) = delete;
@@ -129,7 +132,7 @@ class PlayoutRunner {
 
   struct PlayoutState {
     PlayoutState(const GameSubclass& game) : 
-        move_index(-1), fanout_count(-1), on_root(true), game(game) {}
+        move_index(-1), evals_remaining(-1), on_root(true), game(game) {}
 
     // The playout's outcome.
     float outcome[GameSubclass::players_n()];
@@ -232,8 +235,8 @@ class PlayoutRunner {
         GameSubclass&& game,
         int eval_index) :
             PlayoutWorkElement(playout_state, runner, work_queue),
-            game_(std::move(game),
-            eval_index_(eval_index)) {}
+            game_(std::move(game)),
+            eval_index_(eval_index) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
       int policy_n = 0;
@@ -253,7 +256,7 @@ class PlayoutRunner {
         //
       }
 
-      Cache::TempKey temp_key(game_.state_uid());
+      TempCacheKey temp_key(game_.state_uid());
       int cached_values_n = 1 + policy_n;
       auto cached_output = std::make_unique<float[]>(cached_values_n);
       if (this->runner_.state_lock_.TryLoad(temp_key, &(cached_output[0]),
