@@ -35,6 +35,9 @@ struct PlayoutConfig {
   // Number of playouts to run.
   int n;
 
+  // The linear weight applied to the outcome term.
+  float outcome_weight;
+
   // The linear weight applied to the search policy term. 
   float policy_weight;
 
@@ -105,7 +108,7 @@ class PlayoutRunner {
     // The accumulated chance that the player who's turn it currently is wins
     // after making one of the possible moves. We'll later divide this by the
     // number of visits to each move and select the highest one.
-    std::vector<float> move_totals(0, config.game.CurrentMovesN());
+    std::vector<float> move_totals(config.game.CurrentMovesN(), 0);
     for (auto& state_ptr : playout_states) {
       move_totals[state_ptr->move_index] += state_ptr->outcome[
           config.game.CurrentPlayerI()];
@@ -124,14 +127,18 @@ class PlayoutRunner {
 
     // The number of times each move at the root state was visited across
     // playouts.
-    std::vector<int> moves_searched(0, config.game.CurrentMovesN());
+    std::vector<int> moves_searched(config.game.CurrentMovesN(), 0);
     for (const auto& state_ptr : playout_states) {
       ++(moves_searched[state_ptr->move_index]);
     }
     result.policy = config.game.MoveVisitCountToPolicy(moves_searched);
     
     for (int i = 0; i < config.game.CurrentMovesN(); ++i) {
-      move_totals[i] /= static_cast<float>(moves_searched[i]);
+      if (moves_searched[i] != 0) {
+        move_totals[i] /= static_cast<float>(moves_searched[i]);
+      } else {
+        move_totals[i] = 0.0f;
+      }
     }
     result.max_option_i = std::distance(
         move_totals.begin(), 
@@ -246,7 +253,6 @@ class PlayoutRunner {
       GameNetworkSubclass& local_network,
       Cache& cache) {
     int policy_n = 0;
-    std::vector<nn::DynamicMatrixRef> outputs;
     if (game.State() == games::GameState::kOngoing) {
       policy_n = local_network.PolicyOutputSize(game.PolicyClassI());
     }
@@ -260,24 +266,29 @@ class PlayoutRunner {
       local_network.SetConstants(local_network.InputConstantIndices(),
                                  game.StateToMatrix());
       std::vector<nn::DynamicMatrix> model_outputs;
-      local_network.Outputs(
-          {
-              local_network.OutcomeOutputIndex(),
-              local_network.PolicyOutputIndices()[game.PolicyClassI()]
-          },
-          model_outputs);
+      if (policy_n > 0) {
+        local_network.Outputs(
+            {
+                local_network.OutcomeOutputIndex(),
+                local_network.PolicyOutputIndices()[game.PolicyClassI()]
+            },
+            model_outputs);
+        std::memcpy(
+            cached_output.get() + GameSubclass::players_n(),
+            model_outputs[1].data(),
+            policy_n * sizeof(float));
+      } else {
+        local_network.Outputs(
+            {
+                local_network.OutcomeOutputIndex()
+            },
+            model_outputs);
+      }
 
       std::memcpy(
           cached_output.get(),
           model_outputs[0].data(),
-          GameSubclass::players_n());
-
-      if (policy_n != 0) {
-        std::memcpy(
-            cached_output.get() + GameSubclass::players_n(),
-            model_outputs[1].data(),
-            policy_n);
-      }
+          GameSubclass::players_n() * sizeof(float));
 
       // If this fails, too bad.
       cache.TryStore(temp_key, cached_output.get(), cached_values_n);
@@ -311,11 +322,12 @@ class PlayoutRunner {
       // output, and from these we only care about the predicted odds for the
       // player who's turn it is.
       this->playout_state_.eval_results[eval_index_] = 
-          {game_.state_uid(), model_output[game_.CurrentPlayerI()]};
+          {game_.state_uid(), 
+           model_output[this->playout_state_.game.CurrentPlayerI()]};
 
       uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
           -1, std::memory_order_relaxed);
-      if (evals_remaining > 0) return;
+      if (evals_remaining > 1) return;
 
       this->work_queue_.AddWork(
           std::make_unique<SelectWorkElement>(
@@ -362,19 +374,21 @@ class PlayoutRunner {
         int move_i = 0;
         absl::BitGen bitgen;
         for (const auto& [state_uid, outcome_for_move] : 
-            this->playout_state_.eval_results) {
+             this->playout_state_.eval_results) {
           int visit_count_for_move = this->runner_.visit_table_.Get(state_uid);
           float visit_count_term = std::sqrtf(
               std::logf(static_cast<float>(this->playout_config_.n))
-                  / static_cast<float>(visit_count_for_move) + 1.0f);
+                  / static_cast<float>(visit_count_for_move + 1));
           
           float policy_for_move = this->playout_state_.game.PolicyForMoveI(
               policy, move_i);
           float policy_term = policy_for_move + absl::Gaussian(
               bitgen, 0.0f, this->playout_config_.policy_noise);
+          if (policy_term < 0.0f) policy_term = 0.0f;
 
           // The score for the sub-game resulting from making move move_i.
-          float score = outcome_for_move
+          float score = 
+              this->playout_config_.outcome_weight * outcome_for_move
               + this->playout_config_.policy_weight * policy_term
               + this->playout_config_.revisit_weight * visit_count_term;
 
