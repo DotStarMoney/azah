@@ -14,7 +14,7 @@ using TictactoeNetwork = azah::games::tictactoe::TictactoeNetwork;
 using TictactoeRunner = azah::mcts::PlayoutRunner<
     azah::games::tictactoe::Tictactoe,
     azah::games::tictactoe::TictactoeNetwork,
-    512,
+    1024,
     131072,
     4>;
 using TictactoeRunnerConfig = azah::mcts::PlayoutConfig<
