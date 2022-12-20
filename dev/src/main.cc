@@ -38,10 +38,10 @@ int main(int argc, char* argv[]) {
   TictactoeRunnerConfig config{
       .game = game,
       .n = 384,
-      .outcome_weight = 0.0,
-      .policy_weight = 0.0, 
-      .revisit_weight = 0.3333,
-      .policy_noise = 0.0};
+      .outcome_weight = 0.50,
+      .policy_weight = 0.25, 
+      .revisit_weight = 0.25,
+      .policy_noise = 0.1};
 
   TictactoeRunner runner;
 
