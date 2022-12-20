@@ -50,7 +50,7 @@ int Tictactoe::CurrentMovesN() const {
   return total_moves;
 }
 
-Tictactoe::GameState Tictactoe::State() const {
+GameState Tictactoe::State() const {
   for (int row = 0; row < 3; ++row) {
     if ((board_[row * 3 + 0] != Mark::kNone)
         && (board_[row * 3 + 0] == board_[row * 3 + 1])

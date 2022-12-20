@@ -54,7 +54,18 @@ void Network::SetVariables(const std::vector<uint32_t>& variables_i,
   }
   for (int i = 0; i < variables_i.size(); ++i) {
     auto variable_i = variables_i[i];
-    constants_[variable_i]->value_base() = variables[i];
+    variables_[variable_i]->value_base() = variables[i];
+  }
+}
+
+void Network::SetVariables(const std::vector<uint32_t>& variables_i,
+                           const std::vector<DynamicMatrixRef>& variables) {
+  if (variables_i.empty()) {
+    LOG(FATAL) << "\"variables_i\" cannot be empty.";
+  }
+  for (int i = 0; i < variables_i.size(); ++i) {
+    auto variable_i = variables_i[i];
+    variables_[variable_i]->value_base() = variables[i];
   }
 }
 

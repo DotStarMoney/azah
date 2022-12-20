@@ -27,6 +27,37 @@
 namespace azah {
 namespace mcts {
 
+template <typename GameSubclass>
+struct PlayoutConfig {
+  // The game state to evaluate from.
+  GameSubclass game;
+
+  // Number of playouts to run.
+  int n;
+
+  // The linear weight applied to the search policy term. 
+  float policy_weight;
+
+  // The linear weight applied to the revisit term.
+  float revisit_weight;
+
+  // Standard deviation of Gaussian noise added to the search policy term.
+  float policy_noise;
+};
+
+template <typename GameSubclass>
+struct PlayoutResult {
+  // The outcome order-rotated s.t. the player who's move it is to make is in
+  // the first row.
+  nn::Matrix<GameSubclass::players_n(), 1> outcome;
+
+  // The search proportion across predicted options actually made.
+  nn::DynamicMatrix policy;
+
+  // The move option with the greatest average win proportion across playouts.
+  int max_option_i;
+};
+
 template <typename GameSubclass, typename GameNetworkSubclass, int Shards, 
           int CacheBlocks, int CacheRowsPerBlock>
 class PlayoutRunner {
@@ -50,61 +81,38 @@ class PlayoutRunner {
     cache_.Clear();
   }
 
-  struct PlayoutConfig {
-    // The game state to evaluate from.
-    GameSubclass game;
-
-    // Number of playouts to run.
-    int n;
-
-    // The linear weight applied to the search policy term. 
-    float policy_weight;
-  
-    // The linear weight applied to the revisit term.
-    float revisit_weight;
-
-    // Standard deviation of Gaussian noise added to the search policy term.
-    float policy_noise;
-  };
-
-  struct PlayoutResult {
-    // The outcome order-rotated s.t. the player who's move it is to make is in
-    // the first row.
-    nn::Matrix<GameSubclass::players_n(), 1> outcome;
-
-    // The search proportion across predicted options actually made.
-    nn::DynamicMatrix policy;
-
-    // The move option with the greatest average win proportion across playouts.
-    int max_option_i;
-  };
-
-  PlayoutResult Playout(const PlayoutConfig& config,
-                        NetworkDispatchQueue<GameNetworkSubclass>& work_queue) {
+  PlayoutResult<GameSubclass> Playout(
+      const PlayoutConfig<GameSubclass>& config,
+      NetworkDispatchQueue<GameNetworkSubclass>& work_queue) {
     work_queue.Drain();
-    std::vector<PlayoutState> playout_states(config.n, 
-                                             PlayoutState(config.game));
-    for (auto& state : playout_states) {
+
+    std::vector<std::unique_ptr<PlayoutState>> playout_states;
+    for (int i = 0; i < config.n; ++i) {
+      playout_states.push_back(
+          std::make_unique<PlayoutState>(config, config.game));
+    }
+
+    for (auto& state_ptr : playout_states) {
       work_queue.AddWork(std::make_unique<FanoutWorkElement>(
-          config, state, *this, work_queue));
+          config, *state_ptr, *this, work_queue));
     }
     work_queue.Drain();
     visit_table_.Clear();
 
-    PlayoutResult result;
+    PlayoutResult<GameSubclass> result;
 
     result.outcome = nn::init::Zeros<GameSubclass::players_n(), 1>();
     // The accumulated chance that the player who's turn it currently is wins
     // after making one of the possible moves. We'll later divide this by the
     // number of visits to each move and select the highest one.
     std::vector<float> move_totals(0, config.game.CurrentMovesN());
-    for (auto& state : playout_states) {
-      move_totals[state.move_index] += state.outcome[
+    for (auto& state_ptr : playout_states) {
+      move_totals[state_ptr->move_index] += state_ptr->outcome[
           config.game.CurrentPlayerI()];
 
       result.outcome = (result.outcome.array()
-          + Eigen::Map<nn::Matrix<GameSubclass::players_n(), 1>>(state.outcome))
-              .matrix();
+          + Eigen::Map<nn::Matrix<GameSubclass::players_n(), 1>>(
+              state_ptr->outcome.data()).array()).matrix();
     }
     result.outcome /= static_cast<float>(config.n);
     // Rotate the outcome matrix data to move the player who's turn it currently
@@ -117,8 +125,8 @@ class PlayoutRunner {
     // The number of times each move at the root state was visited across
     // playouts.
     std::vector<int> moves_searched(0, config.game.CurrentMovesN());
-    for (const auto& state : playout_states) {
-      ++(moves_searched[state.move_index]);
+    for (const auto& state_ptr : playout_states) {
+      ++(moves_searched[state_ptr->move_index]);
     }
     result.policy = config.game.MoveVisitCountToPolicy(moves_searched);
     
@@ -138,9 +146,12 @@ class PlayoutRunner {
   LockByKey<std::string, Shards> state_lock_;
 
   struct PlayoutState {
-    PlayoutState(const GameSubclass& game) : 
-        move_index(-1), evals_remaining(-1), on_root(true), game(game) {}
-    const PlayoutConfig& config;
+    PlayoutState(const PlayoutConfig<GameSubclass>& config, 
+                 const GameSubclass& game) : 
+        config(config), move_index(-1), evals_remaining(-1), on_root(true), 
+        game(game) {}
+
+    const PlayoutConfig<GameSubclass>& config;
 
     // The playout's outcome.
     std::array<float, GameSubclass::players_n()> outcome;
@@ -170,7 +181,7 @@ class PlayoutRunner {
     PlayoutWorkElement& operator=(const PlayoutWorkElement&) = delete;
 
     PlayoutWorkElement(
-        const PlayoutConfig& playout_config,
+        const PlayoutConfig<GameSubclass>& playout_config,
         PlayoutState& playout_state,
         PlayoutRunner& runner,
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) :
@@ -182,7 +193,7 @@ class PlayoutRunner {
     virtual void operator()(GameNetworkSubclass* local_network) const = 0;
 
    protected:
-    const PlayoutConfig& playout_config_;
+    const PlayoutConfig<GameSubclass>& playout_config_;
     PlayoutState& playout_state_;
     PlayoutRunner& runner_;
     NetworkDispatchQueue<GameNetworkSubclass>& work_queue_;
@@ -194,7 +205,7 @@ class PlayoutRunner {
      FanoutWorkElement& operator=(const FanoutWorkElement&) = delete;
 
      FanoutWorkElement(
-        const PlayoutConfig& playout_config,
+        const PlayoutConfig<GameSubclass>& playout_config,
         PlayoutState& playout_state, 
         PlayoutRunner& runner, 
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) : 
@@ -203,7 +214,7 @@ class PlayoutRunner {
 
     void operator()(GameNetworkSubclass* local_network) const {
       const GameSubclass& game(this->playout_state_.game);
-      if (game.State() == GameSubclass::GameState::kOver) {
+      if (game.State() == games::GameState::kOver) {
         if (this->playout_state_.on_root) {
           LOG(FATAL) << "Cannot begin fanout from leaf.";
         }
@@ -236,7 +247,7 @@ class PlayoutRunner {
       Cache& cache) {
     int policy_n = 0;
     std::vector<nn::DynamicMatrixRef> outputs;
-    if (game.State() == GameSubclass::kOngoing) {
+    if (game.State() == games::GameState::kOngoing) {
       policy_n = local_network.PolicyOutputSize(game.PolicyClassI());
     }
 
@@ -280,7 +291,7 @@ class PlayoutRunner {
     EvaluateWorkElement& operator=(const EvaluateWorkElement&) = delete;
 
     EvaluateWorkElement(
-        const PlayoutConfig& playout_config,
+        const PlayoutConfig<GameSubclass>& playout_config,
         PlayoutState& playout_state,
         PlayoutRunner& runner,
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue,
@@ -299,7 +310,7 @@ class PlayoutRunner {
       // we only care about the first GameSubclass::player_n() values from the
       // output, and from these we only care about the predicted odds for the
       // player who's turn it is.
-      this->playout_state_.eval_results_[eval_index_] = 
+      this->playout_state_.eval_results[eval_index_] = 
           {game_.state_uid(), model_output[game_.CurrentPlayerI()]};
 
       uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
@@ -323,7 +334,7 @@ class PlayoutRunner {
     SelectWorkElement& operator=(const SelectWorkElement&) = delete;
 
     SelectWorkElement(
-        const PlayoutConfig& playout_config,
+        const PlayoutConfig<GameSubclass>& playout_config,
         PlayoutState& playout_state,
         PlayoutRunner& runner,
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) :
@@ -360,7 +371,7 @@ class PlayoutRunner {
           float policy_for_move = this->playout_state_.game.PolicyForMoveI(
               policy, move_i);
           float policy_term = policy_for_move + absl::Gaussian(
-              bitgen, 0, this->playout_config_.policy_noise);
+              bitgen, 0.0f, this->playout_config_.policy_noise);
 
           // The score for the sub-game resulting from making move move_i.
           float score = outcome_for_move

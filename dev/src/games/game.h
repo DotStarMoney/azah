@@ -12,6 +12,12 @@
 namespace azah {
 namespace games {
 
+enum class GameState {
+  kUnknown = 0,
+  kOngoing = 1,
+  kOver = 2,
+};
+
 template <int PlayersN, int MaxMoveOptionsCacheHint>
 class Game {
  public:
@@ -41,11 +47,6 @@ class Game {
   // Undefined if the game is over.
   virtual int CurrentMovesN() const = 0;
 
-  enum class GameState {
-    kUnknown = 0,
-    kOngoing = 1,
-    kOver = 2,
-  };
   // The state of the current game.
   virtual GameState State() const = 0;
   

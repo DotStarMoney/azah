@@ -26,21 +26,23 @@ class NetworkDispatchQueue :
                             GameNetworkSubclass>(threads, queue_length) {
     for (int i = 0; i < this->threads_n(); ++i) {
       networks_.push_back(std::make_unique<GameNetworkSubclass>());
-      SetThreadState(i, networks_.back().get());
+      this->SetThreadState(i, networks_.back().get());
     }
   }
 
-  void SetAllConstants(const std::vector<uint32_t>& variables_i,
-                       const std::vector<nn::DynamicMatrix>& variables) {
+  void SetAllVariables(const std::vector<nn::DynamicMatrixRef>& variables) {   
+    std::vector<uint32_t> range_i;
+    for (uint32_t i = 0; i < variables.size(); range_i.push_back(i++));
     for (auto& network_ptr : networks_) {
-      network_ptr->SetVariables(variables_i, variables);
+      network_ptr->SetVariables(range_i, variables);
     }
   }
 
-  void SetAllVariables(const std::vector<uint32_t>& constants_i,
-                       const std::vector<nn::DynamicMatrix>& constants) {
+  void SetAlConstants(const std::vector<nn::DynamicMatrixRef>& constants) {
+    std::vector<uint32_t> range_i;
+    for (uint32_t i = 0; i < constants.size(); range_i.push_back(i++));
     for (auto& network_ptr : networks_) {
-      network_ptr->SetConstants(constants_i, constants);
+      network_ptr->SetVariables(range_i, constants);
     }
   }
 
