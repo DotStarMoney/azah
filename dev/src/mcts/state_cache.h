@@ -9,6 +9,7 @@
 #include <atomic>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 
 #include "absl/hash/hash.h"

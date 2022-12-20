@@ -5,6 +5,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <limits>
+#include <mutex>
 #include <shared_mutex>
 
 #include "glog/logging.h"

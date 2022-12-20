@@ -1,6 +1,7 @@
 #ifndef AZAH_MCTS_PLAYOUT_RUNNER_H_
 #define AZAH_MCTS_PLAYOUT_RUNNER_H_
 
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -8,21 +9,20 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <span>
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "../nn/data_types.h"
 #include "../nn/init.h"
+#include "absl/random/random.h"
 #include "Eigen/Core"
 #include "lock_by_key.h"
 #include "network_dispatch_queue.h"
 #include "state_cache.h"
 #include "visit_table.h"
 #include "network_work_item.h"
-
-// - Fill out SelectWorkElement
-// - Add a work element for pure MCTS
 
 namespace azah {
 namespace mcts {
@@ -46,7 +46,7 @@ class PlayoutRunner {
 
   PlayoutRunner() {}
 
-  void ClearModelCache() {
+  void ClearModelOutputCache() {
     cache_.Clear();
   }
 
@@ -57,14 +57,14 @@ class PlayoutRunner {
     // Number of playouts to run.
     int n;
 
-    // If true, don't query the model and just run vanilla MCTS.
-    bool mcts_only;
-
     // The linear weight applied to the search policy term. 
     float policy_weight;
   
     // The linear weight applied to the revisit term.
     float revisit_weight;
+
+    // Standard deviation of Gaussian noise added to the search policy term.
+    float policy_noise;
   };
 
   struct PlayoutResult {
@@ -85,8 +85,8 @@ class PlayoutRunner {
     std::vector<PlayoutState> playout_states(config.n, 
                                              PlayoutState(config.game));
     for (auto& state : playout_states) {
-      work_queue.AddWork(std::make_unique<FanoutWorkElement>(state, *this, 
-                                                             work_queue));
+      work_queue.AddWork(std::make_unique<FanoutWorkElement>(
+          config, state, *this, work_queue));
     }
     work_queue.Drain();
     visit_table_.Clear();
@@ -99,21 +99,21 @@ class PlayoutRunner {
     // number of visits to each move and select the highest one.
     std::vector<float> move_totals(0, config.game.CurrentMovesN());
     for (auto& state : playout_states) {
-      // Rotate the outcome array to move the player who's turn it currently is
-      // into the first position.
-      std::rotate(
-          state.outcome, 
-          state.outcome + config.game.CurrentPlayerI(), 
-          state.outcome + GameSubclass::players_n());
-
-      move_totals[state.move_index] += state.outcome[0];
+      move_totals[state.move_index] += state.outcome[
+          config.game.CurrentPlayerI()];
 
       result.outcome = (result.outcome.array()
           + Eigen::Map<nn::Matrix<GameSubclass::players_n(), 1>>(state.outcome))
               .matrix();
     }
     result.outcome /= static_cast<float>(config.n);
-    
+    // Rotate the outcome matrix data to move the player who's turn it currently
+    // is into the first row.
+    std::rotate(
+        result.outcome.data(),
+        result.outcome.data() + config.game.CurrentPlayerI(),
+        result.outcome.data() + GameSubclass::players_n());
+
     // The number of times each move at the root state was visited across
     // playouts.
     std::vector<int> moves_searched(0, config.game.CurrentMovesN());
@@ -140,6 +140,7 @@ class PlayoutRunner {
   struct PlayoutState {
     PlayoutState(const GameSubclass& game) : 
         move_index(-1), evals_remaining(-1), on_root(true), game(game) {}
+    const PlayoutConfig& config;
 
     // The playout's outcome.
     std::array<float, GameSubclass::players_n()> outcome;
@@ -154,7 +155,10 @@ class PlayoutRunner {
     GameSubclass game;
 
     // The results of evaluating each move in the current game state.
-    std::vector<float> eval_results;
+    //
+    // Each entry is a tuple of the sub-game state_uid, and the predicted
+    // outcome for the player who's move it is to make at that sub-game.
+    std::vector<std::tuple<std::string, float>> eval_results;
 
     // Number of completed evaluations in the current fanout for this playout.
     std::atomic<uint32_t> evals_remaining;
@@ -166,9 +170,11 @@ class PlayoutRunner {
     PlayoutWorkElement& operator=(const PlayoutWorkElement&) = delete;
 
     PlayoutWorkElement(
+        const PlayoutConfig& playout_config,
         PlayoutState& playout_state,
         PlayoutRunner& runner,
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) :
+            playout_config_(playout_config),
             playout_state_(playout_state),
             runner_(runner),
             work_queue_(work_queue) {}
@@ -176,6 +182,7 @@ class PlayoutRunner {
     virtual void operator()(GameNetworkSubclass* local_network) const = 0;
 
    protected:
+    const PlayoutConfig& playout_config_;
     PlayoutState& playout_state_;
     PlayoutRunner& runner_;
     NetworkDispatchQueue<GameNetworkSubclass>& work_queue_;
@@ -187,10 +194,12 @@ class PlayoutRunner {
      FanoutWorkElement& operator=(const FanoutWorkElement&) = delete;
 
      FanoutWorkElement(
+        const PlayoutConfig& playout_config,
         PlayoutState& playout_state, 
         PlayoutRunner& runner, 
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) : 
-            PlayoutWorkElement(playout_state, runner, work_queue) {}
+            PlayoutWorkElement(playout_config, playout_state, runner, 
+                               work_queue) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
       const GameSubclass& game(this->playout_state_.game);
@@ -202,7 +211,8 @@ class PlayoutRunner {
         return;
       }
 
-      this->playout_state_.evals_remaining.store(0, std::memory_order_relaxed);
+      this->playout_state_.evals_remaining.store(game.CurrentMovesN(), 
+                                                 std::memory_order_relaxed);
       this->playout_state_.eval_results.resize(game.CurrentMovesN());
       for (int i = 0; i < game.CurrentMovesN(); ++i) {
         GameSubclass game_w_move(game);
@@ -210,8 +220,8 @@ class PlayoutRunner {
 
         this->work_queue_.AddWork(
             std::make_unique<EvaluateWorkElement>(
-                this->playout_state_, this->runner_, this->work_queue_,
-                std::move(game_w_move), i));
+                this->playout_config_, this->playout_state_, this->runner_, 
+                this->work_queue_, std::move(game_w_move), i));
       }
     }
   };
@@ -270,12 +280,14 @@ class PlayoutRunner {
     EvaluateWorkElement& operator=(const EvaluateWorkElement&) = delete;
 
     EvaluateWorkElement(
+        const PlayoutConfig& playout_config,
         PlayoutState& playout_state,
         PlayoutRunner& runner,
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue,
         GameSubclass&& game,
         int eval_index) :
-            PlayoutWorkElement(playout_state, runner, work_queue),
+            PlayoutWorkElement(playout_config, playout_state, runner, 
+                               work_queue),
             game_(std::move(game)),
             eval_index_(eval_index) {}
 
@@ -288,7 +300,7 @@ class PlayoutRunner {
       // output, and from these we only care about the predicted odds for the
       // player who's turn it is.
       this->playout_state_.eval_results_[eval_index_] = 
-          model_output[game_.CurrentPlayerI()];
+          {game_.state_uid(), model_output[game_.CurrentPlayerI()]};
 
       uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
           -1, std::memory_order_relaxed);
@@ -296,19 +308,14 @@ class PlayoutRunner {
 
       this->work_queue_.AddWork(
           std::make_unique<SelectWorkElement>(
-              this->playout_state_, this->runner_, this->work_queue_));
+              this->playout_config_, this->playout_state_, this->runner_, 
+              this->work_queue_));
     }
-   
+
    private:
     const GameSubclass game_;
-    int eval_index_;
+    const int eval_index_;
   };
-
-  // SelectWorkElement
-  //   - Gather the visit counts for each move tried in a locking fashion, use 
-  //     the table to select the next move. Make that move, and pass /
-  //     push FanoutWorkElement(non-root). If root, increment atomic moves
-  //     counter.
 
   class SelectWorkElement : public PlayoutWorkElement {
    public:
@@ -316,15 +323,76 @@ class PlayoutRunner {
     SelectWorkElement& operator=(const SelectWorkElement&) = delete;
 
     SelectWorkElement(
+        const PlayoutConfig& playout_config,
         PlayoutState& playout_state,
         PlayoutRunner& runner,
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) :
-            PlayoutWorkElement(playout_state, runner, work_queue) {}
+            PlayoutWorkElement(playout_config, playout_state, runner, 
+                               work_queue) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
-      //
-      //
-      //
+      auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
+          this->playout_state_.game, *local_network, this->runner_.cache_);
+      // Skip past the outcome part of the output and just fetch the policy.
+      auto policy = std::span<float>(&(model_output[GameSubclass::players_n()]), 
+                                     policy_n);
+      int best_move_i = -1;
+      {
+        // While this lock ensures that playouts revisiting the same state will
+        // observe child state visit count sequentially, it does not ensure that
+        // a playout at a different state that shares a child with this one
+        // *will* observe visit counts sequentially. We assume this is rare
+        // enough to be okay.
+        auto lock = this->runner_.state_lock_.Lock(
+            this->playout_state_.game.state_uid());
+
+        float best_score = 0.0f;
+
+        int move_i = 0;
+        absl::BitGen bitgen;
+        for (const auto& [state_uid, outcome_for_move] : 
+            this->playout_state_.eval_results) {
+          int visit_count_for_move = this->runner_.visit_table_.Get(state_uid);
+          float visit_count_term = std::sqrtf(
+              std::logf(static_cast<float>(this->playout_config_.n))
+                  / static_cast<float>(visit_count_for_move) + 1.0f);
+          
+          float policy_for_move = this->playout_state_.game.PolicyForMoveI(
+              policy, move_i);
+          float policy_term = policy_for_move + absl::Gaussian(
+              bitgen, 0, this->playout_config_.policy_noise);
+
+          // The score for the sub-game resulting from making move move_i.
+          float score = outcome_for_move
+              + this->playout_config_.policy_weight * policy_term
+              + this->playout_config_.revisit_weight * visit_count_term;
+
+          if (score > best_score) {
+            best_score = score;
+            best_move_i = move_i;
+          }
+
+          ++move_i;
+        }
+
+        // We now know that best_move_i is the move we're going to make, so
+        // we can increment the visit count to this sub-state before we actually
+        // get there for the sake of other visitors to the current state.
+        this->runner_.visit_table_.Inc(
+            std::get<0>(this->playout_state_.eval_results[best_move_i]));
+      }
+
+      // On the root move, record which option we took.
+      if (this->playout_state_.on_root) {
+        this->playout_state_.move_index = best_move_i;
+        this->playout_state_.on_root = false;
+      }
+
+      this->playout_state_.game.MakeMove(best_move_i);
+
+      this->work_queue_.AddWork(std::make_unique<FanoutWorkElement>(
+          this->playout_config_, this->playout_state_, this->runner_,
+          this->work_queue_));
     }
   };
 };

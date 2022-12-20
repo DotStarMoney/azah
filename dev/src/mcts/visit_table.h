@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/hash/hash.h"
@@ -23,7 +24,7 @@ class VisitTable {
   // Thread safe.
   void Inc(const HashKey& key) {
     TableShard& shard = table_shards_[absl::HashOf(key) % Shards];
-    std::unique_lock<std::mutex> read_write_lock(shard.m);
+    std::unique_lock<std::shared_mutex> read_write_lock(shard.m);
     auto [iter, is_new] = shard.table.insert({key, 1});
     if (!is_new) ++(iter->second);
   }
@@ -31,7 +32,7 @@ class VisitTable {
   // Thread safe.
   int Get(const HashKey& key) {
     TableShard& shard = table_shards_[absl::HashOf(key) % Shards];
-    std::unique_lock<std::mutex> read_write_lock(shard.m);
+    std::shared_lock<std::shared_mutex> read_lock(shard.m);
     auto iter = shard.table.find(key);
     if (iter == shard.table.end()) return 0;
     return iter->second;
@@ -47,7 +48,7 @@ class VisitTable {
  private:
   struct TableShard {
     absl::flat_hash_map<HashKey, uint32_t> table;
-    std::mutex m;
+    std::shared_mutex m;
   };
 
   std::unique_ptr<TableShard[]> table_shards_;
