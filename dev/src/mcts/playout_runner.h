@@ -314,16 +314,29 @@ class PlayoutRunner {
             eval_index_(eval_index) {}
 
     void operator()(GameNetworkSubclass* local_network) const {
-      auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
-          game_, *local_network, this->runner_.cache_);
+      if (game_.State() == games::GameState::kOngoing) {
+        auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
+            game_, *local_network, this->runner_.cache_);
 
-      // Since we store the policy and outcome together with the outcome first,
-      // we only care about the first GameSubclass::player_n() values from the
-      // output, and from these we only care about the predicted odds for the
-      // player who's turn it is.
-      this->playout_state_.eval_results[eval_index_] = 
-          {game_.state_uid(), 
-           model_output[this->playout_state_.game.CurrentPlayerI()]};
+        // Since we store the policy and outcome together with the outcome
+        // first, we only care about the first GameSubclass::players_n() values
+        // from the output, and from these we only care about the predicted odds
+        // for the player who's turn it is..
+        // 
+        // Since the evaluation we just did was on state i + 1, not i, we have
+        // to back out the odds for the player moving on i.
+        int parent_player_i = ((this->playout_state_.game.CurrentPlayerI() 
+            - game_.CurrentPlayerI()) + GameSubclass::players_n()) 
+                % GameSubclass::players_n();
+        this->playout_state_.eval_results[eval_index_] =
+            {game_.state_uid(), model_output[parent_player_i]};
+      } else {
+        // If the game is over, lets just use the information known exactly
+        // rather than ask the model.
+        this->playout_state_.eval_results[eval_index_] =
+            {game_.state_uid(), 
+             game_.Outcome()[this->playout_state_.game.CurrentPlayerI()]};
+      }
 
       uint32_t evals_remaining = this->playout_state_.evals_remaining.fetch_add(
           -1, std::memory_order_relaxed);
@@ -392,7 +405,7 @@ class PlayoutRunner {
               + this->playout_config_.policy_weight * policy_term
               + this->playout_config_.revisit_weight * visit_count_term;
 
-          if (score > best_score) {
+          if (score >= best_score) {
             best_score = score;
             best_move_i = move_i;
           }

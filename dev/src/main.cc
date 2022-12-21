@@ -33,15 +33,24 @@ int main(int argc, char* argv[]) {
 
   Tictactoe game;
 
+  game.MakeMove(2);
+  game.MakeMove(5);
+  game.MakeMove(6);
+  game.MakeMove(4);
   game.MakeMove(0);
+  game.MakeMove(1);
+
+  // X _ X
+  // O _ O
+  // O _ X
 
   TictactoeRunnerConfig config{
       .game = game,
       .n = 384,
       .outcome_weight = 0.50,
-      .policy_weight = 0.25, 
+      .policy_weight = 0.33, 
       .revisit_weight = 0.25,
-      .policy_noise = 0.1};
+      .policy_noise = 0.08};
 
   TictactoeRunner runner;
 

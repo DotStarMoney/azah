@@ -54,24 +54,31 @@ class Game {
   // 1. The order of players in the outcome should match what is returned by
   // CurrentPlayerI(). It is okay to return fractional values in the case of a 
   // tie.
+  // 
+  // The player who's outcome value is the highest is considered the winner.
   //
   // Undefined if the game is ongoing.
   virtual std::array<float, PlayersN> Outcome() const = 0;
 
-  // Converts the current game state to a series of matrices. These must be
-  // 1:1 with the associated game model's inputs and will be used to compute
-  // the outcome and policy at a given state.
+  // Converts the current game state to a series of matrices. These must be 1:1
+  // with the associated game model's inputs and will be used to compute the
+  // outcome and policy at a given state.
   //
-  // The created state should reflect the player who's decision it is to make:
+  // <!> The created state should reflect the player who's decision it is to 
+  //     make:
   //
-  // E.g.: In the case of Tic-tac-toe, the player who's move it is could have
-  // their positions represented as 1s and the opponent as -1s instead of 1s for
-  // Xs and -1s for Os.
+  //     E.g.: In the case of Tic-tac-toe, the player who's move it is could
+  //     have their positions represented as 1s and the opponent as -1s instead
+  //     of 1s for Xs and -1s for Os.
   //
-  // E.g.: For Chinese checkers when using six matrices to describe the 6
-  // player's board positions, the order of these matrices as returned by
-  // StateToMatrix() should be rotated such that CurrentPlayerI()'s board matrix
-  // is always in the first array position.
+  //     E.g.: For Chinese checkers when using six matrices to describe the 6
+  //     player's board positions, the order of these matrices as returned by
+  //     StateToMatrix() should be rotated such that CurrentPlayerI()'s board
+  //     matrix is always in the first array position.
+  //
+  // <!> If a player has won the game, the state should reflect that it is that
+  //     player's "turn" even if no further moves can be made.
+  //
   virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;
 
   // The index of the policy head in the associated game model for the current
