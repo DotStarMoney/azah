@@ -3,10 +3,12 @@
 
 #include <stdint.h>
 
+#include <type_traits>
 #include <vector>
 
 #include "constant_base.h"
 #include "data_types.h"
+#include "glog/logging.h"
 #include "node_base.h"
 #include "variable_base.h"
 
@@ -26,11 +28,30 @@ class Network {
                  std::vector<DynamicMatrix>& gradients,
                  std::vector<float>& losses);
 
-  void SetVariables(const std::vector<uint32_t>& variables_i, 
-                    const std::vector<DynamicMatrix>& variables);
-
+  // Leave variables_i empty to set all variables.
+  template <typename SourceDynamicMatrix>
   void SetVariables(const std::vector<uint32_t>& variables_i,
-                    const std::vector<DynamicMatrixRef>& variables);
+                    const std::vector<SourceDynamicMatrix>& variables) {
+    static_assert(
+        std::is_same<SourceDynamicMatrix, DynamicMatrix>()
+            || std::is_same<SourceDynamicMatrix, DynamicMatrixRef>()
+            || std::is_same<SourceDynamicMatrix, ConstDynamicMatrixRef>(), 
+        "Variable type must be a dynamic matrix.");
+    if (variables_i.empty()) {
+      if (variables.size() != variables_.size()) {
+        LOG(FATAL) << "Number of provided variables does not match the number "
+                      "of model variables.";
+      }
+      for (int i = 0; i < variables.size(); ++i) {
+        variables_[i]->value_base() = variables[i];
+      }
+    }
+    else {
+      for (int i = 0; i < variables_i.size(); ++i) {
+        variables_[variables_i[i]]->value_base() = variables[i];
+      }
+    }
+  }
 
   // Leave variables_i empty to retrieve all variables.
   void GetVariables(const std::vector<uint32_t>& variables_i, 

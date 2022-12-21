@@ -17,6 +17,7 @@
 
 namespace azah {
 namespace mcts {
+namespace internal {
 
 template <typename HashKey, typename Value, int Blocks, int RowsPerBlock,
           int ValuesPerRow>
@@ -158,6 +159,7 @@ class StateCache {
   std::unique_ptr<Block[]> blocks_;
 };
 
+}  // namespace internal
 }  // namespace mcts
 }  // namespace azah
 

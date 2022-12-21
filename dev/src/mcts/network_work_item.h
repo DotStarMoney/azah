@@ -3,6 +3,7 @@
 
 namespace azah {
 namespace mcts {
+namespace internal {
 
 template <typename GameNetworkSubclass>
 class GameNetworkWorkItem {
@@ -10,6 +11,7 @@ class GameNetworkWorkItem {
   virtual void operator()(GameNetworkSubclass* local_network) const = 0;
 };
 
+}  // namespace internal
 }  // namespace mcts
 }  // namespace azah
 

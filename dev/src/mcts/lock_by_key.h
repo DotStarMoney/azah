@@ -8,6 +8,7 @@
 
 namespace azah {
 namespace mcts {
+namespace internal {
 
 template <typename HashKey, int Shards = 1>
 class LockByKey {
@@ -27,6 +28,7 @@ class LockByKey {
   std::unique_ptr<std::mutex[]> lock_shards_;
 };
 
+}  // namespace internal
 }  // namespace mcts
 }  // namespace azah
 

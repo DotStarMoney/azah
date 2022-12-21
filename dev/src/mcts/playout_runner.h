@@ -18,6 +18,7 @@
 #include "../nn/init.h"
 #include "absl/random/random.h"
 #include "Eigen/Core"
+#include "glog/logging.h"
 #include "lock_by_key.h"
 #include "network_dispatch_queue.h"
 #include "state_cache.h"
@@ -26,6 +27,7 @@
 
 namespace azah {
 namespace mcts {
+namespace internal {
 
 template <typename GameSubclass>
 struct PlayoutConfig {
@@ -54,7 +56,7 @@ struct PlayoutResult {
   // the first row.
   nn::Matrix<GameSubclass::players_n(), 1> outcome;
 
-  // The search proportion across predicted options actually made.
+  // The search proportion across predicted options.
   nn::DynamicMatrix policy;
 
   // The move option with the greatest average win proportion across playouts.
@@ -435,6 +437,7 @@ class PlayoutRunner {
   };
 };
 
+}  // namespace internal
 }  // namespace mcts
 }  // namespace azah
 

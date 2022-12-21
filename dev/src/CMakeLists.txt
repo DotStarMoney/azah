@@ -35,6 +35,7 @@ set(SRC_MCTS_H
     mcts/network_dispatch_queue.h
     mcts/network_work_item.h
     mcts/playout_runner.h
+    mcts/self_player.h
     mcts/state_cache.h
     mcts/visit_table.h)
 source_group("Header Files\\mcts" FILES ${SRC_MCTS_H})

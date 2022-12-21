@@ -12,6 +12,7 @@
 
 namespace azah {
 namespace mcts {
+namespace internal {
 
 template <typename GameNetworkSubclass>
 class NetworkDispatchQueue : 
@@ -25,15 +26,15 @@ class NetworkDispatchQueue :
       thread::DispatchQueue<GameNetworkWorkItem<GameNetworkSubclass>, 
                             GameNetworkSubclass>(threads, queue_length) {
     for (int i = 0; i < this->threads_n(); ++i) {
-      networks_.push_back(std::make_unique<GameNetworkSubclass>());
-      this->SetThreadState(i, networks_.back().get());
+      replicas_.push_back(std::make_unique<GameNetworkSubclass>());
+      this->SetThreadState(i, replicas_.back().get());
     }
   }
 
   void SetAllVariables(const std::vector<nn::DynamicMatrixRef>& variables) {   
     std::vector<uint32_t> range_i;
     for (uint32_t i = 0; i < variables.size(); range_i.push_back(i++));
-    for (auto& network_ptr : networks_) {
+    for (auto& network_ptr : replicas_) {
       network_ptr->SetVariables(range_i, variables);
     }
   }
@@ -41,15 +42,16 @@ class NetworkDispatchQueue :
   void SetAlConstants(const std::vector<nn::DynamicMatrixRef>& constants) {
     std::vector<uint32_t> range_i;
     for (uint32_t i = 0; i < constants.size(); range_i.push_back(i++));
-    for (auto& network_ptr : networks_) {
+    for (auto& network_ptr : replicas_) {
       network_ptr->SetVariables(range_i, constants);
     }
   }
 
  private:
-  std::vector<std::unique_ptr<GameNetworkSubclass>> networks_;
+  std::vector<std::unique_ptr<GameNetworkSubclass>> replicas_;
 };
 
+}  // namespace internal
 }  // namespace mcts
 }  // namespace azah
 
