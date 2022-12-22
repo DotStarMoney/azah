@@ -26,35 +26,36 @@ GameNetwork::GameNetwork(
         outcome_output_index_(outcome_output_index),
         policy_output_sizes_(std::move(policy_output_sizes)) {}
 
-const std::vector<uint32_t>& GameNetwork::InputConstantIndices() const {
+const std::vector<uint32_t>& GameNetwork::input_constant_indices() const {
   return input_constant_indices_;
 }
 
-const std::vector<uint32_t>& GameNetwork::PolicyTargetConstantIndices() const {
+const std::vector<uint32_t>& 
+    GameNetwork::policy_target_constant_indices() const {
   return policy_target_constant_indices_;
 }
 
-uint32_t GameNetwork::OutcomeTargetConstantIndex() const {
+uint32_t GameNetwork::outcome_target_constant_index() const {
   return outcome_target_constant_index_;
 }
 
-const std::vector<uint32_t>& GameNetwork::PolicyLossTargetIndices() const {
+const std::vector<uint32_t>& GameNetwork::policy_loss_target_indices() const {
   return policy_loss_target_indices_;
 }
 
-uint32_t GameNetwork::OutcomeLossTargetIndex() const {
+uint32_t GameNetwork::outcome_loss_target_index() const {
   return outcome_loss_target_index_;
 }
 
-const std::vector<uint32_t>& GameNetwork::PolicyOutputIndices() const {
+const std::vector<uint32_t>& GameNetwork::policy_output_indices() const {
   return policy_output_indices_;
 }
 
-uint32_t GameNetwork::OutcomeOutputIndex() const {
+uint32_t GameNetwork::outcome_output_index() const {
   return outcome_output_index_;
 }
 
-int GameNetwork::PolicyOutputSize(int policy_output_i) const {
+int GameNetwork::policy_output_sizes(int policy_output_i) const {
   return policy_output_sizes_[policy_output_i];
 }
 

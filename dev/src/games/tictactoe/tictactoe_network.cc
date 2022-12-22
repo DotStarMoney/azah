@@ -8,7 +8,7 @@ namespace games {
 namespace tictactoe {
 
 TictactoeNetwork::TictactoeNetwork() :
-    GameNetwork({0}, {1}, 2, {1}, 2, {0}, 1, {9}),
+    GameNetwork({0}, {1}, 2, {0}, 1, {0}, 1, {9}),
     input_(nn::init::Zeros<9, 1>()),
     dense1_k_(nn::init::GlorotUniform<kLayer1Depth, 9>()),
     dense1_(dense1_k_, input_),
@@ -22,13 +22,14 @@ TictactoeNetwork::TictactoeNetwork() :
     norm2_g_(nn::init::Ones<kLayer2Depth, 1>()),
     norm2_(dense2_, norm2_b_, norm2_g_),
     swish2_(norm2_),
+    swish2_fork_(swish2_, 2),
     policy_linear_k_(nn::init::GlorotUniform<9, kLayer2Depth>()),
-    policy_linear_(policy_linear_k_, swish2_),
+    policy_linear_(policy_linear_k_, swish2_fork_),
     policy_(policy_linear_),
     policy_target_(nn::init::Zeros<9, 1>()),
     policy_loss_(policy_linear_, policy_target_),
     outcome_linear_k_(nn::init::GlorotUniform<2, kLayer2Depth>()),
-    outcome_linear_(outcome_linear_k_, swish2_),
+    outcome_linear_(outcome_linear_k_, swish2_fork_),
     outcome_(outcome_linear_),
     outcome_target_(nn::init::Zeros<2, 1>()),
     outcome_loss_(outcome_linear_, outcome_target_) {

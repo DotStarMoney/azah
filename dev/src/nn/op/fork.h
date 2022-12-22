@@ -52,7 +52,7 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
       this->input_.Backprop(cycle, forked_grad_);
     } else if (forks_ > n_forks_) {
       LOG(FATAL) << "Too many forks, did you mean to set \"forks_n\" in the "
-          "constructor?";
+          "constructor? You may also have forgotten to fork an op downstream.";
     }
   }
 };

@@ -146,11 +146,11 @@ class StateCache {
     std::shared_mutex m;
   };
 
-  static constexpr std::size_t KeyToBlockHash(const TempKey& key) {
+  static inline std::size_t KeyToBlockHash(const TempKey& key) {
     return key.hashed_key_ % Blocks;
   }
 
-  Block& KeyToBlock(const TempKey& key) {
+  Block& KeyToBlock(const TempKey& key) const {
     return blocks_[KeyToBlockHash(key)];
   }
 

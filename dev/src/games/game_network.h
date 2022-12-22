@@ -25,18 +25,18 @@ class GameNetwork : public nn::Network {
       uint32_t outcome_output_index,
       std::vector<uint32_t>&& policy_output_sizes);
 
-  const std::vector<uint32_t>& InputConstantIndices() const;
+  const std::vector<uint32_t>& input_constant_indices() const;
   
-  const std::vector<uint32_t>& PolicyTargetConstantIndices() const;
-  uint32_t OutcomeTargetConstantIndex() const;
+  const std::vector<uint32_t>& policy_target_constant_indices() const;
+  uint32_t outcome_target_constant_index() const;
   
-  const std::vector<uint32_t>& PolicyLossTargetIndices() const;
-  uint32_t OutcomeLossTargetIndex() const;
+  const std::vector<uint32_t>& policy_loss_target_indices() const;
+  uint32_t outcome_loss_target_index() const;
 
-  const std::vector<uint32_t>& PolicyOutputIndices() const;
-  uint32_t OutcomeOutputIndex() const;
+  const std::vector<uint32_t>& policy_output_indices() const;
+  uint32_t outcome_output_index() const;
 
-  int PolicyOutputSize(int policy_output_i) const;
+  int policy_output_sizes(int policy_output_i) const;
 
  private:
   const std::vector<uint32_t> input_constant_indices_;

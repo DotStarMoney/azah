@@ -4,6 +4,7 @@
 #include "../../nn/constant.h"
 #include "../../nn/init.h"
 #include "../../nn/network.h"
+#include "../../nn/op/fork.h"
 #include "../../nn/op/layer_norm.h"
 #include "../../nn/op/matmul.h"
 #include "../../nn/op/softmax.h"
@@ -51,6 +52,10 @@ class TictactoeNetwork : public GameNetwork {
   azah::nn::op::LayerNorm<kLayer2Depth, 1> norm2_;
 
   azah::nn::op::Swish<kLayer2Depth, 1> swish2_;
+
+  // Fork final layer to outputs
+
+  azah::nn::op::Fork<kLayer2Depth, 1> swish2_fork_;
 
   // Policy head
 

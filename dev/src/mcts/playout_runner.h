@@ -221,7 +221,7 @@ class PlayoutRunner {
             PlayoutWorkElement(playout_config, playout_state, runner, 
                                work_queue) {}
 
-    void operator()(GameNetworkSubclass* local_network) const {
+    void operator()(GameNetworkSubclass* local_network) const override {
       const GameSubclass& game(this->playout_state_.game);
       if (game.State() == games::GameState::kOver) {
         if (this->playout_state_.on_root) {
@@ -256,7 +256,7 @@ class PlayoutRunner {
       Cache& cache) {
     int policy_n = 0;
     if (game.State() == games::GameState::kOngoing) {
-      policy_n = local_network.PolicyOutputSize(game.PolicyClassI());
+      policy_n = local_network.policy_output_sizes(game.PolicyClassI());
     }
 
     // We cache the current state's outcome + policy predictions by stacking
@@ -265,14 +265,14 @@ class PlayoutRunner {
     auto cached_output = std::make_unique<float[]>(cached_values_n);
     TempCacheKey temp_key(game.state_uid());
     if (!cache.TryLoad(temp_key, cached_output.get(), cached_values_n)) {
-      local_network.SetConstants(local_network.InputConstantIndices(),
+      local_network.SetConstants(local_network.input_constant_indices(),
                                  game.StateToMatrix());
       std::vector<nn::DynamicMatrix> model_outputs;
       if (policy_n > 0) {
         local_network.Outputs(
             {
-                local_network.OutcomeOutputIndex(),
-                local_network.PolicyOutputIndices()[game.PolicyClassI()]
+                local_network.outcome_output_index(),
+                local_network.policy_output_indices()[game.PolicyClassI()]
             },
             model_outputs);
         std::memcpy(
@@ -282,7 +282,7 @@ class PlayoutRunner {
       } else {
         local_network.Outputs(
             {
-                local_network.OutcomeOutputIndex()
+                local_network.outcome_output_index()
             },
             model_outputs);
       }
@@ -315,7 +315,7 @@ class PlayoutRunner {
             game_(std::move(game)),
             eval_index_(eval_index) {}
 
-    void operator()(GameNetworkSubclass* local_network) const {
+    void operator()(GameNetworkSubclass* local_network) const override {
       if (game_.State() == games::GameState::kOngoing) {
         auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
             game_, *local_network, this->runner_.cache_);
@@ -368,7 +368,7 @@ class PlayoutRunner {
             PlayoutWorkElement(playout_config, playout_state, runner, 
                                work_queue) {}
 
-    void operator()(GameNetworkSubclass* local_network) const {
+    void operator()(GameNetworkSubclass* local_network) const override {
       auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
           this->playout_state_.game, *local_network, this->runner_.cache_);
       // Skip past the outcome part of the output and just fetch the policy.
