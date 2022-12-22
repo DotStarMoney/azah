@@ -17,7 +17,7 @@ public:
   Adam(const Adam&) = delete;
   Adam& operator=(const Adam&) = delete;
 
-  Adam(const Network& src, float beta1, float beta2);
+  Adam(const Network& src, float beta1 = 0.9f, float beta2 = 0.999f);
 
   void Update(
       float lr, 

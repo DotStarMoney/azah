@@ -1,5 +1,5 @@
-#ifndef AZAH_MCTS_NETWORK_WORK_ITEM_H_
-#define AZAH_MCTS_NETWORK_WORK_ITEM_H_
+#ifndef AZAH_MCTS_GAME_NETWORK_WORK_ITEM_H_
+#define AZAH_MCTS_GAME_NETWORK_WORK_ITEM_H_
 
 namespace azah {
 namespace mcts {
@@ -15,4 +15,4 @@ class GameNetworkWorkItem {
 }  // namespace mcts
 }  // namespace azah
 
-#endif  // AZAH_MCTS_NETWORK_WORK_ITEM_H_
+#endif  // AZAH_MCTS_GAME_NETWORK_WORK_ITEM_H_

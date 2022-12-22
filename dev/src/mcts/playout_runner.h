@@ -18,12 +18,12 @@
 #include "../nn/init.h"
 #include "absl/random/random.h"
 #include "Eigen/Core"
+#include "game_network_work_item.h"
 #include "glog/logging.h"
 #include "lock_by_key.h"
 #include "network_dispatch_queue.h"
 #include "state_cache.h"
 #include "visit_table.h"
-#include "network_work_item.h"
 
 namespace azah {
 namespace mcts {

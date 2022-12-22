@@ -4,11 +4,12 @@
 #include <stdint.h>
 
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "../nn/data_types.h"
 #include "../thread/dispatch_queue.h"
-#include "network_work_item.h"
+#include "game_network_work_item.h"
 
 namespace azah {
 namespace mcts {
@@ -31,7 +32,13 @@ class NetworkDispatchQueue :
     }
   }
 
-  void SetAllVariables(const std::vector<nn::DynamicMatrixRef>& variables) {   
+  template <typename SourceDynamicMatrix>
+  void SetAllVariables(const std::vector<SourceDynamicMatrix>& variables) {
+    static_assert(
+        std::is_same<SourceDynamicMatrix, nn::DynamicMatrix>()
+            || std::is_same<SourceDynamicMatrix, nn::DynamicMatrixRef>()
+            || std::is_same<SourceDynamicMatrix, nn::ConstDynamicMatrixRef>(),
+        "Variable type must be a dynamic matrix.");
     std::vector<uint32_t> range_i;
     for (uint32_t i = 0; i < variables.size(); range_i.push_back(i++));
     for (auto& network_ptr : replicas_) {
