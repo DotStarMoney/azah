@@ -21,8 +21,8 @@ class ScalarMSE : public BinaryOp<Rows, Cols, 1, 1, 1, 1> {
       : BinaryOp<Rows, Cols, 1, 1, 1, 1>(input, target) {}
 
   void Backprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) override {
-    auto x = this->input_a_.Output(cycle);
-    auto target = this->input_b_.Output(cycle);
+    const auto& x = this->input_a_.Output(cycle);
+    const auto& target = this->input_b_.Output(cycle);
     auto lhs_prod_array = output_dx.value() * (x.array() - target.value())
         * static_cast<float>(2.0 / (Rows * Cols));
     if (!this->input_a_.constant) {
@@ -36,8 +36,8 @@ class ScalarMSE : public BinaryOp<Rows, Cols, 1, 1, 1, 1> {
 
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto x = this->input_a_.Output(cycle);
-    auto target = this->input_b_.Output(cycle);
+    const auto& x = this->input_a_.Output(cycle);
+    const auto& target = this->input_b_.Output(cycle);
     this->cached_output_ =
         Matrix<1, 1>::Constant((x.array() - target.value()).square().mean());
   }

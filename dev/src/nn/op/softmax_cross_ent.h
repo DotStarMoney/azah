@@ -26,7 +26,7 @@ class SoftmaxCrossEnt : public BinaryOp<Rows, Cols, Rows, Cols, 1, 1> {
     auto pred_softmax = Softmax<Rows, Cols>::SoftmaxExpr(
         this->input_a_.Output(cycle));
     if (!this->input_a_.constant) {
-      auto troo = this->input_b_.Output(cycle);
+      const auto& troo = this->input_b_.Output(cycle);
       this->input_a_.Backprop(
           cycle, 
           (c * (pred_softmax - troo.array())).matrix());
@@ -40,7 +40,7 @@ class SoftmaxCrossEnt : public BinaryOp<Rows, Cols, Rows, Cols, 1, 1> {
   void ComputeOutput(uint32_t cycle) override {
     auto pred_softmax = Softmax<Rows, Cols>::SoftmaxExpr(
         this->input_a_.Output(cycle));
-    auto troo = this->input_b_.Output(cycle);
+    const auto& troo = this->input_b_.Output(cycle);
     auto log_like = troo.array() * pred_softmax.log();
     this->cached_output_ = Matrix<1, 1>::Constant(-log_like.sum());
   }

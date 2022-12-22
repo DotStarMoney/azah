@@ -27,7 +27,7 @@ class Matmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
   void Backprop(uint32_t cycle, 
                 const MatrixRef<InputRowsA, InputColsB>& output_dx) override {
     if (!this->input_a_.constant) {
-      auto b = this->input_b_.Output(cycle);
+      const auto& b = this->input_b_.Output(cycle);
       if constexpr (TransposeRHS) {
         this->input_a_.Backprop(cycle, output_dx * b);
       } else {
@@ -43,8 +43,8 @@ class Matmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB,
 
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto a = this->input_a_.Output(cycle);
-    auto b = this->input_b_.Output(cycle);
+    const auto& a = this->input_a_.Output(cycle);
+    const auto& b = this->input_b_.Output(cycle);
     this->cached_output_ = a * (TransposeRHS ? b.transpose() : b);
   }
 };

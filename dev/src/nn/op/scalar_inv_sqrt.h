@@ -44,8 +44,8 @@ class ScalarInvSqrt : public BinaryOp<Rows, Cols, 1, 1, Rows, Cols> {
 
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto x = this->input_a_.Output(cycle);
-    auto recip = this->input_b_.Output(cycle);
+    const auto& x = this->input_a_.Output(cycle);
+    const auto& recip = this->input_b_.Output(cycle);
     this->cached_output_ = x.array() / (recip.array() + kEpsilon).sqrt().value();
   }
 };

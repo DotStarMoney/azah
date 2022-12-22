@@ -52,8 +52,8 @@ class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputColsA, 1,
 
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto a = this->input_a_.Output(cycle);
-    auto b = this->input_b_.Output(cycle);
+    const auto& a = this->input_a_.Output(cycle);
+    const auto& b = this->input_b_.Output(cycle);
     for (int c = 0; c < OutputCols; ++c) {
       this->cached_output_.col(c) = 
           a.middleRows(c * (InputRowsA / OutputCols), InputRowsA / OutputCols) * b;

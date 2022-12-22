@@ -21,8 +21,8 @@ public:
       : BinaryOp<Rows, Cols, Rows, Cols, 1, 1>(input_a, input_b) {}
 
   void Backprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) override {
-    auto a = this->input_a_.Output(cycle);
-    auto b = this->input_b_.Output(cycle);
+    const auto& a = this->input_a_.Output(cycle);
+    const auto& b = this->input_b_.Output(cycle);
     auto dmse = 
         output_dx.value() * 2.0f / static_cast<float>(Rows * Cols) * (a - b);
     if (!this->input_a_.constant) {
@@ -35,8 +35,8 @@ public:
 
 protected:
   void ComputeOutput(uint32_t cycle) override {
-    auto a = this->input_a_.Output(cycle);
-    auto b = this->input_b_.Output(cycle);
+    const auto& a = this->input_a_.Output(cycle);
+    const auto& b = this->input_b_.Output(cycle);
     this->cached_output_ = 
         Matrix<1, 1>::Constant((a.array() - b.array()).square().mean());
   }

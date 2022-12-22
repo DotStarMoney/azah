@@ -22,7 +22,7 @@ class Mean : public UnaryOp<Rows, Cols, 1, 1> {
 
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto x = this->input_.Output(cycle);
+    const auto& x = this->input_.Output(cycle);
     this->cached_output_ = Matrix<1, 1>::Constant(x.mean());
   }
 

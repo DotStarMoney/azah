@@ -29,19 +29,21 @@ struct SelfPlayConfig {
   // Number of playouts to run.
   int playouts_n;
 
-  // Learning rate used in SGD.
+  // Learning rate used in SGD for training only.
   float learning_rate;
 
-  // The linear weight applied to the outcome term.
+  // The linear weight applied to the outcome term in MCTS branch selection.
   float outcome_weight;
 
-  // The linear weight applied to the search policy term. 
+  // The linear weight applied to the search policy term in MCTS branch
+  // selection.
   float policy_weight;
 
-  // The linear weight applied to the revisit term.
+  // The linear weight applied to the revisit term in MCTS branch selection.
   float revisit_weight;
 
-  // Standard deviation of Gaussian noise added to the search policy term.
+  // Standard deviation of Gaussian noise added to the search policy term in
+  // MCTS branch selection.
   float policy_noise;
 };
 
@@ -118,16 +120,19 @@ class SelfPlayer {
     float outcome_loss;
   };
 
-  void Train(int games_n, const SelfPlayConfig& config) {
+  TrainResult Train(int games_n, const SelfPlayConfig& config) {
     auto playout_config = SelfPlayConfigToPlayoutConfig(GameSubclass(), config);
+
     TrainResult losses{0.0f, 0.0f};
     for (int i = 0; i < games_n; ++i) {
       auto iter_losses = TrainIteration(playout_config, config.learning_rate);
       losses.policy_loss += iter_losses.policy_loss;
       losses.outcome_loss += iter_losses.outcome_loss;
     }
+
     losses.policy_loss /= static_cast<float>(games_n);
     losses.outcome_loss /= static_cast<float>(games_n);
+    return losses;
   }
 
   void ResetTraining() {
@@ -161,18 +166,19 @@ class SelfPlayer {
   };
 
   TrainResult TrainIteration(
-      internal::PlayoutConfig<GameSubclass>& playout_config, 
+      const internal::PlayoutConfig<GameSubclass>& playout_config, 
       float learning_rate) {
     std::vector<NetworkUpdateRow> updates;
-    while (playout_config.game.State() == games::GameState::kOngoing) {
+    GameSubclass game = playout_config.game;
+    while (game.State() == games::GameState::kOngoing) {
       internal::PlayoutResult<GameSubclass> result = playout_runner_->Playout(
           playout_config, *work_queue_);
       updates.emplace_back(
-          std::move(playout_config.game.StateToMatrix()),
+          std::move(game.StateToMatrix()),
           std::move(result.outcome),
           std::move(result.policy),
-          playout_config.game.PolicyClassI());
-      playout_config.game.MakeMove(result.max_option_i);
+          game.PolicyClassI());
+      game.MakeMove(result.max_option_i);
     }
 
     auto losses = UpdatePrimaryModel(updates, learning_rate);

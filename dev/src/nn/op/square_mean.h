@@ -22,12 +22,12 @@ class SquareMean : public UnaryOp<Rows, Cols, 1, 1> {
   
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto x = this->input_.Output(cycle);
+    const auto& x = this->input_.Output(cycle);
     this->cached_output_ = Matrix<1, 1>::Constant(x.array().square().mean());
   }
 
   void UnaryBackprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) override {
-    auto x = this->input_.Output(cycle);
+    const auto& x = this->input_.Output(cycle);
     this->input_.Backprop(
         cycle,
         x * ((2.0f * output_dx.value()) / static_cast<float>(Rows * Cols)));

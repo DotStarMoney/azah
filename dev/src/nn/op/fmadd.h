@@ -26,11 +26,11 @@ class FMAdd : public Op<Rows, Cols> {
   void Backprop(uint32_t cycle,
                 const MatrixRef<Rows, Cols>& output_dx) override {
     if (!this->input_.constant) {
-      auto m = this->m_.Output(cycle);
+      const auto& m = this->m_.Output(cycle);
       this->input_.Backprop(cycle, output_dx.cwiseProduct(m));
     }
     if (!this->m_.constant) {
-      auto x = this->input_.Output(cycle);
+      const auto& x = this->input_.Output(cycle);
       this->m_.Backprop(cycle, output_dx.cwiseProduct(x));
     }
     if (!this->b_.constant) {
@@ -44,9 +44,9 @@ class FMAdd : public Op<Rows, Cols> {
   Node<Rows, Cols>& b_;
 
   void ComputeOutput(uint32_t cycle) override {
-    auto x = this->input_.Output(cycle);
-    auto m = this->m_.Output(cycle);
-    auto b = this->b_.Output(cycle);
+    const auto& x = this->input_.Output(cycle);
+    const auto& m = this->m_.Output(cycle);
+    const auto& b = this->b_.Output(cycle);
     this->cached_output_ = (x.array() * m.array() + b.array()).matrix();
   }
 };

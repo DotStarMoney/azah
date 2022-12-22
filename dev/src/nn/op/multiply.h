@@ -33,8 +33,8 @@ class Multiply : public BinaryOp<Rows, Cols, Rows, Cols, Rows, Cols> {
 
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto a = this->input_a_.Output(cycle);
-    auto b = this->input_b_.Output(cycle);
+    const auto& a = this->input_a_.Output(cycle);
+    const auto& b = this->input_b_.Output(cycle);
     this->cached_output_ = a.cwiseProduct(b);
   }
 };

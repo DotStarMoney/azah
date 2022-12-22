@@ -55,8 +55,8 @@ class GroupMatmul : public BinaryOp<InputRowsA, InputColsA, InputRowsB,
 
  private:
   void ComputeOutput(uint32_t cycle) override {
-    auto a = this->input_a_.Output(cycle);
-    auto b = this->input_b_.Output(cycle);
+    const auto& a = this->input_a_.Output(cycle);
+    const auto& b = this->input_b_.Output(cycle);
     for (int g = 0; g < Groups; ++g) {
       this->cached_output_.middleRows(g * InputRowsA, InputRowsA) = 
           a.middleCols(g * InputColsA / Groups, InputColsA / Groups) * 
