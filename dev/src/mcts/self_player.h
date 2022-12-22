@@ -169,16 +169,16 @@ class SelfPlayer {
       const internal::PlayoutConfig<GameSubclass>& playout_config, 
       float learning_rate) {
     std::vector<NetworkUpdateRow> updates;
-    GameSubclass game = playout_config.game;
-    while (game.State() == games::GameState::kOngoing) {
+    auto config = playout_config;
+    while (config.game.State() == games::GameState::kOngoing) {
       internal::PlayoutResult<GameSubclass> result = playout_runner_->Playout(
-          playout_config, *work_queue_);
+          config, *work_queue_);
       updates.emplace_back(
-          std::move(game.StateToMatrix()),
+          std::move(config.game.StateToMatrix()),
           std::move(result.outcome),
           std::move(result.policy),
-          game.PolicyClassI());
-      game.MakeMove(result.max_option_i);
+          config.game.PolicyClassI());
+      config.game.MakeMove(result.max_option_i);
     }
 
     auto losses = UpdatePrimaryModel(updates, learning_rate);
