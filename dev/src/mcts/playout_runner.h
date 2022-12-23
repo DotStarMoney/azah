@@ -212,10 +212,10 @@ class PlayoutRunner {
 
   class FanoutWorkElement : public PlayoutWorkElement {
    public:
-     FanoutWorkElement(const FanoutWorkElement&) = delete;
-     FanoutWorkElement& operator=(const FanoutWorkElement&) = delete;
+    FanoutWorkElement(const FanoutWorkElement&) = delete;
+    FanoutWorkElement& operator=(const FanoutWorkElement&) = delete;
 
-     FanoutWorkElement(
+    FanoutWorkElement(
         const PlayoutConfig<GameSubclass>& playout_config,
         PlayoutState& playout_state, 
         PlayoutRunner& runner, 

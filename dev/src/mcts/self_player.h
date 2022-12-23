@@ -1,6 +1,14 @@
 #ifndef AZAH_MCTS_SELF_PLAYER_H_
 #define AZAH_MCTS_SELF_PLAYER_H_
 
+//
+//
+//
+#include <iostream>
+//
+//
+//
+
 #include <stdint.h>
 
 #include <algorithm>
@@ -181,13 +189,15 @@ class SelfPlayer {
       config.game.MakeMove(result.max_option_i);
     }
 
+    
     auto losses = UpdatePrimaryModel(updates, learning_rate);
+    /*
     std::vector<nn::DynamicMatrixRef> variables;
     primary_network_->GetVariables({}, variables);
     work_queue_->SetAllVariables(variables);
     playout_runner_->ClearModelOutputCache();
-
-    return losses;
+    */
+    return { 0, 0 };//losses;
   }
 
   struct GradientResult {
@@ -232,10 +242,18 @@ class SelfPlayer {
       uint32_t outcome_loss_index = local_network->outcome_loss_target_index();
 
       std::vector<float> losses;
+      //
+      // <!> THIS CRASHES IN RELEASE <!>
+      //
+      // - We've got iostream, so I guess its thyme to print debug...
+      //
       local_network->Gradients({policy_loss_index, outcome_loss_index}, 
-                               grads_.var_grad_i, grads_.var_grad, losses);
+                               grads_.var_grad_i, grads_.var_grad, losses); 
       grads_.losses.policy_loss = losses[0];
       grads_.losses.outcome_loss = losses[1];
+      //
+      //
+      //
     }
    
    private:
@@ -252,12 +270,16 @@ class SelfPlayer {
 
     std::vector<GradientResult> all_grads;
     all_grads.resize(updates.size());
-    for (int i = 0; i < updates.size(); ++i) {
+    //
+    //
+    //
+    for (int i = 0; i < 1; ++i) { //updates.size(); ++i) {
       work_queue_->AddWork(
           std::make_unique<GradientsWorkElement>(updates[i], all_grads[i]));
     }
     work_queue_->Drain();
 
+    /*
     // Since not all variables are guaranteed to have gradients for each row in
     // updates, we have to do some extra bookkeeping to sum the terms of each
     // variable's average gradients.
@@ -298,6 +320,7 @@ class SelfPlayer {
     sgd_->Update(lr, acc_index, acc_grads, *primary_network_);
 
     return losses;
+    */
   }
 
   std::unique_ptr<GameNetworkSubclass> primary_network_;
