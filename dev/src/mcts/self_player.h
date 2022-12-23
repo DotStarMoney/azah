@@ -210,6 +210,8 @@ class SelfPlayer {
         GradientResult& grads) :
             update_(update), grads_(grads) {}
 
+    ~GradientsWorkElement() override {}
+
     void operator()(GameNetworkSubclass* local_network) const override {
       uint32_t policy_target_index = 
           local_network->policy_target_constant_indices()[

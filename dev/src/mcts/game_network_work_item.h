@@ -8,6 +8,7 @@ namespace internal {
 template <typename GameNetworkSubclass>
 class GameNetworkWorkItem {
  public:
+  virtual ~GameNetworkWorkItem() {}
   virtual void operator()(GameNetworkSubclass* local_network) const = 0;
 };
 

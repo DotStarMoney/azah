@@ -34,9 +34,5 @@ int main(int argc, char* argv[]) {
 
   auto loss_i1 = self_player.Train(5, config);
 
-  std::cout << "Playing five games..." << std::endl;
-
-  auto loss_i2 = self_player.Train(5, config);
-
   return 0;
 }

@@ -41,7 +41,10 @@ class DispatchQueue {
                   slot_working_.fetch_add(1, std::memory_order_relaxed) 
                       % buffer_.size()];
               while (!work_element.ready.load(std::memory_order_relaxed)) {}
+
               (*(work_element.work))(this->thread_state_[i]);
+              work_element.work.reset();
+
               drain_.Inc();
               work_element.ready.exchange(false, std::memory_order_release);
               buffer_avail_.V();

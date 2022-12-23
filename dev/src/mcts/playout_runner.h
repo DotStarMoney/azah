@@ -199,6 +199,8 @@ class PlayoutRunner {
             runner_(runner),
             work_queue_(work_queue) {}
 
+    virtual ~PlayoutWorkElement() override {};
+
     virtual void operator()(GameNetworkSubclass* local_network) const = 0;
 
    protected:
@@ -220,6 +222,8 @@ class PlayoutRunner {
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) : 
             PlayoutWorkElement(playout_config, playout_state, runner, 
                                work_queue) {}
+
+    ~FanoutWorkElement() override {}
 
     void operator()(GameNetworkSubclass* local_network) const override {
       const GameSubclass& game(this->playout_state_.game);
@@ -315,6 +319,8 @@ class PlayoutRunner {
             game_(std::move(game)),
             eval_index_(eval_index) {}
 
+    ~EvaluateWorkElement() override {}
+
     void operator()(GameNetworkSubclass* local_network) const override {
       if (game_.State() == games::GameState::kOngoing) {
         auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
@@ -367,6 +373,8 @@ class PlayoutRunner {
         NetworkDispatchQueue<GameNetworkSubclass>& work_queue) :
             PlayoutWorkElement(playout_config, playout_state, runner, 
                                work_queue) {}
+
+    ~SelectWorkElement() override {}
 
     void operator()(GameNetworkSubclass* local_network) const override {
       auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
