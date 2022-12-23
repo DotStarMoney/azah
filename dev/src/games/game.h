@@ -76,9 +76,6 @@ class Game {
   //     StateToMatrix() should be rotated such that CurrentPlayerI()'s board
   //     matrix is always in the first array position.
   //
-  // <!> If a player has won the game, the state should reflect that it is that
-  //     player's "turn" even if no further moves can be made.
-  //
   virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;
 
   // The index of the policy head in the associated game model for the current

@@ -21,7 +21,7 @@ using TictactoeSelfPlayer = azah::mcts::SelfPlayer<
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  TictactoeSelfPlayer self_player(1);
+  TictactoeSelfPlayer self_player(4);
   azah::mcts::SelfPlayConfig config{
       .playouts_n = 384,
       .learning_rate = 0.01,
@@ -30,9 +30,12 @@ int main(int argc, char* argv[]) {
       .revisit_weight = 0.25,
       .policy_noise = 0.08};
 
-  std::cout << "Playing five games..." << std::endl;
-
-  auto loss_i1 = self_player.Train(1, config);
-
+  int steps_n = 0;
+  for (int i = 0; i < 100; ++i) {
+    auto loss = self_player.Train(5, config);
+    steps_n += 5;
+    std::cout << "Step: " << steps_n << ", " << loss << std::endl;
+  }
+ 
   return 0;
 }

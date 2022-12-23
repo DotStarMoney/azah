@@ -55,6 +55,8 @@ class TictactoeNetwork : public GameNetwork {
 
   // Fork final layer to outputs
 
+  // This little optimization only works because we'll always backprop two
+  // losses from the model at a time: the outcome and policy.
   azah::nn::op::Fork<kLayer2Depth, 1> swish2_fork_;
 
   // Policy head

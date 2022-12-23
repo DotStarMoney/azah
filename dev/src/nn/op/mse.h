@@ -23,8 +23,8 @@ public:
   void Backprop(uint32_t cycle, const MatrixRef<1, 1>& output_dx) override {
     const auto& a = this->input_a_.Output(cycle);
     const auto& b = this->input_b_.Output(cycle);
-    auto dmse = 
-        output_dx.value() * 2.0f / static_cast<float>(Rows * Cols) * (a - b);
+    auto dmse = (output_dx.value() * 2.0f 
+        / static_cast<float>(Rows * Cols) * (a - b)).eval();
     if (!this->input_a_.constant) {
       this->input_a_.Backprop(cycle, dmse);
     }

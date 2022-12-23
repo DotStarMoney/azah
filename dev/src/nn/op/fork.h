@@ -40,7 +40,9 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
 
   void UnaryBackprop(uint32_t cycle,
                      const MatrixRef<Rows, Cols>& output_dx) override {
-    if (cycle != grad_cycle_) {
+    // If we've forked too many times, assume we're being called from unique
+    // outputs and also reset.
+    if ((cycle != grad_cycle_) || (forks_ == n_forks_)) {
       forked_grad_ = output_dx;
       grad_cycle_ = cycle;
       forks_ = 1;
@@ -50,9 +52,6 @@ class Fork : public UnaryOp<Rows, Cols, Rows, Cols> {
     ++forks_;
     if (forks_ == n_forks_) {
       this->input_.Backprop(cycle, forked_grad_);
-    } else if (forks_ > n_forks_) {
-      LOG(FATAL) << "Too many forks, did you mean to set \"forks_n\" in the "
-          "constructor? You may also have forgotten to fork an op downstream.";
     }
   }
 };
