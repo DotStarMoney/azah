@@ -83,7 +83,7 @@ class SelfPlayer {
     work_queue_->SetAllVariables(variables);
   }
 
-  const GameNetworkSubclass& get_network() const {
+  GameNetworkSubclass& get_network() {
     return *primary_network_;
   }
 
@@ -187,7 +187,6 @@ class SelfPlayer {
           config.game.PolicyClassI());
       config.game.MakeMove(result.max_option_i);
     }
-
     
     auto losses = UpdatePrimaryModel(updates, learning_rate);
     std::vector<nn::DynamicMatrixRef> variables;

@@ -235,11 +235,13 @@ class PlayoutRunner {
         return;
       }
 
-      this->playout_state_.evals_remaining.store(game.CurrentMovesN(), 
+      GameSubclass game_snapshot(game);
+      int moves_n = game.CurrentMovesN();
+      this->playout_state_.evals_remaining.store(moves_n,
                                                  std::memory_order_relaxed);
-      this->playout_state_.eval_results.resize(game.CurrentMovesN());
-      for (int i = 0; i < game.CurrentMovesN(); ++i) {
-        GameSubclass game_w_move(game);
+      this->playout_state_.eval_results.resize(moves_n);
+      for (int i = 0; i < moves_n; ++i) {
+        GameSubclass game_w_move(game_snapshot);
         game_w_move.MakeMove(i);
 
         this->work_queue_.AddWork(
