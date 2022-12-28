@@ -75,6 +75,9 @@ class Game {
   //     StateToMatrix() should be rotated such that CurrentPlayerI()'s board
   //     matrix is always in the first array position.
   //
+  //     In short, the model should know who's move it is to make based on what
+  //     this function returns.
+  //
   virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;
 
   // The index of the policy head in the associated game model for the current
@@ -85,10 +88,11 @@ class Game {
 
   // For the given move option index and output from the associated game model's
   // policy head (dictated by PolicyClassI()), extract the value from the policy
-  // head associated with the move option index. 
+  // head associated with the move option index. Policy heads return column
+  // vectors.
   //
   // Undefined if the game is over.
-  virtual float PolicyForMoveI(const std::span<float const>& policy, 
+  virtual float PolicyForMoveI(const nn::DynamicMatrix& policy, 
                                int move_i) const = 0;
 
   // Return a 0/1 mask for valid moves compatible with the policy head on the

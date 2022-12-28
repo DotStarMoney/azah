@@ -140,12 +140,12 @@ std::vector<nn::DynamicMatrix> Tictactoe::StateToMatrix() const {
   return {std::move(out)};
 }
 
-float Tictactoe::PolicyForMoveI(const std::span<float const>& policy,
+float Tictactoe::PolicyForMoveI(const nn::DynamicMatrix& policy,
                                 int move_i) const {
   int move_index = 0;
   for (int i = 0; i < 9; ++i) {
     if (board_[i] != Mark::kNone) continue;
-    if (move_index == move_i) return policy[i];
+    if (move_index == move_i) return policy(i, 0);
     ++move_index;
   }
 

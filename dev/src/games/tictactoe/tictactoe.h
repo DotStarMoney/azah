@@ -29,7 +29,7 @@ class Tictactoe : public Game<2, 9> {
 
   std::vector<nn::DynamicMatrix> StateToMatrix() const override;
   int PolicyClassI() const override;
-  float PolicyForMoveI(const std::span<float const>& policy,
+  float PolicyForMoveI(const nn::DynamicMatrix& policy,
                        int move_i) const override;
   
   nn::DynamicMatrix PolicyMask() const override;
