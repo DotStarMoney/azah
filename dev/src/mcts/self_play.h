@@ -21,7 +21,7 @@ struct TreeEdge {
   // The sum of all outcomes predicted or discovered through this edge.
   std::array<float, Game::players_n()> acc_outcome;
 
-  // = acc_outcome / visits_n.
+  // outcome = acc_outcome / visits_n.
   std::array<float, Game::players_n()> outcome;
 
   // The predicted search probability along this edge.
@@ -35,6 +35,11 @@ struct TreeEdge {
 
   // The source index of the child node. If -1, there is no child node at the
   // other end.
+
+  //
+  // TODO: How do we handle a game terminal state that is a child?
+  //
+
   std::size_t child_i;
 };
 
@@ -60,7 +65,7 @@ struct SelfPlayRow {
   // the first row.
   nn::Matrix<Game::players_n(), 1> outcome;
 
-  // The search proportion across predicted options.
+  // The search proportions across move options.
   nn::DynamicMatrix search_policy;
 
   // The index of the policy head of the games::GameNetwork that search_policy
@@ -83,7 +88,12 @@ enum class SelfPlayTerminationCriteria {
 
 template <typename Game>
 struct SelfPlayResult {
+  // The rows corresponding to the actual move search policies and the final
+  // outcome as it stood for each player (redundantly included with each row
+  // so we don't have to figure out how to rotate the outcome vector later). 
   std::vector<SelfPlayRow> rows;
+
+  // How the game ultimately ended.
   SelfPlayTerminationCriteria termination;
 };
 
@@ -97,6 +107,8 @@ SelfPlayResult<Game> SelfPlay(/* ... */) {
   //     enough s.t. it works in the case where we just want to know what move
   //     to make in the current state, rather than play a whole game.
   //
+  //     We also have to figure out how to include enough information to adjust
+  //     the resignation threshold.
 
 }
 
