@@ -24,20 +24,20 @@ int main(int argc, char* argv[]) {
 
   TictactoeSelfPlayer self_player(4);
   azah::mcts::SelfPlayConfig config{
-      .playouts_n = 128,
+      .playouts_n = 1,
       .learning_rate = 0.01,
-      .outcome_weight = 0.33,
-      .policy_weight = 0.33,
-      .revisit_weight = 0.25,
-      .policy_noise = 0.08};
-   
+      .outcome_temp = 1.0,
+      .policy_temp = 1.0,
+      .revisit_temp = 1.0,
+      .noise_temp = 1.0};
+
   int steps_n = 0;
   for (int i = 0; i < 500; ++i) {
     auto loss = self_player.Train(5, config);
     steps_n += 5;
     std::cout << "Step: " << steps_n << ", " << loss << std::endl;
   }
- 
+
   azah::games::tictactoe::Tictactoe bb;
   auto x = self_player.EvaluatePosition(bb, config);
 

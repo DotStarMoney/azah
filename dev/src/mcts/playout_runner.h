@@ -37,17 +37,21 @@ struct PlayoutConfig {
   // Number of playouts to run.
   int n;
 
-  // The linear weight applied to the outcome term.
-  float outcome_weight;
+  // Below are "temperatures", or interpolants between a computed and uniform
+  // distribution on [0, 1]. Higher temperatures lead to greater uniformity of
+  // the MCTS exploration.
 
-  // The linear weight applied to the search policy term. 
-  float policy_weight;
+  // The temperature of the outcome term.
+  float outcome_temp;
 
-  // The linear weight applied to the revisit term.
-  float revisit_weight;
+  // The temperature of the policy term.
+  float policy_temp;
 
-  // Standard deviation of Gaussian noise added to the search policy term.
-  float policy_noise;
+  // The temperature of the revisit term.
+  float revisit_temp;
+
+  // The temperature of the white noise term.
+  float noise_temp;
 };
 
 template <typename GameSubclass>
@@ -111,9 +115,13 @@ class PlayoutRunner {
     // after making one of the possible moves. We'll later divide this by the
     // number of visits to each move and select the highest one.
     std::vector<float> move_totals(config.game.CurrentMovesN(), 0);
+    // The number of times each move at the root state was visited across
+    // playouts.
+    std::vector<int> moves_searched(config.game.CurrentMovesN(), 0);
     for (auto& state_ptr : playout_states) {
       move_totals[state_ptr->move_index] += state_ptr->outcome[
           config.game.CurrentPlayerI()];
+      ++(moves_searched[state_ptr->move_index]);
 
       result.outcome = (result.outcome.array()
           + Eigen::Map<nn::Matrix<GameSubclass::players_n(), 1>>(
@@ -127,21 +135,22 @@ class PlayoutRunner {
         result.outcome.data() + config.game.CurrentPlayerI(),
         result.outcome.data() + GameSubclass::players_n());
 
-    // The number of times each move at the root state was visited across
-    // playouts.
-    std::vector<int> moves_searched(config.game.CurrentMovesN(), 0);
-    for (const auto& state_ptr : playout_states) {
-      ++(moves_searched[state_ptr->move_index]);
-    }
-    result.policy = config.game.MoveVisitCountToPolicy(moves_searched);
-    
-    for (int i = 0; i < config.game.CurrentMovesN(); ++i) {
-      if (moves_searched[i] != 0) {
-        move_totals[i] /= static_cast<float>(moves_searched[i]);
-      } else {
-        move_totals[i] = 0.0f;
+    // Set the desired policy to be the averaged outcomes across the searched
+    // moves.
+    int move_index = 0;
+    result.policy = config.game.PolicyMask();
+    for (int i = 0; i < result.policy.rows(); ++i) {
+      if (result.policy(i, 0) == 0.0f) continue;
+      if (move_totals[move_index] > 0.0f) {
+        move_totals[move_index] /= 
+            static_cast<float>(moves_searched[move_index]);
+        result.policy(i, 0) = move_totals[move_index];
       }
+      ++move_index;
     }
+    // The policy should be a proportion across averaged outcomes.
+    result.policy /= result.policy.sum();
+
     result.max_option_i = std::distance(
         move_totals.begin(), 
         std::max_element(move_totals.begin(), move_totals.end()));
@@ -231,7 +240,7 @@ class PlayoutRunner {
         if (this->playout_state_.on_root) {
           LOG(FATAL) << "Cannot begin fanout from leaf.";
         }
-        this->playout_state_.outcome = std::move(game.Outcome());
+        this->playout_state_.outcome = game.Outcome();
         return;
       }
 
@@ -381,9 +390,69 @@ class PlayoutRunner {
     void operator()(GameNetworkSubclass* local_network) const override {
       auto [model_output, policy_n] = PlayoutRunner::QueryModelForGameState(
           this->playout_state_.game, *local_network, this->runner_.cache_);
+
+      // TODO: This calculation could also be cached for the whole iteration.
+      //     Instead of caching the model outputs, we can cache this calculation
+      //     once and Fanout can choose not to re-run it, just selecting the
+      //     move directly. Obviously the noise-ing would happen every time, but
+      //     conflating the outcome and policy terms doesn't have to.
+      //     -
+      //     Also add tail moves to be friendlier to the cache.
+
+      int moves_n = this->playout_state_.eval_results.size();
+      float uniform_prob = 1.0f / static_cast<float>(moves_n);
+      std::vector<float> move_prop(moves_n, 0.0f);
       // Skip past the outcome part of the output and just fetch the policy.
       auto policy = std::span<float>(&(model_output[GameSubclass::players_n()]), 
                                      policy_n);
+
+      // First step is to get a conflated distribution of predicted policy and
+      // sub-game outcomes. We need to normalize these first.
+      float policy_sum = 0.0f;
+      float outcome_sum = 0.0f;
+      for (int i = 0; i < moves_n; ++i) {
+        move_prop[i] = this->playout_state_.game.PolicyForMoveI(policy, i);
+        policy_sum += move_prop[i];
+        outcome_sum += std::get<1>(this->playout_state_.eval_results[i]);
+      }
+      // Apply the temperature knobs to the policy and outcome for each move,
+      // then conflate the discrete distributions: these are attempts at
+      // measuring the same phenomenon in two different ways.
+      for (int i = 0; i < moves_n; ++i) {
+        float policy_f = 
+            (move_prop[i] / policy_sum) 
+                * (1 - this->playout_config_.policy_temp)
+            + uniform_prob * this->playout_config_.policy_temp;
+        float outcome_f = 
+            (std::get<1>(this->playout_state_.eval_results[i]) / outcome_sum)
+                * (1 - this->playout_config_.outcome_temp)
+            + uniform_prob * this->playout_config_.outcome_temp;
+
+        move_prop[i] = policy_f * outcome_f;
+      }
+
+      absl::BitGen gen;
+
+      // One more pass to include noise in the final move proportions.
+      AddNoise(gen, move_prop, this->playout_config_.noise_temp);
+
+      // Sample from move_prop.
+      int move_index = Sample(gen, move_prop);
+
+      // Blocking TODO list:
+      //     - Come up with a better way to include visit counts, and implement
+      //       it.
+      //     - Plumb all the temperature parameters through and such.
+      //     - Test to make sure is actually learning.
+      //     - Re-write to cache move_prop, not the model evaluations. This will
+      //       work by FanoutWorkElement checking for the existence of a cached
+      //       copy, and if it doesn't find it, creating an eval work element.
+      //       Things proceed the same way except we don't cache model results,
+      //       and select now caches and pushes the next fanout. Fanout and
+      //       Select share a factored method that selects the next move for a 
+      //       given playout.
+
+      /*
       int best_move_i = -1;
       {
         // While this lock ensures that playouts revisiting the same state will
@@ -391,8 +460,9 @@ class PlayoutRunner {
         // a playout at a different state that shares a child with this one
         // *will* observe visit counts sequentially. We assume this is rare
         // enough to be okay.
-        auto lock = this->runner_.state_lock_.Lock(
-            this->playout_state_.game.state_uid());
+        auto this_state_uid = this->playout_state_.game.state_uid();
+        auto lock = this->runner_.state_lock_.Lock(this_state_uid);
+        int visit_count = this->runner_.visit_table_.Get(this_state_uid);
 
         float best_score = 0.0f;
 
@@ -405,17 +475,13 @@ class PlayoutRunner {
               std::logf(static_cast<float>(this->playout_config_.n))
                   / static_cast<float>(visit_count_for_move + 1));
           
-          float policy_for_move = this->playout_state_.game.PolicyForMoveI(
-              policy, move_i);
-          float policy_term = policy_for_move + absl::Gaussian(
-              bitgen, 0.0f, this->playout_config_.policy_noise);
-          if (policy_term < 0.0f) policy_term = 0.0f;
-
+          
           // The score for the sub-game resulting from making move move_i.
           float score = 
               this->playout_config_.outcome_weight * outcome_for_move
               + this->playout_config_.policy_weight * policy_term
               + this->playout_config_.revisit_weight * visit_count_term;
+          
 
           if (score >= best_score) {
             best_score = score;
@@ -431,18 +497,59 @@ class PlayoutRunner {
         this->runner_.visit_table_.Inc(
             std::get<0>(this->playout_state_.eval_results[best_move_i]));
       }
+      */
 
       // On the root move, record which option we took.
       if (this->playout_state_.on_root) {
-        this->playout_state_.move_index = best_move_i;
+        this->playout_state_.move_index = move_index;
         this->playout_state_.on_root = false;
       }
 
-      this->playout_state_.game.MakeMove(best_move_i);
+      this->playout_state_.game.MakeMove(move_index);
 
       this->work_queue_.AddWork(std::make_unique<FanoutWorkElement>(
           this->playout_config_, this->playout_state_, this->runner_,
           this->work_queue_));
+    }
+
+    static inline int Sample(absl::BitGen& bitgen, 
+                             const std::vector<float>& prop) {
+      int move_index = 0;
+      
+      float uniform = absl::Uniform(bitgen, 0.0f, 1.0f);
+      float total = 0.0f;
+      float prev_total = total;
+      for (; move_index < prop.size(); ++move_index) {
+        total += prop[move_index];
+        if ((uniform >= prev_total) && (uniform < total)) break;
+        prev_total = total;
+      }
+      // Handle round-off errors.
+      return (move_index == prop.size())
+          ? prop.size() - 1
+          : move_index;
+    }
+
+    static inline void AddNoise(absl::BitGen& bitgen, 
+                                std::vector<float>& move_prop, 
+                                float noise_temp) {
+      int moves_n = move_prop.size();
+      std::vector<float> noise(moves_n, 0.0f);
+      float noise_sum = 0.0f;
+      float move_prop_sum = 0.0f;
+      for (int i = 0; i < move_prop.size(); ++i) {
+        noise[i] = absl::Uniform(bitgen, 0.0f, 1.0f);
+        noise_sum += noise[i];
+      }
+      for (int i = 0; i < moves_n; ++i) {
+        noise[i] = (noise[i] / noise_sum) * (1 - noise_temp)
+            + (1.0f / static_cast<float>(moves_n)) * noise_temp;
+        move_prop[i] *= noise[i];
+        move_prop_sum += move_prop[i];
+      }
+      for (int i = 0; i < moves_n; ++i) {
+        move_prop[i] /= move_prop_sum;
+      }
     }
   };
 };

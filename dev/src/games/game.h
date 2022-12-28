@@ -89,16 +89,14 @@ class Game {
   // head associated with the move option index. 
   //
   // Undefined if the game is over.
-  virtual float PolicyForMoveI(std::span<float const> policy, 
+  virtual float PolicyForMoveI(const std::span<float const>& policy, 
                                int move_i) const = 0;
 
-  // Given an array of the number of visits to each move option, return a search
-  // policy for the current game state compatible with the policy head on the
+  // Return a 0/1 mask for valid moves compatible with the policy head on the
   // associated game model dictated by PolicyClassI().
   //
   // Undefined if the game is over.
-  virtual nn::DynamicMatrix MoveVisitCountToPolicy(
-      std::span<int const> visits) const = 0;
+  virtual nn::DynamicMatrix PolicyMask() const = 0;
 
   // Make the move for the given index.
   //

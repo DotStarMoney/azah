@@ -33,19 +33,21 @@ struct SelfPlayConfig {
   // Learning rate used in SGD for training only.
   float learning_rate;
 
-  // The linear weight applied to the outcome term in MCTS branch selection.
-  float outcome_weight;
+  // Below are "temperatures", or interpolants between a computed and uniform
+  // distribution on [0, 1]. Higher temperatures lead to greater uniformity of
+  // the MCTS exploration.
 
-  // The linear weight applied to the search policy term in MCTS branch
-  // selection.
-  float policy_weight;
+  // The temperature of the outcome term.
+  float outcome_temp;
 
-  // The linear weight applied to the revisit term in MCTS branch selection.
-  float revisit_weight;
+  // The temperature of the policy term.
+  float policy_temp;
 
-  // Standard deviation of Gaussian noise added to the search policy term in
-  // MCTS branch selection.
-  float policy_noise;
+  // The temperature of the revisit term.
+  float revisit_temp;
+
+  // The temperature of the white noise term.
+  float noise_temp;
 };
 
 template <typename GameSubclass, typename GameNetworkSubclass, int Shards,
@@ -152,10 +154,10 @@ class SelfPlayer {
     return {
         .game = game,
         .n = config.playouts_n,
-        .outcome_weight = config.outcome_weight,
-        .policy_weight = config.policy_weight,
-        .revisit_weight = config.revisit_weight,
-        .policy_noise = config.policy_noise};
+        .outcome_temp = config.outcome_temp,
+        .policy_temp = config.policy_temp,
+        .revisit_temp = config.revisit_temp,
+        .noise_temp = config.noise_temp};
   }
 
   struct NetworkUpdateRow {

@@ -140,7 +140,7 @@ std::vector<nn::DynamicMatrix> Tictactoe::StateToMatrix() const {
   return {std::move(out)};
 }
 
-float Tictactoe::PolicyForMoveI(std::span<float const> policy, 
+float Tictactoe::PolicyForMoveI(const std::span<float const>& policy,
                                 int move_i) const {
   int move_index = 0;
   for (int i = 0; i < 9; ++i) {
@@ -156,22 +156,18 @@ int Tictactoe::PolicyClassI() const {
   return 0;
 }
 
-nn::DynamicMatrix Tictactoe::MoveVisitCountToPolicy(
-    std::span<int const> visits) const {
-  if (visits.size() != CurrentMovesN()) {
-    LOG(FATAL) << "Visit counts should match available moves";
+nn::DynamicMatrix Tictactoe::PolicyMask() const {
+  if (State() == GameState::kOver) {
+    LOG(FATAL) << "Game is over, there is no policy.";
   }
 
   nn::Matrix<9, 1> policy = nn::init::Zeros<9, 1>();
-  int move_index = 0;
   for (int i = 0; i < 9; ++i) {
     if (board_[i] != Mark::kNone) continue;
-    policy(i, 0) = static_cast<float>(visits[move_index]);
-    ++move_index;
+    policy(i, 0) = 1.0f;
   }
-  policy /= policy.sum();
 
-  return std::move(policy);
+  return policy;
 }
 
 void Tictactoe::MakeMove(int move_i) {
