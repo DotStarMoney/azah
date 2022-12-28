@@ -18,7 +18,7 @@ enum class GameState {
   kOver = 2,
 };
 
-template <int PlayersN, int MaxMoveOptionsCacheHint>
+template <int PlayersN, int MaxMoveOptions>
 class Game {
  public:
   // The canonical name for this game.
@@ -28,10 +28,9 @@ class Game {
   // Outcome is this long.
   static constexpr int players_n() { return PlayersN; }
 
-  // A cache hint for the maximum policy size required across possible
-  // decisions.
-  static constexpr int max_move_options_cache_hint() { 
-    return MaxMoveOptionsCacheHint;  
+  // The maximum policy size required across possible decisions.
+  static constexpr int max_move_options() { 
+    return MaxMoveOptions;
   }
 
   // A string unique to this game state.
