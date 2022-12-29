@@ -49,7 +49,7 @@ struct TreeEdge {
   const std::size_t parent_i;
 
   // The source index of the child node. If -1, there is no child node at the
-  // other end, and this node wi
+  // other end, and this node is a candidate for expansion.
   std::size_t child_i;
 
   bool barren() const {
@@ -99,20 +99,36 @@ class GameTree {
               float exploration_scale, float root_noise_alpha, 
               float root_noise_lerp, absl::BitGenRef bitgen) {
 
+    // Arrays we'll re-use during descent.
+    //
+    // Noise interpolated with the policy to encourage exploration.
+    std::vector<float> noise;
+    // A random ordering of candidate edges to visit.
+    std::vector<std::size_t> shuffled_seq;
+
     // Step 1 is to explore the tree and find a leaf outcome to propagate up.
     std::array<float, Game::players_n()> leaf_outcome;
     for (;;) {
+      std::size_t children_n = node->children_i.size();
+
       // Selecting an edge *at* the root is a little more involved since we have
       // to factor in some exploration noise.
-      std::unique_ptr<float[]> noise;
       if (node->root()) {
-        noise = GameTree<Game, GameNetwork>::DirichletNoise(
-            root_noise_alpha, node->children_i.size(), bitgen);
+        noise.resize(children_n);
+        GameTree<Game, GameNetwork>::DirichletNoise(noise, root_noise_alpha, 
+                                                    bitgen);
       }
       float max_value = -1.0f;
       TreeEdge<Game>* max_edge;
       int max_edge_index;
-      for (int child_i = 0; child_i < node->children_i.size(); ++child_i) {
+
+      // To prevent favoring any particular move ordering when there are ties,
+      // we always randomly permute the indices.
+      shuffled_seq.resize(children_n);
+      RandomSeq(shuffled_seq, bitgen);
+      for (int seq_i = 0, child_i = shuffled_seq[seq_i]; 
+          seq_i < children_n; 
+          child_i = shuffled_seq[seq_i++]) {
         TreeEdge<Game>& edge = edges[node->children_i[child_i]];
         float policy_value = node->root()
             ? (noise[child_i] - edge.search_prob) * root_noise_lerp
@@ -217,20 +233,22 @@ class GameTree {
   }
  
  private:
-  static inline std::unique_ptr<float[]> DirichletNoise(
-      float alpha, int n, absl::BitGenRef bitgen) {
+  static inline void RandomSeq(std::vector<std::size_t>& seq, 
+                               absl::BitGenRef bitgen) {
+    for (int i = 0; i < seq.size(); seq[i] = i, ++i);
+    std::shuffle(seq.begin(), seq.end(), bitgen);
+  }
+
+  static inline void DirichletNoise(std::vector<float>& noise, float alpha, 
+                                    absl::BitGenRef bitgen) {
     // 1D, so \beta = 1.
     std::gamma_distribution<float> gamma(alpha);
-    auto noise = std::unique_ptr<float[]>(new float[n]);
     float sum = 0.0f;
-    for (int i = 0; i < n; ++i) {
-      noise[i] = gamma(bitgen);
-      sum += noise[i];
+    for (auto& x : noise) {
+      x = gamma(bitgen);
+      sum += x;
     }
-    for (int i = 0; i < n; ++i) {
-      noise[i] /= sum;
-    }
-    return noise;
+    for (auto& x : noise) x /= sum;
   }
 };
 
