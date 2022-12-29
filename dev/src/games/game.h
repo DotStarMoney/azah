@@ -75,8 +75,8 @@ class Game {
   //     StateToMatrix() should be rotated such that CurrentPlayerI()'s board
   //     matrix is always in the first array position.
   //
-  //     In short, the model should know who's move it is to make based on what
-  //     this function returns.
+  //     In short, the network should know who's move it is to make based on
+  //     what this function returns.
   //
   virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;
 
