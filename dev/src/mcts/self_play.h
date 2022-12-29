@@ -95,7 +95,7 @@ class GameTree {
   std::vector<TreeNode<Game>> nodes;
   std::vector<TreeEdge<Game>> edges;
 
-  void Search(TreeNode<Game>& node, GameNetwork* network, 
+  void Search(TreeNode<Game>* node, GameNetwork* network, 
               float exploration_scale, float root_noise_alpha, 
               float root_noise_lerp, absl::BitGenRef bitgen) {
 
@@ -105,24 +105,24 @@ class GameTree {
       // Selecting an edge *at* the root is a little more involved since we have
       // to factor in some exploration noise.
       std::unique_ptr<float[]> noise;
-      if (node.root()) {
+      if (node->root()) {
         noise = GameTree<Game, GameNetwork>::DirichletNoise(
-            root_noise_alpha, node.children_i.size(), bitgen);
+            root_noise_alpha, node->children_i.size(), bitgen);
       }
-      float max_value = 0.0f;
+      float max_value = -1.0f;
       TreeEdge<Game>* max_edge;
       int max_edge_index;
-      for (int child_i = 0; child_i < node.children_i.size(); ++child_i) {
-        TreeEdge<Game>& edge = edges[node.children_i[child_i]];
-        float policy_value = node.root()
+      for (int child_i = 0; child_i < node->children_i.size(); ++child_i) {
+        TreeEdge<Game>& edge = edges[node->children_i[child_i]];
+        float policy_value = node->root()
             ? (noise[child_i] - edge.search_prob) * root_noise_lerp
                 + edge.search_prob
             : edge.search_prob; 
         // We consider the outcome to be the projection from whoever's turn it
         // is, giving us our min-max like behavior.
-        float edge_value = edge.outcome[node.game.CurrentPlayerI()]
+        float edge_value = edge.outcome[node->game.CurrentPlayerI()]
             + exploration_scale * policy_value * (
-                std::sqrtf(static_cast<float>(node.visit_sum)) 
+                std::sqrtf(static_cast<float>(node->visit_sum))
                     / static_cast<float>(1 + edge.visits_n));
         if (edge_value > max_value) {
           max_value = edge_value;
@@ -135,40 +135,40 @@ class GameTree {
       // Now either traverse the edge, expand it, or just pass up its value up
       // if it's terminal.
       if (!max_edge->barren()) {
-        node = nodes[max_edge->child_i];
-        if (node.terminal()) {
+        node = &(nodes[max_edge->child_i]);
+        if (node->terminal()) {
           leaf_outcome = max_edge->outcome;
           break;
         }
       } else {
-        Game expanded_game(node.game);
+        Game expanded_game(node->game);
         expanded_game.MakeMove(max_edge_index);
         leaf_outcome = ExpandNode(std::move(expanded_game), 
-                                  node.children_i[max_edge_index], network);
-        node = nodes.back();
+                                  node->children_i[max_edge_index], network);
+        node = &(nodes.back());
         break;
       }
     }
 
     // Step 2 is to propagate up leaf_outcome from node.
-    while (!node.root()) {
-      TreeEdge<Game>& parent_edge = edges[node.parent_i];
+    while (!node->root()) {
+      TreeEdge<Game>& parent_edge = edges[node->parent_i];
       ++(parent_edge.visits_n);
       for (int i = 0; i < Game::players_n(); ++i) {
         parent_edge.acc_outcome[i] += leaf_outcome[i];
         parent_edge.outcome[i] = parent_edge.acc_outcome[i] 
             / static_cast<float>(parent_edge.visits_n);
       }
-      node = nodes[parent_edge.parent_i];
-      ++(node.visit_sum);
+      node = &(nodes[parent_edge.parent_i]);
+      ++(node->visit_sum);
     }
   }
 
   const std::array<float, Game::players_n()>& ExpandNode(
       Game&& expanded_game, std::size_t source_edge_i, GameNetwork* network) {
-    nodes.emplace_back(std::move(expanded_game), {}, {source_edge_i}, 0);
+    nodes.emplace_back(std::move(expanded_game), source_edge_i);
     TreeNode<Game>& node = nodes.back();
-    std::size_t node_i = node_i;
+    std::size_t node_i = nodes.size() - 1;
 
     if (!edges.empty()) {
       edges[source_edge_i].child_i = node_i;
@@ -313,12 +313,13 @@ struct Config {
 template <typename Game, typename GameNetwork>
 std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
                                         GameNetwork* network) {
-  if (config.game.State() == games::GameState::kOver) {
+  if (game.State() == games::GameState::kOver) {
     LOG(FATAL) << "Self play cannot begin from a terminal state.";
   }
   internal::GameTree<Game, GameNetwork> tree;
-  (void)tree.ExpandNode(game, -1, network);
-  internal::TreeNode<Game>& root = tree.nodes[0];
+  (void)tree.ExpandNode(Game(game), -1, network);
+  std::size_t root_i = 0;
+  internal::TreeNode<Game>* root = &(tree.nodes[root_i]);
 
   // These are parallel arrays.
   // 
@@ -330,13 +331,15 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
 
   absl::BitGen bitgen;
   int total_moves = 0;
-  while (root.game.State() == games::GameState::kOngoing) {
+  while (root->game.State() == games::GameState::kOngoing) {
     // To make a move, we first grow the tree a bunch from this position.
     for (int sim_i = 0; sim_i < config.simulations_n; ++sim_i) {
       tree.Search(root, network, config.exploration_scale,
           config.root_noise_alpha, config.root_noise_lerp, bitgen);
+      // The vector backing this pointer can change in Search.
+      root = &(tree.nodes[root_i]);
     }
-    const int moves_n = root.children_i.size();
+    const int moves_n = root->children_i.size();
 
     // Next, we take the search proportions at the root and create a policy
     // vector from them.
@@ -347,53 +350,54 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
       // Since we've been tracking node visit sums, this will come out
       // normalized.
       search_policy[move_i] = 
-          static_cast<float>(edges[root.children_i[move_i]].visits_n) 
-              / static_cast<float>(root.visit_sum);
+          static_cast<float>(tree.edges[root->children_i[move_i]].visits_n) 
+              / static_cast<float>(root->visit_sum);
       if (search_policy[move_i] > max_search_policy) {
         max_search_policy = search_policy[move_i];
-        max_search_policy_i = move_i
+        max_search_policy_i = move_i;
       }
     }
     if (config.full_play && (total_moves >= config.one_hot_breakover_moves_n)) {
       for (int move_i = 0; move_i < moves_n; ++move_i) {
         search_policy[move_i] = (move_i == max_search_policy_i)
-            ? 1.0f;
+            ? 1.0f
             : 0.0f;
       }
     }
 
     // Next, copy the vectorized stats into the output.
     MoveOutcome<Game> move_outcome;
-    move_outcome.search_policy_class_i = root.game.PolicyClassI();
-    move_outcome.state_inputs = root.game.StateToMatrix();
-    move_outcome.search_policy = root.game.PolicyMask();
+    move_outcome.search_policy_class_i = root->game.PolicyClassI();
+    move_outcome.state_inputs = root->game.StateToMatrix();
+    move_outcome.search_policy = root->game.PolicyMask();
     int move_i = 0;
     for (int policy_vec_i = 0; policy_vec_i < move_outcome.search_policy.rows();
         ++policy_vec_i) {
       if (move_outcome.search_policy(policy_vec_i, 0) == 0.0f) continue;
-      move_outcome.search_policy(policy_vec_i, 0) == search_policy[move_i++];
+      move_outcome.search_policy(policy_vec_i, 0) = search_policy[move_i++];
     }
     move_outcome.max_option_i = max_search_policy_i;
     results.push_back(std::move(move_outcome));
-    current_player_i.push_back(root.game.CurrentPlayerI());
+    current_player_i.push_back(root->game.CurrentPlayerI());
 
     // If we're just looking at this one move, we can leave.
     if (!config.full_play) return std::move(results);
 
     // Next, and the last step in self-play, we sample from the search policy
     int move_index = internal::SamplePolicy(search_policy, 
-                                            root.children_i.size(), bitgen);
+                                            root->children_i.size(), bitgen);
 
     // Setting parent_i to -1 ensures future searches don't propagate anything
     // past the new root and that noise is added where appropriate.
-    root = tree.nodes[tree.edges[root.children_i[move_index]].child_i];
-    root.parent_i = -1;
+    root_i = tree.edges[root->children_i[move_index]].child_i;
+    root = &(tree.nodes[root_i]);
+    root->parent_i = -1;
 
     ++total_moves;
   }
 
   // Finally, score the game, and copy the rotated outcome into the result rows. 
-  auto outcome = root.game.Outcome();
+  auto outcome = root->game.Outcome();
   for (int i = 0; i < results.size(); ++i) {
     for (int player_i = 0; player_i < Game::players_n(); ++player_i) {
       results[i].outcome(

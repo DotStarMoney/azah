@@ -4,59 +4,41 @@
 #include "games/tictactoe/tictactoe.h"
 #include "games/tictactoe/tictactoe_network.h"
 #include "glog/logging.h"
-#include "mcts/self_player.h"
+#include "mcts/self_play.h"
 #include "nn/data_types.h"
-
-namespace {
-
-using TictactoeSelfPlayer = azah::mcts::SelfPlayer<
-    azah::games::tictactoe::Tictactoe,
-    azah::games::tictactoe::TictactoeNetwork,
-    1024,
-    131072,
-    4,
-    16384>;
-
-}  // namespace
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
-
-  TictactoeSelfPlayer self_player(4);
-  azah::mcts::SelfPlayConfig config{
-      .playouts_n = 1,
-      .learning_rate = 0.01,
-      .outcome_temp = 1.0,
-      .policy_temp = 1.0,
-      .revisit_temp = 1.0,
-      .noise_temp = 1.0};
-
-  int steps_n = 0;
-  for (int i = 0; i < 500; ++i) {
-    auto loss = self_player.Train(5, config);
-    steps_n += 5;
-    std::cout << "Step: " << steps_n << ", " << loss << std::endl;
-  }
-
-  azah::games::tictactoe::Tictactoe bb;
-  auto x = self_player.EvaluatePosition(bb, config);
-
-  std::cout << x.best_move_option_i << ", " 
-      << x.projected_outcome[0] << ", " 
-      << x.projected_outcome[1] << std::endl;
-
-  auto& network = self_player.get_network();
   
-  network.SetConstants(network.input_constant_indices(),
-                       bb.StateToMatrix());
-  std::vector<azah::nn::DynamicMatrix> model_outputs;
-  network.Outputs({0, 1}, model_outputs);
+  azah::games::tictactoe::Tictactoe game;
+  azah::games::tictactoe::TictactoeNetwork game_network;
 
-  std::cout << "Policy: " << std::endl;
-  std::cout << model_outputs[0] << std::endl;
+  azah::mcts::self_play::Config config{
+        .simulations_n = 128,
+        .full_play = true,
+        .root_noise_alpha = 0.4,
+        .root_noise_lerp = 0.25,
+        .one_hot_breakover_moves_n = 2,
+        .exploration_scale = 1.0
+      };
 
-  std::cout << "Outcome: " << std::endl;
-  std::cout << model_outputs[1] << std::endl;
+  auto results = azah::mcts::self_play::SelfPlay(config, game, &game_network);
+
+  bool x_move = true;
+  for (const auto& x : results) {
+    if (x_move) {
+      std::cout << "----------------X TO MOVE------------------\n";
+    } else {
+      std::cout << "----------------O TO MOVE------------------\n";
+    }
+    std::cout << "BOARD STATE\n";
+    std::cout << x.state_inputs[0].reshaped(3, 3) << "\n";
+    std::cout << "SEARCHED\n";
+    std::cout << x.search_policy.reshaped(3, 3) << "\n";
+    std::cout << "OUTCOME\n";
+    std::cout << x.outcome << "\n";
+    x_move = !x_move;
+  }
 
   return 0;
 }
