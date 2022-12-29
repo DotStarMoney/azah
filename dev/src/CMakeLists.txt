@@ -32,7 +32,8 @@ set(SRC_GAMES
 
 set(SRC_MCTS_H
     mcts/work_queue.h
-    mcts/self_play.h)
+    mcts/self_play.h
+    mcts/rl_player.h)
 source_group("Header Files\\mcts" FILES ${SRC_MCTS_H})
 set(SRC_MCTS
     ${SRC_MCTS_H})
