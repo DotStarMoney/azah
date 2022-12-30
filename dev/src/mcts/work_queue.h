@@ -25,8 +25,7 @@ class WorkQueue : public thread::DispatchQueue<WorkQueueElement, void> {
   WorkQueue(uint32_t threads, uint32_t queue_length) :
       thread::DispatchQueue<WorkQueueElement, void>(threads, queue_length) {}
 
- private:
-  using thread::DispatchQueue<WorkQueueElement, void>::SetThreadState;
+  void SetThreadState(uint32_t thread, void* state) = delete;
 };
 
 }  // namespace internal

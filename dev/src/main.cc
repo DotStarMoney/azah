@@ -5,6 +5,7 @@
 #include "games/tictactoe/tictactoe_network.h"
 #include "glog/logging.h"
 #include "mcts/self_play.h"
+#include "mcts/rl_player.h"
 #include "nn/data_types.h"
 
 int main(int argc, char* argv[]) {
