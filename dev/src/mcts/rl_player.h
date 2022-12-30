@@ -8,6 +8,9 @@
 #include <vector>
 
 #include "../nn/adam.h"
+#include "../nn/data_types.h"
+#include "absl/container/flat_hash_map.h"
+#include "glog/logging.h"
 #include "self_play.h"
 #include "work_queue.h"
 
@@ -18,33 +21,15 @@ template <typename Game, typename GameNetwork>
 class RLPlayer {
  public:
   struct Options {
-    static constexpr std::size_t kDefaultAsyncDispatchQueueLength = 65536;
-    static constexpr std::size_t kDefaultThreadsN = 4;
+    static constexpr std::size_t kDefaultAsyncDispatchQueueLength = 256;
 
-    std::size_t threads_n = kDefaultThreadsN;
     std::size_t async_dispatch_queue_length = kDefaultAsyncDispatchQueueLength;
   };
 
   RLPlayer(std::size_t replicas_n, const Options& options = Options()) : 
-      work_queue_(options.threads_n, options.async_dispatch_queue_length) {
+      work_queue_(replicas_n, options.async_dispatch_queue_length) {
     ResetInternal(replicas_n);
   }
-
-  struct TrainResult {
-    // Average softmax cross entropy across replicas + moves between true search
-    // policies and predicted search policies.
-    float policy_loss;
-
-    // Average softmax cross entropy across replicas + moves between true outcomes
-    // and predicted outcomes.
-    float outcome_loss;
-
-    friend std::ostream& operator<<(std::ostream& os, const TrainResult& x) {
-      os << "{outcome_Loss=" << x.outcome_loss << ",policy_loss="
-          << x.policy_loss << "}";
-      return os;
-    }
-  };
 
   struct SelfPlayOptions {
     // The SGD learning rate used when training.
@@ -78,6 +63,59 @@ class RLPlayer {
     // A multiplier on the upper-confidence-bound that encourages exploration when
     // higher.
     float exploration_scale;
+  };
+
+  struct EvaluateResult {
+    // The belief in the outcome of the game. 
+    std::array<float, Game::players_n()> predicted_outcome;
+
+    // The belief of the move that should be made for the current player to
+    // maximize their odds of winning.
+    std::vector<float> predicted_move;
+  };
+
+  EvaluateResult Evaluate(const Game& position, 
+                          const SelfPlayOptions& self_play_options) {
+    if (position.State() == games::GameState::kOver) {
+      LOG(FATAL) << "Game is over.";
+    }
+    auto self_play_config = SelfPlayOptionsToConfig(false, self_play_options);
+    auto replica_moves = CollectReplicaMoves(position, self_play_config);
+
+    // Average the outcomes and search policies into the first replica.
+    for (std::size_t i = 1; i < replicas_.size(); ++i) {
+      replica_moves[0][0].outcome += replica_moves[i][0].outcome;
+      replica_moves[0][0].search_policy += replica_moves[i][0].search_policy;
+    }
+    replica_moves[0][0].outcome /= static_cast<float>(replicas_.size());
+    replica_moves[0][0].search_policy /= static_cast<float>(replicas_.size());
+
+    // Copy the results out.
+    EvaluateResult result;
+    for (std::size_t i = 0; i < position.CurrentMovesN(); ++i) {
+      result.predicted_move.push_back(
+          position.PolicyForMoveI(replica_moves[0][0].search_policy, i));
+    }
+    for (std::size_t i = 0; i < Game::players_n(); ++i) {
+      result.predicted_outcome[i] = replica_moves[0][0].outcome(i, 0);
+    }
+    return result;
+  }
+
+  struct TrainResult {
+    // Average softmax cross entropy across replicas + moves between true search
+    // policies and predicted search policies.
+    float policy_loss;
+
+    // Average softmax cross entropy across replicas + moves between true outcomes
+    // and predicted outcomes.
+    float outcome_loss;
+
+    friend std::ostream& operator<<(std::ostream& os, const TrainResult& x) {
+      os << "{outcome_Loss=" << x.outcome_loss << ",policy_loss="
+          << x.policy_loss << "}";
+      return os;
+    }
   };
 
   TrainResult Train(int games_n, const SelfPlayOptions& self_play_options) {
@@ -131,55 +169,150 @@ class RLPlayer {
 
   class ReplicaSelfPlayerFn : public internal::WorkQueueElement {
    public:
-    ReplicaSelfPlayerFn(const self_play::Config& config,
+    ReplicaSelfPlayerFn(const Game& position, const self_play::Config& config,
                         GameNetwork* network,
                         std::vector<self_play::MoveOutcome<Game>>* moves) :
-        config_(config), network_(network), moves_(moves) {}
+        position_(position), config_(config), network_(network), moves_(moves) {}
 
     void run() override {
-      *moves_ = std::move(self_play::SelfPlay(
-          config_, RLPlayer<Game, GameNetwork>::root_game_, network_));
+      *moves_ = std::move(self_play::SelfPlay(config_, position_, network_));
     }
 
    private:
+    const Game& position_;
     const self_play::Config& config_;
     GameNetwork* network_;
     std::vector<self_play::MoveOutcome<Game>>* moves_;
   };
 
+  class ReplicaSGDFn : public internal::WorkQueueElement {
+   public:
+    ReplicaSGDFn(
+        float learning_rate,
+        Replica& replica,
+        const std::vector<const self_play::MoveOutcome<Game>*>& all_moves,
+        TrainResult& replica_loss) :
+            learning_rate_(learning_rate), replica_(replica),
+            all_moves_(all_moves), replica_loss_(replica_loss) {}
+
+    void run() override {
+      GameNetwork& network = replica_.network;
+      
+      // These will be re-used between updates.
+      std::vector<nn::DynamicMatrix> var_grad;
+      std::vector<uint32_t> var_grad_i;
+      std::vector<float> losses;
+
+      // Since not all variables are guaranteed to have gradients for each row in
+      // updates, we have to do some extra bookkeeping to sum the terms of each
+      // variable's average gradients.
+      absl::flat_hash_map<uint32_t, int> var_index_to_vec_index;
+
+      // Parallel arrays
+      std::vector<nn::DynamicMatrix> acc_grads;
+      std::vector<uint32_t> acc_index;
+      std::vector<int> acc_grad_count;
+
+      uint32_t outcome_target_index = network.outcome_target_constant_index();
+      uint32_t outcome_loss_index = network.outcome_loss_target_index();
+      for (auto update : all_moves_) {
+        // Step 1: Calculate gradients for the given update.
+        uint32_t policy_target_index = 
+            network.policy_target_constant_indices()[
+                update.search_policy_class_i];
+
+        network.SetConstants(network.input_constant_indices(), 
+                             update.state_inputs);
+        network.SetConstants({policy_target_index}, {update.search_policy});
+        network.SetConstants({outcome_target_index}, {update.outcome});
+
+        uint32_t policy_loss_index =
+            network.policy_loss_target_indices()[update.search_policy_class_i];
+
+        network.Gradients({policy_loss_index, outcome_loss_index}, var_grad_i, 
+                          var_grad, losses);
+        
+        // Step 2: Accumulate the gradients into the averages.
+        for (int i = 0; i < var_grad.size(); ++i) {
+          uint32_t grad_index = var_grad_i[i];
+          nn::DynamicMatrix& grad = var_grad[i];
+          auto [iter, is_new] = var_index_to_vec_index.insert({grad_index,
+                                                               acc_grads.size()});
+          if (is_new) {
+            acc_grads.push_back(std::move(grad));
+            acc_index.push_back(grad_index);
+            acc_grad_count.push_back(1);
+          } else {
+            acc_grads[iter->second] += grad;
+            (acc_grad_count[iter->second])++;
+          }
+        }
+        replica_loss_.policy_loss += losses[0];
+        replica_loss_.outcome_loss += losses[1];
+      }
+
+      for (std::size_t i = 0; i < acc_grads.size(); ++i) {
+        acc_grads[i] /= static_cast<float>(acc_grad_count[i]);
+      }
+      replica_loss_.policy_loss /= static_cast<float>(all_moves_.size());
+      replica_loss_.outcome_loss /= static_cast<float>(all_moves_.size());
+
+      replica_.opt.update(learning_rate_, acc_index, acc_grads, replica_.network);
+    }
+
+   private:
+    const float learning_rate_;
+    Replica& replica_;
+    const std::vector<const self_play::MoveOutcome<Game>*>& all_moves_;
+    TrainResult& replica_loss_;
+  };
+
+  std::vector<std::vector<self_play::MoveOutcome<Game>>> CollectReplicaMoves(
+      const Game& position, const self_play::Config& self_play_config) {
+    std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
+        replicas_.size(), {});
+    std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
+    for (auto& replica : replicas_) {
+      work_queue_.AddWork(std::make_unique<ReplicaSelfPlayerFn>(
+          position, self_play_config, &(replica.network), moves_ptr++));
+    }
+    work_queue_.Drain();
+    return replica_moves;
+  }
+
   TrainResult TrainIteration(
       float learning_rate, const self_play::Config& self_play_config) {
     // This is effectively a nested list of training examples and needs to outlive
     // gradient accumulation for obvious reasons.
-    std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
-        replicas_.size(), {});
-
-    {
-      std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
-      for (auto& replica : replicas_) {
-        work_queue_.AddWork(std::make_unique<ReplicaSelfPlayerFn>(
-            self_play_config, &(replica.network), moves_ptr++));
-      }
-      work_queue_.Drain();
-    }
+    auto replica_moves = CollectReplicaMoves(root_game_, self_play_config);
     
-    std::vector<self_play::MoveOutcome<Game>*> all_moves;
+    // Flatten the list of move outcomes.
+    std::vector<const self_play::MoveOutcome<Game>*> all_moves;
     for (std::size_t rep_i; rep_i < replicas_.size(); ++rep_i) {
       for (auto& move : replica_moves[rep_i]) {
         all_moves.push_back(&move);
       }
     }
     
-    //
-    // Update replicas with all_moves, return losses
-    //
+    // Update the replicas.
+    std::vector<TrainResult> replica_losses(replicas_.size(), {0.0f, 0.0f});
+    for (std::size_t i = 0; i < replicas_.size(); ++i) {
+      work_queue_.AddWork(std::make_unique<ReplicaSGDFn>(
+          learning_rate, replicas_[i], all_moves, replica_losses[i]));
+    }
+    work_queue_.Drain();
 
-    //
-    // return losses
-    //
+    // Average the loss over the replicas.
+    TrainResult final_loss{0.0f, 0.0f};
+    for (std::size_t i = 0; i < replicas_.size(); ++i) {
+      final_loss.policy_loss += replica_losses.policy_loss;
+      final_loss.outcome_loss += replica_losses.outcome_loss;
+    }
+    final_loss.policy_loss /= static_cast<float>(replicas_.size());
+    final_loss.outcome_loss /= static_cast<float>(replicas_.size());
+
+    return final_loss;
   }
-
-
 };
 
 template <typename Game, typename GameNetwork>

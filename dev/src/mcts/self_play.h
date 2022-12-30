@@ -275,7 +275,8 @@ struct MoveOutcome {
   // The outcome order-rotated s.t. the player who's move it is to make is in
   // the first row.
   //
-  // If not playing a full game, the value of this field is unspecified.
+  // If not playing a full game, the value of this field is set by the outcome
+  // estimated at the root and is not rotated.
   nn::Matrix<Game::players_n(), 1> outcome;
 
   // The visit proportions across move options at the searched game state.
@@ -287,11 +288,6 @@ struct MoveOutcome {
 
   // The network inputs that should yield outcome and search_policy.
   std::vector<nn::DynamicMatrix> state_inputs;
-
-  // The move index with the highest search value, a.k.a "the move to make."
-  // This is not necessarily the move taken during self-play since that is
-  // chosen by sampling the policy vector.
-  std::size_t max_option_i;
 };
 
 struct Config {
@@ -328,6 +324,7 @@ struct Config {
   float exploration_scale;
 };
 
+// See MoveOutcome for the return values of this function.
 template <typename Game, typename GameNetwork>
 std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
                                         GameNetwork* network) {
@@ -363,7 +360,6 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
     // vector from them.
     auto search_policy = std::unique_ptr<float[]>(new float[moves_n]);
     float max_search_policy = 0.0f;
-    int max_search_policy_i = -1;
     for (int move_i = 0; move_i < moves_n; ++move_i) {
       // Since we've been tracking node visit sums, this will come out
       // normalized.
@@ -372,12 +368,11 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
               / static_cast<float>(root->visit_sum);
       if (search_policy[move_i] > max_search_policy) {
         max_search_policy = search_policy[move_i];
-        max_search_policy_i = move_i;
       }
     }
     if (config.full_play && (total_moves >= config.one_hot_breakover_moves_n)) {
       for (int move_i = 0; move_i < moves_n; ++move_i) {
-        search_policy[move_i] = (move_i == max_search_policy_i)
+        search_policy[move_i] = (search_policy[move_i] == max_search_policy)
             ? 1.0f
             : 0.0f;
       }
@@ -394,13 +389,17 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
       if (move_outcome.search_policy(policy_vec_i, 0) == 0.0f) continue;
       move_outcome.search_policy(policy_vec_i, 0) = search_policy[move_i++];
     }
-    move_outcome.max_option_i = max_search_policy_i;
     results.push_back(std::move(move_outcome));
     current_player_i.push_back(root->game.CurrentPlayerI());
 
     // If we're just looking at this one move, we can leave.
-    if (!config.full_play) return std::move(results);
-
+    if (!config.full_play) {
+      // Copy the outcome (not rotated) predicted at the root into the results.
+      for (std::size_t player_i = 0; player_i < Game::players_n(); ++player_i) {
+        results[0].outcome(player_i, 0) = root->predicted_outcome[player_i];
+      }
+      return std::move(results);
+    }
     // Next, and the last step in self-play, we sample from the search policy
     int move_index = internal::SamplePolicy(search_policy, 
                                             root->children_i.size(), bitgen);
