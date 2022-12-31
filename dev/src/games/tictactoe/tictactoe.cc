@@ -41,7 +41,8 @@ int Tictactoe::CurrentPlayerI() const {
 
 int Tictactoe::CurrentMovesN() const {
   if (State() != GameState::kOngoing) {
-    LOG(FATAL) << "Game is over, there is no current move. Move is " << static_cast<int>(State());
+    LOG(FATAL) << "Game is over, there is no current move. Move is " 
+        << static_cast<int>(State());
   }
   int total_moves = 0;
   for (int i = 0; i < 9; ++i) {
