@@ -18,7 +18,7 @@ enum class GameState {
   kOver = 2,
 };
 
-template <int PlayersN, int MaxMoveOptions>
+template <int PlayersN>
 class Game {
  public:
   // The canonical name for this game.
@@ -27,11 +27,6 @@ class Game {
   // The number of players in this game. The size of the array returned by
   // Outcome is this long.
   static constexpr int players_n() { return PlayersN; }
-
-  // The maximum policy size required across possible decisions.
-  static constexpr int max_move_options() { 
-    return MaxMoveOptions;
-  }
 
   // A string unique to this game state.
   virtual const std::string& state_uid() const = 0;

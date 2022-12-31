@@ -15,7 +15,7 @@ namespace azah {
 namespace games {
 namespace tictactoe {
 
-class Tictactoe : public Game<2, 9> {
+class Tictactoe : public Game<2> {
  public:
   Tictactoe();
   const std::string_view name() const override;
