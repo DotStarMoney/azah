@@ -19,17 +19,17 @@ using RLPlayer = azah::mcts::RLPlayer<Tictactoe, TictactoeNetwork>;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   
-  RLPlayer player(4);
+  RLPlayer player(2);
 
   RLPlayer::SelfPlayOptions options{
-      .learning_rate = 0.02,
+      .learning_rate = 0.01,
       .simulations_n = 128,
       .root_noise_alpha = 0.4,
       .root_noise_lerp = 0.25,
       .one_hot_breakover_moves_n = 2,
       .exploration_scale = 0.25};
 
-  for (int i = 0; i < 100; ++i) {
+  for (int i = 0; i < 200; ++i) {
     std::cout << "Playing 5 games..." << std::endl;
     auto losses = player.Train(5, options);
     std::cout << "Finished game " << i << ", with loss " << losses << std::endl;

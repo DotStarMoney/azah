@@ -126,9 +126,8 @@ class GameTree {
       // we always randomly permute the indices.
       shuffled_seq.resize(children_n);
       RandomSeq(shuffled_seq, bitgen);
-      for (int seq_i = 0, child_i = shuffled_seq[seq_i]; 
-          seq_i < children_n; 
-          child_i = shuffled_seq[seq_i++]) {
+      for (std::size_t seq_i = 0; seq_i < children_n; ++seq_i) {
+        std::size_t child_i = shuffled_seq[seq_i];
         TreeEdge<Game>& edge = edges[node->children_i[child_i]];
         float policy_value = node->root()
             ? (noise[child_i] - edge.search_prob) * root_noise_lerp
