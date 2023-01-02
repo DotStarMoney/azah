@@ -18,6 +18,18 @@ set(SRC_GAMES_TICTACTOE
     ${SRC_GAMES_TICTACTOE_H}
     ${SRC_GAMES_TICTACTOE_C})
     
+set(SRC_GAMES_MANCALA_H
+    games/mancala/mancala.h
+    games/mancala/mancala_network.h)
+set(SRC_GAMES_MANCALA_C
+    games/mancala/mancala.cc
+    games/mancala/mancala_network.cc)
+source_group("Header Files\\games\\mancala" FILES ${SRC_GAMES_MANCALA_H})
+source_group("Source Files\\games\\mancala" FILES ${SRC_GAMES_MANCALA_C})
+set(SRC_GAMES_MANCALA
+    ${SRC_GAMES_MANCALA_H}
+    ${SRC_GAMES_MANCALA_C})
+
 set(SRC_GAMES_H
     games/game.h
     games/game_network.h)
@@ -28,7 +40,8 @@ source_group("Source Files\\games" FILES ${SRC_GAMES_C})
 set(SRC_GAMES
     ${SRC_GAMES_H}
     ${SRC_GAMES_C}
-    ${SRC_GAMES_TICTACTOE})
+    ${SRC_GAMES_TICTACTOE}
+    ${SRC_GAMES_MANCALA})
 
 set(SRC_MCTS_H
     mcts/work_queue.h

@@ -9,6 +9,7 @@
 
 #include "../../nn/data_types.h"
 #include "../../nn/init.h"
+#include "../game.h"
 #include "glog/logging.h"
 
 namespace azah {
@@ -19,17 +20,11 @@ Tictactoe::Tictactoe() :
     board_{Mark::kNone, Mark::kNone, Mark::kNone,
            Mark::kNone, Mark::kNone, Mark::kNone,
            Mark::kNone, Mark::kNone, Mark::kNone},
-    x_move_(true),
-    uid_("_________") {
-  UpdateUid();
+    x_move_(true) {
 }
 
 const std::string_view Tictactoe::name() const {
-  return kName;
-}
-
-const std::string& Tictactoe::state_uid() const {
-  return uid_;
+  return kName_;
 }
 
 int Tictactoe::CurrentPlayerI() const {
@@ -182,19 +177,12 @@ void Tictactoe::MakeMove(int move_i) {
     if (move_index == move_i) {
       board_[i] = x_move_ ? Mark::kX : Mark::kO;
       x_move_ = !x_move_;
-      UpdateUid();
       return;
     }
     ++move_index;
   }
 
   LOG(FATAL) << "The given move did not exist!";
-}
-
-void Tictactoe::UpdateUid() {
-  for (int i = 0; i < 9; ++i) {
-    uid_[i] = static_cast<char>(board_[i]);
-  }
 }
 
 }  // namespace tictactoe

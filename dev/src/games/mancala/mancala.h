@@ -1,11 +1,11 @@
-#ifndef AZAH_GAMES_TICTACTOE_TICTACTOE_H_
-#define AZAH_GAMES_TICTACTOE_TICTACTOE_H_
+#ifndef AZAH_GAMES_MANCALA_MANCALA_H_
+#define AZAH_GAMES_MANCALA_MANCALA_H_
+
+#include <stddef.h>
 
 #include <array>
-#include <span>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include "../../nn/data_types.h"
@@ -13,11 +13,11 @@
 
 namespace azah {
 namespace games {
-namespace tictactoe {
+namespace mancala {
 
-class Tictactoe : public Game<2> {
+class Mancala : public Game<2> {
  public:
-  Tictactoe();
+  Mancala();
   const std::string_view name() const override;
 
   int CurrentPlayerI() const override;
@@ -29,26 +29,27 @@ class Tictactoe : public Game<2> {
   int PolicyClassI() const override;
   float PolicyForMoveI(const nn::DynamicMatrix& policy,
                        int move_i) const override;
-  
+
   nn::DynamicMatrix PolicyMask() const override;
 
   void MakeMove(int move_i) override;
 
  private:
-  static constexpr std::string_view kName_ = "TicTacToe";
+  static constexpr std::string_view kName_ = "Mancala";
 
-  enum class Mark {
-    kNone = 0,
-    kX = 1,
-    kO = 2
-  };
+  static constexpr std::size_t kPlayerAWellI_ = 6;
+  static constexpr std::size_t kPlayerBWellI_ = 13;
 
-  std::array<Mark, 9> board_;
-  bool x_move_;
+
+
+
+  bool player_a_turn_;
+  std::array<std::size_t, 14> board_;
+  bool over_;
 };
 
-}  // namespace tictactoe
+}  // namespace mancala
 }  // namespace games
 }  // namespace azah
 
-#endif  // AZAH_GAMES_TICTACTOE_TICTACTOE_H_
+#endif  // AZAH_GAMES_MANCALA_MANCALA_H_

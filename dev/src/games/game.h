@@ -28,9 +28,6 @@ class Game {
   // Outcome is this long.
   static constexpr int players_n() { return PlayersN; }
 
-  // A string unique to this game state.
-  virtual const std::string& state_uid() const = 0;
-
   // The index of the player who's move it is to make.
   //
   // Undefined if the game is over.
