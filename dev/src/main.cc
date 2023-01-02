@@ -40,7 +40,8 @@ int main(int argc, char* argv[]) {
   
   bool x_move = true;
   while (game.State() == azah::games::GameState::kOngoing) {
-    std::cout << "PLAYER " << (x_move ? "X" : "O") << "------------------------" << std::endl;
+    std::cout << "PLAYER " << (x_move ? "X" : "O") << "------------------------" 
+        << std::endl;
     auto eval_results = player.Evaluate(game, options);
 
     int best_move_i = -1;
