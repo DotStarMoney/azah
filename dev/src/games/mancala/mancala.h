@@ -40,12 +40,14 @@ class Mancala : public Game<2> {
   static constexpr std::size_t kPlayerAWellI_ = 6;
   static constexpr std::size_t kPlayerBWellI_ = 13;
 
-
-
-
   bool player_a_turn_;
-  std::array<std::size_t, 14> board_;
+  std::array<int, 14> board_;
   bool over_;
+  
+  // This tracks the filled pockets for the current player, so won't ever exceed
+  // 6 in length and no element will be > 5.
+  std::array<std::size_t, 6> filled_pockets_;
+  std::size_t filled_pockets_n_;
 };
 
 }  // namespace mancala
