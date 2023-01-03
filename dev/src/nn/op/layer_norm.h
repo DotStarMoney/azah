@@ -10,8 +10,6 @@
 #include "../unary_op.h"
 #include "fork.h"
 #include "glog/logging.h"
-#include "mean.h"
-#include "fmadd.h"
 #include "scalar_inv_sqrt.h"
 #include "scalar_sub.h"
 #include "square_mean.h"
@@ -121,19 +119,18 @@ class ColBroadcastFMAdd : public Op<Rows, Cols> {
 
   void Backprop(uint32_t cycle,
                 const MatrixRef<Rows, Cols>& output_dx) override {
-    /*
     if (!this->input_.constant) {
       const auto& m = this->m_.Output(cycle);
-      this->input_.Backprop(cycle, output_dx.cwiseProduct(m));
+      this->input_.Backprop(cycle, output_dx.cwiseProduct(
+          m.rowwise().replicate<Cols>()));
     }
     if (!this->m_.constant) {
       const auto& x = this->input_.Output(cycle);
-      this->m_.Backprop(cycle, output_dx.cwiseProduct(x));
+      this->m_.Backprop(cycle, output_dx.cwiseProduct(x).rowwise().sum());
     }
     if (!this->b_.constant) {
-      this->b_.Backprop(cycle, output_dx);
+      this->b_.Backprop(cycle, output_dx.rowwise().sum());
     }
-    */
   }
 
  private:
@@ -152,11 +149,7 @@ class ColBroadcastFMAdd : public Op<Rows, Cols> {
   }
 };
 
-
-
-
 }  // namespace internal
-
 
 template <int Rows, int Cols>
 class LayerNorm : public Op<Rows, Cols> {

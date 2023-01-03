@@ -86,15 +86,12 @@ set(SRC_NN_H
     nn/op/row_mean.h
     nn/op/scalar_fmadd.h
     nn/op/scalar_mse.h
-    nn/op/scalar_sub.h
     nn/op/sigmoid.h
     nn/op/softmax.h
     nn/op/softmax_cross_ent.h
-    nn/op/square_mean.h
     nn/op/swish.h
     nn/op/tanh.h
     nn/op/transpose.h
-    nn/op/scalar_inv_sqrt.h
     nn/sgd_optimizer.h
     nn/unary_op.h
     nn/variable.h
