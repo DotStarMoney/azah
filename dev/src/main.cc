@@ -10,6 +10,16 @@
 #include "nn/op/mean.h"
 #include "nn/op/swish.h"
 
+/*
+
+
+Something is borked in LayerNorm gradient calculation, so fix that before going
+any further.
+
+
+*/
+
+
 namespace {
 
 using Tictactoe = azah::games::tictactoe::Tictactoe;
