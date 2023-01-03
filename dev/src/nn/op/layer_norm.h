@@ -33,7 +33,7 @@ class Debias : public UnaryOp<Rows, Cols, Rows, Cols> {
   void UnaryBackprop(uint32_t cycle,
                      const MatrixRef<Rows, Cols>& output_dx) override {
     this->input_.Backprop(
-        cycle, 
+        cycle,
         output_dx.rowwise() - output_dx.colwise().mean());
   }
 };
@@ -57,8 +57,8 @@ class SquareColMean : public UnaryOp<Rows, Cols, 1, Cols> {
     const auto& x = this->input_.Output(cycle);
     this->input_.Backprop(
         cycle,
-        (output_dx 
-            * (2.0f / static_cast<float>(Rows))).colwise().replicate<Rows>());
+        x.cwiseProduct((output_dx
+            * (2.0f / static_cast<float>(Rows))).colwise().replicate<Rows>()));
   }
 };
 

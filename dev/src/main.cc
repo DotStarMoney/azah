@@ -7,56 +7,18 @@
 #include "glog/logging.h"
 #include "mcts/rl_player.h"
 #include "nn/op/layer_norm.h"
-#include "nn/op/mean.h"
-#include "nn/op/swish.h"
-
-/*
-
-
-Something is borked in LayerNorm gradient calculation, so fix that before going
-any further.
-
-
-*/
-
 
 namespace {
 
 using Tictactoe = azah::games::tictactoe::Tictactoe;
 using TictactoeNetwork = azah::games::tictactoe::TictactoeNetwork;
 using RLPlayer = azah::mcts::RLPlayer<Tictactoe, TictactoeNetwork>;
-using azah::nn::Matrix;
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   
-  Matrix<2, 2> xx;
-  xx << 3.0, 9.0, 5.0, 10.0;
-
-  Matrix<2, 1> mm;
-  mm << 0.0, 0.3;
-
-  Matrix<2, 1> vv;
-  vv << 1.0, 1.2;
-
-  auto x = azah::nn::Variable<2, 2>(xx);
-  auto beta = azah::nn::Variable<2, 1>(mm);
-  auto gamma = azah::nn::Variable<2, 1>(vv);
-
-  auto layer_norm = azah::nn::op::LayerNorm(x, beta, gamma);
-  auto z = azah::nn::op::Mean(layer_norm);
-
-  std::cout << "result=\n" << z.OutputBase(0) << "\n";
-
-  z.BackpropBase(0);
-
-  std::cout << "gradient x=\n" << x.gradient_base() << "\n";
-  std::cout << "gradient beta=\n" << beta.gradient_base() << "\n";
-  std::cout << "gradient gamma=\n" << gamma.gradient_base() << "\n";
-
-  /*
   RLPlayer player(2);
 
   RLPlayer::SelfPlayOptions options{
@@ -104,6 +66,6 @@ int main(int argc, char* argv[]) {
 
     x_move = !x_move;
   }
-  */
+
   return 0;
 }
