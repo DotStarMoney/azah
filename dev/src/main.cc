@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
   azah::nn::Variable<5, 4> input_var(input);
   azah::nn::op::Mixer<5, 4, 16, 24> mixer(input_var);
 
-  mixer.Output(0);
+  mixer.OutputBase(0);
+  mixer.BackpropBase(0);
 
   /*
   RLPlayer player(2);
