@@ -48,7 +48,8 @@ std::array<float, 2> Mancala::Outcome() const {
 }
 
 std::vector<nn::DynamicMatrix> Mancala::StateToMatrix() const {
-  // 14 column vectors of height 48, where each vector is a separate board space.
+  // 14 column vectors of height 48, where each vector is a separate board
+  // space.
   nn::Matrix<48, 14> input = nn::init::Zeros<48, 14>();
   // If it's player B's turn, we rotate the board so that the first 7 columns
   // in the output matrix belong to B not A.
@@ -88,10 +89,11 @@ void Mancala::MakeMove(int move_i) {
   int pocket_contents = board_[well_index];
   board_[well_index] = 0;
 
-  std::size_t opposing_mancala = player_a_turn_ ? kPlayerBWellI_ : kPlayerAWellI_;
+  std::size_t opposing_mancala = 
+      player_a_turn_ ? kPlayerBWellI_ : kPlayerAWellI_;
   std::size_t last_sow_space = -1;
-  // Sow seeds, skipping the opponent's mancala and tracking the last place we left
-  // a stone.
+  // Sow seeds, skipping the opponent's mancala and tracking the last place we 
+  // left a stone.
   for (int i = 1; i <= pocket_contents; ++i) {
     std::size_t sow_space = (well_index + i) % 14;
     if (sow_space == opposing_mancala) {
@@ -107,7 +109,8 @@ void Mancala::MakeMove(int move_i) {
       ? std::make_tuple<>(0, 6)
       : std::make_tuple<>(7, 13);
 
-  // If our last stone was on our side, steal from our opponent and take the stone.
+  // If our last stone was on our side, steal from our opponent and take the
+  // stone.
   std::size_t mancala = player_a_turn_ ? kPlayerAWellI_ : kPlayerBWellI_;
   if ((board_[last_sow_space] == 1) &&
       ((last_sow_space >= lb) && (last_sow_space < ub))) {
@@ -137,16 +140,17 @@ void Mancala::MakeMove(int move_i) {
   }
 
   if (last_sow_space != mancala) {
-    // If we didn't place a stone in our own mancala switch the turn to be of our
-    // opponent, and change the LB / UB to their side.
+    // If we didn't place a stone in our own mancala switch the turn to be of
+    // our opponent, and change the LB / UB to their side.
     player_a_turn_ = !player_a_turn_;
     lb = (lb + 7) % 14;
     ub = (ub + 7) % 14;
   }
-  // Note that if we placed our last stone in our own mancala, its still our turn
-  // (we never switched turns in the above if clause).
+  // Note that if we placed our last stone in our own mancala, its still our
+  // turn (we never switched turns in the above if clause).
 
-  // Now calculate available moves for our opponent (or us if we get another turn).
+  // Now calculate available moves for our opponent (or us if we get another
+  // turn).
   filled_pockets_n_ = 0;
   for (int i = lb; i < ub; ++i) {
     if (board_[i] == 0) continue;
