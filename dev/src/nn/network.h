@@ -10,6 +10,7 @@
 #include "data_types.h"
 #include "glog/logging.h"
 #include "node_base.h"
+#include "op.h"
 #include "variable_base.h"
 
 namespace azah {
@@ -72,15 +73,17 @@ class Network {
   void AddVariable(VariableBase* variable);
   void AddConstant(ConstantBase* constant);
 
+  template <typename OpType>
+  void AddVariables(const OpType& op) {
+    for (auto& var : op.variables()) AddVariable(var);
+  }
+
  private:
   uint32_t cycle_;
   
   std::vector<NodeBase*> outputs_;
-  
   std::vector<NodeBase*> targets_;
-  
   std::vector<VariableBase*> variables_;
-
   std::vector<ConstantBase*> constants_;
 };
 

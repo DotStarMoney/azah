@@ -5,8 +5,6 @@ set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 set(SOURCE_DIR ${LOCAL_DIR}/src)
 
-# Lets get started!
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -14,8 +12,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # For MSVC; gives a nice project layout.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast /arch:AVX2")
-
+ 
+if(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast /arch:AVX2 /bigobj")   
+else()
+  message(FATAL_ERROR "Only MSVC is supported for now.")
+endif()
+ 
 define_property(
   TARGET
   PROPERTY FOLDER
