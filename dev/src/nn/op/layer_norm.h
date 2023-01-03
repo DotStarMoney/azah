@@ -10,9 +10,6 @@
 #include "../unary_op.h"
 #include "fork.h"
 #include "glog/logging.h"
-#include "scalar_inv_sqrt.h"
-#include "scalar_sub.h"
-#include "square_mean.h"
 
 namespace azah {
 namespace nn {
