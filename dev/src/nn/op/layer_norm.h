@@ -31,25 +31,25 @@ class Debias : public UnaryOp<Rows, Cols, Rows, Cols> {
   }
 
   void UnaryBackprop(uint32_t cycle,
-      const MatrixRef<Rows, Cols>& output_dx) override {
+                     const MatrixRef<Rows, Cols>& output_dx) override {
     this->input_.Backprop(
         cycle, 
-        output_dx.rowwise() - output_dx.colwise().mean()));
+        output_dx.rowwise() - output_dx.colwise().mean());
   }
 };
 
 template <int Rows, int Cols>
 class SquareColMean : public UnaryOp<Rows, Cols, 1, Cols> {
  public:
-  SquareColMean(const SquareMean&) = delete;
-  SquareColMean& operator=(const SquareMean&) = delete;
+  SquareColMean(const SquareColMean&) = delete;
+  SquareColMean& operator=(const SquareColMean&) = delete;
 
   SquareColMean(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, 1, Cols>(input) {}
 
  private:
   void ComputeOutput(uint32_t cycle) override {
     const auto& x = this->input_.Output(cycle);
-    this->cached_output_ = x.square().colwise().mean();
+    this->cached_output_ = x.array().square().matrix().colwise().mean();
   }
 
   void UnaryBackprop(uint32_t cycle, 
@@ -65,30 +65,31 @@ class SquareColMean : public UnaryOp<Rows, Cols, 1, Cols> {
 static constexpr float kEpsilon = 1e-3;
 
 template <int Rows, int Cols>
-class ColBroadcastScalarInvSqrt : public BinaryOp<Rows, Cols, 1, Cols, Rows, Cols> {
+class ColBroadcastScalarInvSqrt 
+    : public BinaryOp<Rows, Cols, 1, Cols, Rows, Cols> {
  public:
   ColBroadcastScalarInvSqrt(const ColBroadcastScalarInvSqrt&) = delete;
   ColBroadcastScalarInvSqrt& operator=(const ColBroadcastScalarInvSqrt&) = delete;
 
-  ColBroadcastScalarInvSqrt(Node<Rows, Cols>& input_a, Node<1, 1>& input_b)
+  ColBroadcastScalarInvSqrt(Node<Rows, Cols>& input_a, Node<1, Cols>& input_b)
       : BinaryOp<Rows, Cols, 1, Cols, Rows, Cols>(input_a, input_b) {}
 
   void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
-    /*
-    auto recip_inv =
-      (this->input_b_.Output(cycle).array() + kEpsilon).inverse().value();
-    auto recip_inv_sqrt = std::sqrt(recip_inv);
-
+    auto recip_inv = 
+        (this->input_b_.Output(cycle).array() + kEpsilon).inverse().matrix();
+    auto recip_inv_sqrt = recip_inv.cwiseSqrt();
     if (!this->input_a_.constant) {
-      this->input_a_.Backprop(cycle,
-        (output_dx.array() * recip_inv_sqrt).matrix());
+      this->input_a_.Backprop(
+          cycle,
+          output_dx.cwiseProduct(recip_inv_sqrt.colwise().replicate<Rows>()));
     }
     if (!this->input_b_.constant) {
-      auto num = this->input_a_.Output(cycle).cwiseProduct(output_dx).array();
-      this->input_b_.Backprop(cycle, Matrix<1, 1>::Constant(
-        -num.sum() * 0.5 * recip_inv * recip_inv_sqrt));
+      auto num = 0.5f * -this->input_a_.Output(cycle).cwiseProduct(output_dx);
+      this->input_b_.Backprop(
+          cycle,
+          num.colwise().sum()
+              .cwiseProduct(recip_inv).cwiseProduct(recip_inv_sqrt));
     }
-    */
   }
 
  private:
@@ -96,11 +97,10 @@ class ColBroadcastScalarInvSqrt : public BinaryOp<Rows, Cols, 1, Cols, Rows, Col
     const auto& x = this->input_a_.Output(cycle);
     const auto& recip = this->input_b_.Output(cycle);
     this->cached_output_ = (x.array() / 
-        (recip + kEpsilon).cwiseSqrt().colwise().replicate<Rows>().array())
-            .matrix();
+        (recip.array() + kEpsilon).matrix().cwiseSqrt()
+            .colwise().replicate<Rows>().array()).matrix();
   }
 };
-
 
 template <int Rows, int Cols>
 class ColBroadcastFMAdd : public Op<Rows, Cols> {
