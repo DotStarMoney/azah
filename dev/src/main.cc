@@ -6,7 +6,6 @@
 #include "games/tictactoe/tictactoe_network.h"
 #include "glog/logging.h"
 #include "mcts/rl_player.h"
-#include "nn/op/layer_norm.h"
 
 namespace {
 
