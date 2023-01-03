@@ -1,23 +1,43 @@
 #include <iostream>
 #include <vector>
 
+/*
 #include "games/game.h"
 #include "games/tictactoe/tictactoe.h"
 #include "games/tictactoe/tictactoe_network.h"
 #include "glog/logging.h"
 #include "mcts/rl_player.h"
+*/
+
+//
+#include "nn/op/mixer.h"
+#include "nn/data_types.h"
+//
 
 namespace {
 
-using Tictactoe = azah::games::tictactoe::Tictactoe;
-using TictactoeNetwork = azah::games::tictactoe::TictactoeNetwork;
-using RLPlayer = azah::mcts::RLPlayer<Tictactoe, TictactoeNetwork>;
+//using Tictactoe = azah::games::tictactoe::Tictactoe;
+//using TictactoeNetwork = azah::games::tictactoe::TictactoeNetwork;
+//using RLPlayer = azah::mcts::RLPlayer<Tictactoe, TictactoeNetwork>;
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   
+  azah::nn::Matrix<5, 4> input;
+  input << 0.2, 0.3, 0.5, 0.7, 
+           0.11, 0.13, 0.17, 0.19, 
+           0.23, 0.29, 0.31, 0.37, 
+           0.41, 0.43, 0.47, 0.53,
+           0.59, 0.61, 0.67, 0.71;
+
+  azah::nn::Variable<5, 4> input_var(input);
+  azah::nn::op::Mixer<5, 4, 16, 24> mixer(input_var);
+
+  mixer.Output(0);
+
+  /*
   RLPlayer player(2);
 
   RLPlayer::SelfPlayOptions options{
@@ -67,4 +87,5 @@ int main(int argc, char* argv[]) {
   }
 
   return 0;
+  */
 }

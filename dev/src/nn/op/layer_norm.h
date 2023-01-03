@@ -163,8 +163,9 @@ class LayerNorm : public Op<Rows, Cols> {
         scalar_inv_sqrt_op_(debias_fork_op_, square_mean_op_),
         fmadd_op_(scalar_inv_sqrt_op_, gamma, beta) {}
 
-  void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
-    return this->fmadd_op_.Backprop(cycle, output_dx);
+  void Backprop(uint32_t cycle, 
+                const MatrixRef<Rows, Cols>& output_dx) override {
+    this->fmadd_op_.Backprop(cycle, output_dx);
   }
 
   const Matrix<Rows, Cols>& Output(uint32_t cycle) override {

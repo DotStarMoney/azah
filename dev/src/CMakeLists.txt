@@ -81,6 +81,7 @@ set(SRC_NN_H
     nn/op/layer_norm.h
     nn/op/matmul.h
     nn/op/mean.h
+    nn/op/mixer.h
     nn/op/mse.h
     nn/op/multiply.h
     nn/op/row_mean.h
