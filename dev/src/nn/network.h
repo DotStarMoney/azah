@@ -41,7 +41,7 @@ class Network {
     if (variables_i.empty()) {
       if (variables.size() != variables_.size()) {
         LOG(FATAL) << "Number of provided variables does not match the number "
-                      "of model variables.";
+                      "of network variables.";
       }
       for (int i = 0; i < variables.size(); ++i) {
         variables_[i]->value_base() = variables[i];
