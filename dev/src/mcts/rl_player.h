@@ -270,8 +270,9 @@ class RLPlayer {
     TrainResult& replica_loss_;
   };
 
-  std::vector<std::vector<self_play::MoveOutcome<Game>>> CollectReplicaMoves(
-      const Game& position, const self_play::Config& self_play_config) {
+  inline std::vector<std::vector<self_play::MoveOutcome<Game>>> 
+      CollectReplicaMoves(const Game& position, 
+                          const self_play::Config& self_play_config) {
     std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
         replicas_.size());
     std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
