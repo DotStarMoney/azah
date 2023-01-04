@@ -112,7 +112,7 @@ class RLPlayer {
     float outcome_loss;
 
     friend std::ostream& operator<<(std::ostream& os, const TrainResult& x) {
-      os << "{outcome_Loss=" << x.outcome_loss << ",policy_loss="
+      os << "{outcome_loss=" << x.outcome_loss << ",policy_loss="
           << x.policy_loss << "}";
       return os;
     }
