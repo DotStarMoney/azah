@@ -5,9 +5,12 @@
 
 #include "../binary_op.h"
 #include "../data_types.h"
+#include "../init.h"
 #include "../node.h"
 #include "../op.h"
 #include "../unary_op.h"
+#include "../variable.h"
+#include "../variable_base.h"
 #include "fork.h"
 #include "glog/logging.h"
 
@@ -44,7 +47,8 @@ class SquareColMean : public UnaryOp<Rows, Cols, 1, Cols> {
   SquareColMean(const SquareColMean&) = delete;
   SquareColMean& operator=(const SquareColMean&) = delete;
 
-  SquareColMean(Node<Rows, Cols>& input) : UnaryOp<Rows, Cols, 1, Cols>(input) {}
+  SquareColMean(Node<Rows, Cols>& input) 
+      : UnaryOp<Rows, Cols, 1, Cols>(input) {}
 
  private:
   void ComputeOutput(uint32_t cycle) override {
@@ -65,16 +69,17 @@ class SquareColMean : public UnaryOp<Rows, Cols, 1, Cols> {
 static constexpr float kEpsilon = 1e-3;
 
 template <int Rows, int Cols>
-class ColBroadcastScalarInvSqrt 
+class ColBroadcastInvSqrt 
     : public BinaryOp<Rows, Cols, 1, Cols, Rows, Cols> {
  public:
-  ColBroadcastScalarInvSqrt(const ColBroadcastScalarInvSqrt&) = delete;
-  ColBroadcastScalarInvSqrt& operator=(const ColBroadcastScalarInvSqrt&) = delete;
+  ColBroadcastInvSqrt(const ColBroadcastInvSqrt&) = delete;
+  ColBroadcastInvSqrt& operator=(const ColBroadcastInvSqrt&) = delete;
 
-  ColBroadcastScalarInvSqrt(Node<Rows, Cols>& input_a, Node<1, Cols>& input_b)
+  ColBroadcastInvSqrt(Node<Rows, Cols>& input_a, Node<1, Cols>& input_b)
       : BinaryOp<Rows, Cols, 1, Cols, Rows, Cols>(input_a, input_b) {}
 
-  void Backprop(uint32_t cycle, const MatrixRef<Rows, Cols>& output_dx) override {
+  void Backprop(uint32_t cycle, 
+                const MatrixRef<Rows, Cols>& output_dx) override {
     auto recip_inv = 
         (this->input_b_.Output(cycle).array() + kEpsilon).inverse().matrix();
     auto recip_inv_sqrt = recip_inv.cwiseSqrt();
@@ -149,19 +154,21 @@ class ColBroadcastFMAdd : public Op<Rows, Cols> {
 }  // namespace internal
 
 template <int Rows, int Cols>
-class LayerNorm : public Op<Rows, Cols> {
+class LayerNorm : public Op<Rows, Cols, 2> {
  public:
   LayerNorm(const LayerNorm&) = delete;
   LayerNorm& operator=(const LayerNorm&) = delete;
 
-  LayerNorm(Node<Rows, Cols>& input, Node<Rows, 1>& beta, 
-            Node<Rows, 1>& gamma)
-      : Op<Rows, Cols>(input.constant & beta.constant & gamma.constant),
+  LayerNorm(Node<Rows, Cols>& input)
+      : Op<Rows, Cols, 2>(input.constant),
         debias_op_(input),
         debias_fork_op_(debias_op_, 2),
         square_mean_op_(debias_fork_op_),
-        scalar_inv_sqrt_op_(debias_fork_op_, square_mean_op_),
-        fmadd_op_(scalar_inv_sqrt_op_, gamma, beta) {}
+        inv_sqrt_op_(debias_fork_op_, square_mean_op_),
+        beta_(init::Zeros<Rows, 1>()),
+        gamma_(init::Ones<Rows, 1>()),
+        fmadd_op_(inv_sqrt_op_, gamma_, beta_),
+        variables_{&gamma_, &beta_} {}
 
   void Backprop(uint32_t cycle, 
                 const MatrixRef<Rows, Cols>& output_dx) override {
@@ -172,12 +179,20 @@ class LayerNorm : public Op<Rows, Cols> {
     return this->fmadd_op_.Output(cycle);
   }
 
+  const std::array<VariableBase*, 2>& variables() const override {
+    return variables_;
+  }
+
  private:
   internal::Debias<Rows, Cols> debias_op_;
   Fork<Rows, Cols> debias_fork_op_;
   internal::SquareColMean<Rows, Cols> square_mean_op_;
-  internal::ColBroadcastScalarInvSqrt<Rows, Cols> scalar_inv_sqrt_op_;
+  internal::ColBroadcastInvSqrt<Rows, Cols> inv_sqrt_op_;
   internal::ColBroadcastFMAdd<Rows, Cols> fmadd_op_;
+
+  Variable<Rows, 1> beta_;
+  Variable<Rows, 1> gamma_;
+  const std::array<VariableBase*, 2> variables_;
 
   void ComputeOutput(uint32_t cycle) override {
     LOG(FATAL) << "compute_output unimplemented for LayerNorm.";

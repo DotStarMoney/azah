@@ -10,6 +10,7 @@
 #include "../node.h"
 #include "../op.h"
 #include "../variable.h"
+#include "../variable_base.h"
 #include "add.h"
 #include "fork.h"
 #include "layer_norm.h"
@@ -32,9 +33,7 @@ class Mixer : public Op<Rows, Cols, 8> {
   Mixer(Node<Rows, Cols>& input)
       : Op<Rows, Cols, 8>(input.constant),
         fork_t_(input, 2),
-        norm_t_beta_(init::Zeros<Rows, 1>()),
-        norm_t_gamma_(init::Ones<Rows, 1>()),
-        norm_t_(fork_t_, norm_t_beta_, norm_t_gamma_),
+        norm_t_(fork_t_),
         dense_t_1_k_(init::GlorotUniform<TokenHiddenSize, Cols>()),
         dense_t_1_(dense_t_1_k_, norm_t_),
         swish_t_(dense_t_1_),
@@ -43,9 +42,7 @@ class Mixer : public Op<Rows, Cols, 8> {
         transpose_(dense_t_2_),
         res_t_(transpose_, fork_t_),
         fork_f_(res_t_, 2),
-        norm_f_beta_(init::Zeros<Rows, 1>()),
-        norm_f_gamma_(init::Ones<Rows, 1>()),
-        norm_f_(fork_f_, norm_f_beta_, norm_f_gamma_),
+        norm_f_(fork_f_),
         dense_f_1_k_(init::GlorotUniform<FeatureHiddenSize, Rows>()),
         dense_f_1_(dense_f_1_k_, norm_f_),
         swish_f_(dense_f_1_),
@@ -53,8 +50,9 @@ class Mixer : public Op<Rows, Cols, 8> {
         dense_f_2_(dense_f_2_k_, swish_f_),
         res_f_(dense_f_2_, fork_f_),
         variables_{
-            &norm_t_beta_, &norm_t_gamma_, &dense_t_1_k_, &dense_t_2_k_, 
-            &norm_f_beta_, &norm_f_gamma_, &dense_f_1_k_, &dense_f_2_k_} {}
+            norm_t_.variables()[0], norm_t_.variables()[1], &dense_t_1_k_, 
+            &dense_t_2_k_, norm_f_.variables()[0], norm_f_.variables()[1], 
+            &dense_f_1_k_, &dense_f_2_k_} {}
 
   void Backprop(uint32_t cycle, 
                 const MatrixRef<Rows, Cols>& output_dx) override {
@@ -71,8 +69,6 @@ class Mixer : public Op<Rows, Cols, 8> {
 
  private:
   Fork<Rows, Cols> fork_t_;
-  Variable<Rows, 1> norm_t_beta_;
-  Variable<Rows, 1> norm_t_gamma_;
   LayerNorm<Rows, Cols> norm_t_;
   Variable<TokenHiddenSize, Cols> dense_t_1_k_;
   Matmul<TokenHiddenSize, Cols, Rows, Cols, true> dense_t_1_;
@@ -83,8 +79,6 @@ class Mixer : public Op<Rows, Cols, 8> {
   Add<Rows, Cols> res_t_;
 
   Fork<Rows, Cols> fork_f_;
-  Variable<Rows, 1> norm_f_beta_;
-  Variable<Rows, 1> norm_f_gamma_;
   LayerNorm<Rows, Cols> norm_f_;
   Variable<FeatureHiddenSize, Rows> dense_f_1_k_;
   Matmul<FeatureHiddenSize, Rows, Rows, Cols> dense_f_1_;

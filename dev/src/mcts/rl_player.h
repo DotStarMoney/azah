@@ -60,8 +60,8 @@ class RLPlayer {
     // AlphaZero uses 30.
     int one_hot_breakover_moves_n;
 
-    // A multiplier on the upper-confidence-bound that encourages exploration when
-    // higher.
+    // A multiplier on the upper-confidence-bound that encourages exploration
+    // when higher.
     float exploration_scale;
   };
 
@@ -107,8 +107,8 @@ class RLPlayer {
     // policies and predicted search policies.
     float policy_loss;
 
-    // Average softmax cross entropy across replicas + moves between true outcomes
-    // and predicted outcomes.
+    // Average softmax cross entropy across replicas + moves between true
+    // outcomes and predicted outcomes.
     float outcome_loss;
 
     friend std::ostream& operator<<(std::ostream& os, const TrainResult& x) {
@@ -163,7 +163,8 @@ class RLPlayer {
         .full_play = full_play,
         .root_noise_alpha = self_play_options.root_noise_alpha,
         .root_noise_lerp = self_play_options.root_noise_lerp,
-        .one_hot_breakover_moves_n = self_play_options.one_hot_breakover_moves_n,
+        .one_hot_breakover_moves_n = 
+            self_play_options.one_hot_breakover_moves_n,
         .exploration_scale = self_play_options.exploration_scale};
   }
 
@@ -172,7 +173,8 @@ class RLPlayer {
     ReplicaSelfPlayerFn(const Game& position, const self_play::Config& config,
                         GameNetwork* network,
                         std::vector<self_play::MoveOutcome<Game>>* moves) :
-        position_(position), config_(config), network_(network), moves_(moves) {}
+        position_(position), config_(config), network_(network), 
+        moves_(moves) {}
 
     void run() override {
       *moves_ = std::move(self_play::SelfPlay(config_, position_, network_));
@@ -203,9 +205,9 @@ class RLPlayer {
       std::vector<uint32_t> var_grad_i;
       std::vector<float> losses;
 
-      // Since not all variables are guaranteed to have gradients for each row in
-      // updates, we have to do some extra bookkeeping to sum the terms of each
-      // variable's average gradients.
+      // Since not all variables are guaranteed to have gradients for each row
+      // in updates, we have to do some extra bookkeeping to sum the terms of
+      // each variable's average gradients.
       absl::flat_hash_map<uint32_t, int> var_index_to_vec_index;
 
       // Parallel arrays
@@ -236,8 +238,8 @@ class RLPlayer {
         for (int i = 0; i < var_grad.size(); ++i) {
           uint32_t grad_index = var_grad_i[i];
           nn::DynamicMatrix& grad = var_grad[i];
-          auto [iter, is_new] = var_index_to_vec_index.insert({grad_index,
-                                                               acc_grads.size()});
+          auto [iter, is_new] = var_index_to_vec_index.insert(
+              {grad_index, acc_grads.size()});
           if (is_new) {
             acc_grads.push_back(std::move(grad));
             acc_index.push_back(grad_index);
@@ -257,7 +259,8 @@ class RLPlayer {
       replica_loss_.policy_loss /= static_cast<float>(all_moves_.size());
       replica_loss_.outcome_loss /= static_cast<float>(all_moves_.size());
 
-      replica_.opt.Update(learning_rate_, acc_index, acc_grads, replica_.network);
+      replica_.opt.Update(learning_rate_, acc_index, acc_grads, 
+                          replica_.network);
     }
 
    private:
@@ -282,8 +285,8 @@ class RLPlayer {
 
   TrainResult TrainIteration(
       float learning_rate, const self_play::Config& self_play_config) {
-    // This is effectively a nested list of training examples and needs to outlive
-    // gradient accumulation for obvious reasons.
+    // This is effectively a nested list of training examples and needs to
+    // outlive gradient accumulation for obvious reasons.
     auto replica_moves = CollectReplicaMoves(root_game_, self_play_config);
     
     // Flatten the list of move outcomes.

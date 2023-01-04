@@ -36,10 +36,7 @@ class TictactoeNetwork : public GameNetwork {
   nn::Variable<kLayer1Depth, 9> dense1_k_;
   nn::op::Matmul<kLayer1Depth, 9, 9, 1> dense1_;
 
-  nn::Variable<kLayer1Depth, 1> norm1_b_;
-  nn::Variable<kLayer1Depth, 1> norm1_g_;
   nn::op::LayerNorm<kLayer1Depth, 1> norm1_;
-
   nn::op::Swish<kLayer1Depth, 1> swish1_;
 
   // Layer 2
@@ -47,10 +44,7 @@ class TictactoeNetwork : public GameNetwork {
   nn::Variable<kLayer2Depth, kLayer1Depth> dense2_k_;
   nn::op::Matmul<kLayer2Depth, kLayer1Depth, kLayer1Depth, 1> dense2_;
 
-  nn::Variable<kLayer2Depth, 1> norm2_b_;
-  nn::Variable<kLayer2Depth, 1> norm2_g_;
   nn::op::LayerNorm<kLayer2Depth, 1> norm2_;
-
   nn::op::Swish<kLayer2Depth, 1> swish2_;
 
   // Fork final layer to outputs

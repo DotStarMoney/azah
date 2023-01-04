@@ -12,15 +12,11 @@ TictactoeNetwork::TictactoeNetwork() :
     input_(nn::init::Zeros<9, 1>()),
     dense1_k_(nn::init::GlorotUniform<kLayer1Depth, 9>()),
     dense1_(dense1_k_, input_),
-    norm1_b_(nn::init::Zeros<kLayer1Depth, 1>()),
-    norm1_g_(nn::init::Ones<kLayer1Depth, 1>()),
-    norm1_(dense1_, norm1_b_, norm1_g_),
+    norm1_(dense1_),
     swish1_(norm1_),
     dense2_k_(nn::init::GlorotUniform<kLayer2Depth, kLayer1Depth>()),
     dense2_(dense2_k_, swish1_),
-    norm2_b_(nn::init::Zeros<kLayer2Depth, 1>()),
-    norm2_g_(nn::init::Ones<kLayer2Depth, 1>()),
-    norm2_(dense2_, norm2_b_, norm2_g_),
+    norm2_(dense2_),
     swish2_(norm2_),
     swish2_fork_(swish2_, 2),
     policy_linear_k_(nn::init::GlorotUniform<9, kLayer2Depth>()),
@@ -40,11 +36,9 @@ TictactoeNetwork::TictactoeNetwork() :
   AddTarget(&outcome_loss_);
 
   AddVariable(&dense1_k_);
-  AddVariable(&norm1_b_);
-  AddVariable(&norm1_g_);
+  AddVariables(norm1_);
   AddVariable(&dense2_k_);
-  AddVariable(&norm2_b_);
-  AddVariable(&norm2_g_);
+  AddVariables(norm2_);
   AddVariable(&policy_linear_k_);
   AddVariable(&outcome_linear_k_);
 

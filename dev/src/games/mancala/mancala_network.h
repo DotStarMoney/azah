@@ -47,8 +47,6 @@ class MancalaNetwork : public GameNetwork {
   nn::op::Mixer<kFeatureDepth, 14, kMixerTokenDepth, kMixerFeatureDepth> mix_3_;
 
   // One final norm and average pool.
-  nn::Variable<kFeatureDepth, 1> final_norm_beta_;
-  nn::Variable<kFeatureDepth, 1> final_norm_gamma_;
   nn::op::LayerNorm<kFeatureDepth, 14> final_norm_;
   nn::op::RowMean<kFeatureDepth, 14> pool_;
 
