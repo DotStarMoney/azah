@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include <array>
+
 #include "../binary_op.h"
 #include "../data_types.h"
 #include "../init.h"
