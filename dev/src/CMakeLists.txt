@@ -43,6 +43,16 @@ set(SRC_GAMES
     ${SRC_GAMES_TICTACTOE}
     ${SRC_GAMES_MANCALA})
 
+set(SRC_IO_H
+    io/stopwatch.h)
+set(SRC_IO_C
+    io/stopwatch.cc)
+source_group("Header Files\\io" FILES ${SRC_IO_H})
+source_group("Source Files\\io" FILES ${SRC_IO_C})
+set(SRC_IO
+    ${SRC_IO_H}
+    ${SRC_IO_C})
+
 set(SRC_MCTS_H
     mcts/work_queue.h
     mcts/self_play.h
@@ -121,6 +131,7 @@ set(SRC_THREAD
 target_sources(azah PRIVATE
     main.cc
     ${SRC_GAMES}
+	${SRC_IO}
     ${SRC_MCTS}
     ${SRC_NN}
     ${SRC_THREAD})
