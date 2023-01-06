@@ -8,11 +8,13 @@
 #include <array>
 #include <memory>
 #include <random>
+#include <tuple>
 #include <vector>
 
 #include "../games/game.h"
 #include "../games/game_network.h"
 #include "../nn/data_types.h"
+#include "../io/stopwatch.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
@@ -97,7 +99,8 @@ class GameTree {
 
   void Search(TreeNode<Game>* node, GameNetwork* network, 
               float exploration_scale, float root_noise_alpha, 
-              float root_noise_lerp, absl::BitGenRef bitgen) {
+              float root_noise_lerp, absl::BitGenRef bitgen, 
+              io::Stopwatch& network_stopwatch) {
 
     // Arrays we'll re-use during descent.
     //
@@ -158,8 +161,9 @@ class GameTree {
       } else {
         Game expanded_game(node->game);
         expanded_game.MakeMove(max_edge_index);
-        leaf_outcome = ExpandNode(std::move(expanded_game), 
-                                  node->children_i[max_edge_index], network);
+        leaf_outcome = ExpandNode(
+            std::move(expanded_game), node->children_i[max_edge_index], network, 
+            stopwatch);
         node = &(nodes.back());
         break;
       }
@@ -180,7 +184,8 @@ class GameTree {
   }
 
   const std::array<float, Game::players_n()>& ExpandNode(
-      Game&& expanded_game, std::size_t source_edge_i, GameNetwork* network) {
+      Game&& expanded_game, std::size_t source_edge_i, GameNetwork* network,
+      io::Stopwatch& network_stopwatch) {
     nodes.emplace_back(std::move(expanded_game), source_edge_i);
     TreeNode<Game>& node = nodes.back();
     std::size_t node_i = nodes.size() - 1;
@@ -200,12 +205,14 @@ class GameTree {
     network->SetConstants(network->input_constant_indices(), 
                           node.game.StateToMatrix());
     std::vector<nn::DynamicMatrix> model_outputs;
+    network_stopwatch.Start();
     network->Outputs(
         {
             network->outcome_output_index(),
             network->policy_output_indices()[node.game.PolicyClassI()]
         },
         model_outputs);
+    network_stopwatch.End();
 
     // After creating the edges, we normalize the search probabilities because
     // we don't expect the model to.
@@ -269,6 +276,17 @@ static inline int SamplePolicy(const std::unique_ptr<float[]>& prop, int size,
 
 }  // namespace internal
 
+struct TimingMetrics {
+  // Time spent evaluating the network.
+  io::Stopwatch network_stopwatch;
+
+  // Time spent performing MCTS.
+  io::Stopwatch search_stopwatch;
+
+  // Time spent during self-play.
+  io::Stopwatch game_stopwatch;
+};
+
 template <typename Game>
 struct MoveOutcome {
   // The outcome order-rotated s.t. the player who's move it is to make is in
@@ -325,11 +343,14 @@ struct Config {
 
 // See MoveOutcome for the return values of this function.
 template <typename Game, typename GameNetwork>
-std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
-                                        GameNetwork* network) {
+std::tuple<std::vector<MoveOutcome<Game>>, TimingMetrics> SelfPlay(
+    const Config& config, const Game& game, GameNetwork* network) {
   if (game.State() == games::GameState::kOver) {
     LOG(FATAL) << "Self play cannot begin from a terminal state.";
   }
+  TimingMetrics timing_metrics;
+  timing_metrics.game_stopwatch.Start();
+
   internal::GameTree<Game, GameNetwork> tree;
   (void)tree.ExpandNode(Game(game), -1, network);
   std::size_t root_i = 0;
@@ -342,16 +363,19 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
   // respect the current_player_i for that row.
   std::vector<MoveOutcome<Game>> results;
   std::vector<int> current_player_i;
-
+  
   absl::BitGen bitgen;
   int total_moves = 0;
   while (root->game.State() == games::GameState::kOngoing) {
     // To make a move, we first grow the tree a bunch from this position.
     for (int sim_i = 0; sim_i < config.simulations_n; ++sim_i) {
+      timing_metrics.search_stopwatch.Start();
       tree.Search(root, network, config.exploration_scale,
-          config.root_noise_alpha, config.root_noise_lerp, bitgen);
+          config.root_noise_alpha, config.root_noise_lerp, bitgen,
+          timing_metrics.network_stopwatch);
       // The vector backing this pointer can change in Search.
       root = &(tree.nodes[root_i]);
+      timing_metrics.search_stopwatch.End();
     }
     const int moves_n = root->children_i.size();
 
@@ -422,7 +446,8 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
     }
   }
 
-  return std::move(results);
+  timing_metrics.game_stopwatch.End();
+  return {std::move(results), timing_metrics};
 }
 
 }  // namespace self_play
