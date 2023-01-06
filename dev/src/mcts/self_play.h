@@ -341,7 +341,7 @@ struct Config {
   float exploration_scale;
 };
 
-// See MoveOutcome and TimingMetrics for the return values of this function.
+// See MoveOutcome for the return values of this function.
 template <typename Game, typename GameNetwork>
 std::tuple<std::vector<MoveOutcome<Game>>, TimingMetrics> SelfPlay(
     const Config& config, const Game& game, GameNetwork* network) {
