@@ -1,9 +1,7 @@
 #include "mancala.h"
 
 #include <array>
-#include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include "../../nn/data_types.h"

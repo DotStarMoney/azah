@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include <type_traits>
 #include <vector>
 
 #include "../nn/network.h"
@@ -52,6 +53,9 @@ class GameNetwork : public nn::Network {
 
   const std::vector<uint32_t> policy_output_sizes_;
 };
+
+template <typename T>
+concept GameNetworkType = std::is_base_of<GameNetwork, T>::value;
 
 }  // namespace games
 }  // namespace azah

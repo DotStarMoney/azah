@@ -7,6 +7,8 @@
 #include <ostream>
 #include <vector>
 
+#include "../games/game.h"
+#include "../games/game_network.h"
 #include "../nn/adam.h"
 #include "../nn/data_types.h"
 #include "absl/container/flat_hash_map.h"
@@ -17,7 +19,7 @@
 namespace azah {
 namespace mcts {
 
-template <typename Game, typename GameNetwork>
+template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
 class RLPlayer {
  public:
   struct Options {
@@ -319,7 +321,7 @@ class RLPlayer {
   }
 };
 
-template <typename Game, typename GameNetwork>
+template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
 const Game RLPlayer<Game, GameNetwork>::root_game_ = Game();
 
 }  // namespace mcts

@@ -2,10 +2,7 @@
 #define AZAH_GAMES_TICTACTOE_TICTACTOE_H_
 
 #include <array>
-#include <span>
-#include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include "../../nn/data_types.h"
@@ -32,7 +29,7 @@ class Tictactoe : public Game<2> {
   
   nn::DynamicMatrix PolicyMask() const override;
 
-  void MakeMove(int move_i) override;
+  void MakeMove(int move_i);
 
  private:
   static constexpr std::string_view kName_ = "TicTacToe";

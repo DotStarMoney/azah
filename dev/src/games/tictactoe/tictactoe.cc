@@ -1,10 +1,7 @@
 #include "tictactoe.h"
 
 #include <array>
-#include <span>
-#include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include "../../nn/data_types.h"
