@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <ostream>
+#include <utility>
 #include <vector>
 
 #include "../games/game.h"
@@ -82,7 +83,15 @@ class RLPlayer {
       LOG(FATAL) << "Game is over.";
     }
     auto self_play_config = SelfPlayOptionsToConfig(false, self_play_options);
-    auto replica_moves = CollectReplicaMoves(position, self_play_config);
+
+    std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
+        replicas_.size());
+    std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
+    for (auto& replica : replicas_) {
+      work_queue_.AddWork(std::make_unique<ReplicaSelfPlayerFn>(
+          position, self_play_config, &(replica->network), moves_ptr++));
+    }
+    work_queue_.Drain();
 
     // Average the outcomes and search policies into the first replica.
     for (std::size_t i = 1; i < replicas_.size(); ++i) {
@@ -142,7 +151,6 @@ class RLPlayer {
 
  private:
   internal::WorkQueue work_queue_;
-  static const Game root_game_;
 
   struct Replica {
     Replica() : opt(network) {}
@@ -172,18 +180,19 @@ class RLPlayer {
 
   class ReplicaSelfPlayerFn : public internal::WorkQueueElement {
    public:
-    ReplicaSelfPlayerFn(const Game& position, const self_play::Config& config,
+    template <typename GameT>
+    ReplicaSelfPlayerFn(GameT&& position, const self_play::Config& config,
                         GameNetwork* network,
                         std::vector<self_play::MoveOutcome<Game>>* moves) :
-        position_(position), config_(config), network_(network), 
-        moves_(moves) {}
+        position_(std::forward<GameT>(position)), config_(config), 
+        network_(network), moves_(moves) {}
 
     void run() override {
       *moves_ = std::move(self_play::SelfPlay(config_, position_, network_));
     }
 
    private:
-    const Game& position_;
+    const Game position_;
     const self_play::Config& config_;
     GameNetwork* network_;
     std::vector<self_play::MoveOutcome<Game>>* moves_;
@@ -272,26 +281,20 @@ class RLPlayer {
     TrainResult& replica_loss_;
   };
 
-  inline std::vector<std::vector<self_play::MoveOutcome<Game>>> 
-      CollectReplicaMoves(const Game& position, 
-                          const self_play::Config& self_play_config) {
+  TrainResult TrainIteration(
+      float learning_rate, const self_play::Config& self_play_config) {
+    // This is effectively a nested list of training examples and needs to
+    // outlive gradient accumulation for obvious reasons.
+    
     std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
         replicas_.size());
     std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
     for (auto& replica : replicas_) {
       work_queue_.AddWork(std::make_unique<ReplicaSelfPlayerFn>(
-          position, self_play_config, &(replica->network), moves_ptr++));
+          Game(), self_play_config, &(replica->network), moves_ptr++));
     }
     work_queue_.Drain();
-    return replica_moves;
-  }
 
-  TrainResult TrainIteration(
-      float learning_rate, const self_play::Config& self_play_config) {
-    // This is effectively a nested list of training examples and needs to
-    // outlive gradient accumulation for obvious reasons.
-    auto replica_moves = CollectReplicaMoves(root_game_, self_play_config);
-    
     // Flatten the list of move outcomes.
     std::vector<const self_play::MoveOutcome<Game>*> all_moves;
     for (std::size_t rep_i = 0; rep_i < replicas_.size(); ++rep_i) {
@@ -320,9 +323,6 @@ class RLPlayer {
     return final_loss;
   }
 };
-
-template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
-const Game RLPlayer<Game, GameNetwork>::root_game_ = Game();
 
 }  // namespace mcts
 }  // namespace azah
