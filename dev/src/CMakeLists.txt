@@ -9,39 +9,52 @@ target_link_libraries(azah absl_flat_hash_map absl_hash absl_random_random
 set(SRC_GAMES_TICTACTOE_H
     games/tictactoe/tictactoe.h
     games/tictactoe/tictactoe_network.h)
-set(SRC_GAMES_TICTACTOE_C
+set(SRC_GAMES_TICTACTOE_CC
     games/tictactoe/tictactoe.cc
     games/tictactoe/tictactoe_network.cc)
 source_group("Header Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_H})
-source_group("Source Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_C})
+source_group("Source Files\\games\\tictactoe" FILES ${SRC_GAMES_TICTACTOE_CC})
 set(SRC_GAMES_TICTACTOE
     ${SRC_GAMES_TICTACTOE_H}
-    ${SRC_GAMES_TICTACTOE_C})
+    ${SRC_GAMES_TICTACTOE_CC})
     
 set(SRC_GAMES_MANCALA_H
     games/mancala/mancala.h
     games/mancala/mancala_network.h)
-set(SRC_GAMES_MANCALA_C
+set(SRC_GAMES_MANCALA_CC
     games/mancala/mancala.cc
     games/mancala/mancala_network.cc)
 source_group("Header Files\\games\\mancala" FILES ${SRC_GAMES_MANCALA_H})
-source_group("Source Files\\games\\mancala" FILES ${SRC_GAMES_MANCALA_C})
+source_group("Source Files\\games\\mancala" FILES ${SRC_GAMES_MANCALA_CC})
 set(SRC_GAMES_MANCALA
     ${SRC_GAMES_MANCALA_H}
-    ${SRC_GAMES_MANCALA_C})
+    ${SRC_GAMES_MANCALA_CC})
+
+set(SRC_GAMES_IGNOBLE_H
+    games/ignoble/ignoble4.h
+    games/ignoble/ignoble4_network.h)
+set(SRC_GAMES_IGNOBLE_CC
+    games/ignoble/ignoble4.cc
+    games/ignoble/ignoble4_network.cc)
+source_group("Header Files\\games\\ignoble" FILES ${SRC_GAMES_IGNOBLE_H})
+source_group("Source Files\\games\\ignoble" FILES ${SRC_GAMES_IGNOBLE_CC})
+set(SRC_GAMES_IGNOBLE
+    ${SRC_GAMES_IGNOBLE_H}
+    ${SRC_GAMES_IGNOBLE_CC})
 
 set(SRC_GAMES_H
     games/game.h
     games/game_network.h)
-set(SRC_GAMES_C
+set(SRC_GAMES_CC
     games/game_network.cc)
 source_group("Header Files\\games" FILES ${SRC_GAMES_H})
-source_group("Source Files\\games" FILES ${SRC_GAMES_C})
+source_group("Source Files\\games" FILES ${SRC_GAMES_CC})
 set(SRC_GAMES
     ${SRC_GAMES_H}
-    ${SRC_GAMES_C}
+    ${SRC_GAMES_CC}
     ${SRC_GAMES_TICTACTOE}
-    ${SRC_GAMES_MANCALA})
+    ${SRC_GAMES_MANCALA}
+    ${SRC_GAMES_IGNOBLE})
 
 set(SRC_MCTS_H
     mcts/work_queue.h
@@ -53,13 +66,13 @@ set(SRC_MCTS
 
 set(SRC_NN_ACTIVATION_H
     nn/activation.h)
-set(SRC_NN_ACTIVATION_C
+set(SRC_NN_ACTIVATION_CC
     nn/activation.cc)
 source_group("Header Files\\nn" FILES ${SRC_NN_ACTIVATION_H})
-source_group("Source Files\\nn" FILES ${SRC_NN_ACTIVATION_C})
+source_group("Source Files\\nn" FILES ${SRC_NN_ACTIVATION_CC})
 set(SRC_NN_ACTIVATION
     ${SRC_NN_ACTIVATION_H}
-    ${SRC_NN_ACTIVATION_C})
+    ${SRC_NN_ACTIVATION_CC})
 
 set(SRC_NN_H
     nn/adam.h
@@ -97,26 +110,26 @@ set(SRC_NN_H
     nn/unary_op.h
     nn/variable.h
     nn/variable_base.h)
-set(SRC_NN_C
+set(SRC_NN_CC
     nn/adam.cc
     nn/network.cc)
 source_group("Header Files\\nn" FILES ${SRC_NN_H})
-source_group("Source Files\\nn" FILES ${SRC_NN_C})
+source_group("Source Files\\nn" FILES ${SRC_NN_CC})
 set(SRC_NN
     ${SRC_NN_H}
-    ${SRC_NN_C}
+    ${SRC_NN_CC}
     ${SRC_NN_ACTIVATION})
 
 set(SRC_THREAD_H
     thread/dispatch_queue.h
     thread/semaphore.h)
-set(SRC_THREAD_C
+set(SRC_THREAD_CC
     thread/semaphore.cc)
 source_group("Header Files\\thread" FILES ${SRC_THREAD_H})
-source_group("Source Files\\thread" FILES ${SRC_THREAD_C})
+source_group("Source Files\\thread" FILES ${SRC_THREAD_CC})
 set(SRC_THREAD
     ${SRC_THREAD_H}
-    ${SRC_THREAD_C})
+    ${SRC_THREAD_CC})
 
 target_sources(azah PRIVATE
     main.cc
