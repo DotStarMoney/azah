@@ -285,7 +285,6 @@ class RLPlayer {
       float learning_rate, const self_play::Config& self_play_config) {
     // This is effectively a nested list of training examples and needs to
     // outlive gradient accumulation for obvious reasons.
-    
     std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
         replicas_.size());
     std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
