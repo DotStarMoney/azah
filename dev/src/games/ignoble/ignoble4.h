@@ -1,7 +1,7 @@
 #ifndef AZAH_GAMES_IGNOBLE_IGNOBLE4_H_
 #define AZAH_GAMES_IGNOBLE_IGNOBLE4_H_
 
-#include <stddef.h>
+#include <stdint.h>
 
 #include <array>
 #include <string_view>
@@ -16,7 +16,7 @@ namespace games {
 namespace ignoble {
 
 class Ignoble4 : public Game<4> {
-public:
+ public:
   Ignoble4();
   const std::string_view name() const override;
 
@@ -34,8 +34,10 @@ public:
 
   void MakeMove(int move_i, absl::BitGenRef bitgen);
 
-private:
+ private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
+
+  typedef std::int8_t IndexT;
 
   enum class RoundPhase {
     kUnknown = 0,
@@ -45,9 +47,52 @@ private:
     kRepent = 4
   };
   RoundPhase round_phase_;
+  
+  // A random order determined at the start of the game that breaks ties for
+  // deck selection
+  std::array<IndexT, 4> deck_select_tie_order_;
 
+  // The hands available to players 1-4. On current_location_i_ = 0, 4 cards are
+  // available so indices [0, 3], on current_location_i_ = 1, 3 cards are
+  // available so indices [0, 2] and so on.
+  std::array<std::array<IndexT, 4>, 4> hand_;
+  
+  // The player who is currently selecting a deck, or repenting.
+  IndexT player_turn_i_;
 
- 
+  // Broken down by type, the stock for players 1-4.
+  std::array<IndexT, 4> soil_n_;
+  std::array<IndexT, 4> herb_n_;
+  std::array<IndexT, 4> beast_n_;
+  std::array<IndexT, 4> coin_n_;
+
+  // The locations dealt, with the current location referenced by
+  // current_location_i_
+  std::array<IndexT, 4> locations_in_play_;
+  IndexT current_location_i_;
+  
+  // The shuffled location deck, with top_of_deck_i starting at 15 and working
+  // down to 0.
+  std::array<IndexT, 16> location_deck_;
+  IndexT top_of_deck_i_;
+
+  // The cards played for the current location, sorted from highest to lowest
+  // value. current_card_in_play_i_ refers to the card about which we must make
+  // the next decision (assuming such a card exists).
+  struct PlayedCard {
+    IndexT value;
+    IndexT player_i;
+  };
+  std::array<PlayedCard, 4> cards_in_play_;
+  IndexT current_card_in_play_i_;
+
+  // Used to scramble decision orders when multiple players must take an action
+  // simultaneously.
+  std::array<IndexT, 4> order_;
+
+  // If -1, nobody has won yet. Otherwise, this is the index of the winning
+  // player [0, 3].
+  IndexT winning_player_i_;
 };
 
 }  // namespace ignoble
