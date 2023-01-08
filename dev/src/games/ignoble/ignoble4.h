@@ -54,11 +54,11 @@ class Ignoble4 : public Game<4> {
 
   // The hands available to players 1-4. On current_location_i_ = 0, 4 cards are
   // available so indices [0, 3], on current_location_i_ = 1, 3 cards are
-  // available so indices [0, 2] and so on.
+  // available so indices [1, 3] and so on.
   std::array<std::array<IndexT, 4>, 4> hand_;
   
-  // The index into order_ that yilds the player who is currently selecting a deck,
-  // a card, or repenting.
+  // The index into order_ that yields the player who is currently selecting a
+  // deck, a card, or repenting.
   IndexT player_turn_i_;
 
   // Broken down by type, the stock for players 1-4.

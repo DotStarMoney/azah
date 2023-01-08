@@ -1,11 +1,14 @@
 #include "ignoble4.h"
 
+#include <stddef.h>
+
 #include <algorithm>
 #include <array>
 #include <string_view>
 #include <vector>
 
 #include "../../nn/data_types.h"
+#include "../../nn/init.h"
 #include "../game.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
@@ -13,6 +16,14 @@
 namespace azah {
 namespace games {
 namespace ignoble {
+namespace {
+
+constexpr int kSoilOffset = 0;
+constexpr int kHerbOffset = 23;
+constexpr int kBeastOffset = 46;
+constexpr int kCoinOffset = 69;
+
+}  // namespace
 
 Ignoble4::Ignoble4() :
     round_phase_(RoundPhase::kTeamSelect),
@@ -60,10 +71,36 @@ std::array<float, 4> Ignoble4::Outcome() const {
 }
 
 std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
-  //
-  //
-  //
-  return {};
+  std::vector<nn::DynamicMatrix> inputs;
+  for (std::size_t i = 0; i < 4; ++i) {
+    inputs.push_back(nn::init::Zeros<128, 1>());
+    auto& f = inputs.back();
+    std::size_t player_i = (current_player_i_ + i) % 4;
+    
+    // First the stock amounts, which are length 23 segments. The first 22 elements
+    // are a one-hot vector of the discrete amount of that stock owned, and the
+    // 23rd marks that the stock is "overflowing" the required amount.
+
+    int soil = soil_n_[player_i];
+    f(kSoilOffset + soil, 0) = 1.0f;
+    if (soil > 5) f(kSoilOffset + 22) = 1.0f;
+
+    int herb = herb_n_[player_i];
+    f(kHerbOffset + herb, 0) = 1.0f;
+    if (herb > 5) f(kHerbOffset + 22) = 1.0f;
+
+    int beast = beast_n_[player_i];
+    f(kBeastOffset + beast, 0) = 1.0f;
+    if (beast > 5) f(kBeastOffset + 22) = 1.0f;
+
+    int coin = coin_n_[player_i];
+    f(kCoinOffset + coin, 0) = 1.0f;
+    if (coin > 5) f(kCoinOffset + 22) = 1.0f;
+
+
+
+  }
+  return inputs;
 }
 
 int Ignoble4::PolicyClassI() const {
