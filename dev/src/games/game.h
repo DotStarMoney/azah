@@ -56,6 +56,10 @@ class Game {
   // with the associated game model's inputs and will be used to compute the
   // outcome and policy at a given state.
   //
+  // This operation will be called once per MCTS node expansion, and when building
+  // the move list. Since the former is the expensive part, there isn't much
+  // benefit to caching the value this returns.
+  //
   // <!> The created state should reflect the player who's decision it is to 
   //     make:
   //

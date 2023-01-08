@@ -48,7 +48,7 @@ class Ignoble4 : public Game<4> {
   };
   RoundPhase round_phase_;
   
-  // A random order determined at the start of the game that breaks ties for
+  // A random player order determined at the start of the game that breaks ties for
   // deck selection
   std::array<IndexT, 4> deck_select_tie_order_;
 
@@ -57,7 +57,8 @@ class Ignoble4 : public Game<4> {
   // available so indices [0, 2] and so on.
   std::array<std::array<IndexT, 4>, 4> hand_;
   
-  // The player who is currently selecting a deck, or repenting.
+  // The index into order_ that yilds the player who is currently selecting a deck,
+  // a card, or repenting.
   IndexT player_turn_i_;
 
   // Broken down by type, the stock for players 1-4.
@@ -71,9 +72,9 @@ class Ignoble4 : public Game<4> {
   std::array<IndexT, 4> locations_in_play_;
   IndexT current_location_i_;
   
-  // The shuffled location deck, with top_of_deck_i starting at 15 and working
+  // The shuffled location deck, with top_of_deck_i starting at 11 and working
   // down to 0.
-  std::array<IndexT, 16> location_deck_;
+  std::array<IndexT, 12> location_deck_;
   IndexT top_of_deck_i_;
 
   // The cards played for the current location, sorted from highest to lowest
@@ -93,6 +94,11 @@ class Ignoble4 : public Game<4> {
   // If -1, nobody has won yet. Otherwise, this is the index of the winning
   // player [0, 3].
   IndexT winning_player_i_;
+
+  // Cached values.
+  int available_actions_n_;
+  int current_player_i_;
+  int policy_class_i_;
 };
 
 }  // namespace ignoble
