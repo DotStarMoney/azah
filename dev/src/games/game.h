@@ -56,13 +56,18 @@ class Game {
   // with the associated game model's inputs and will be used to compute the
   // outcome and policy at a given state.
   //
-  // This operation will be called once per MCTS node expansion, and when building
-  // the move list. Since the former is the expensive part, there isn't much
-  // benefit to caching the value this returns.
+  // This operation will be called once per MCTS node expansion, and when 
+  // building the move list. Since the former is the expensive part, there isn't
+  // much benefit to caching the value this returns.
   //
   // <!> The created state should reflect the player who's decision it is to 
-  //     make:
-  //
+  //     make such that outcomes can be predicted in rotated "current player"
+  //     order. So in a 3 player game, if its player 2's turn, the model should
+  //     be able to report outcomes (from these inputs) for player 2, 3, 1 in
+  //     that order. For player 3's turn, 3, 1, 2 and for player 1's turn 1, 2,
+  //     3. This need not reflect decision order, just *who* is currently making
+  //     a decision in a fixed ordering.
+  // 
   //     E.g.: In the case of Tic-tac-toe, the player who's move it is could
   //     have their positions represented as 1s and the opponent as -1s instead
   //     of 1s for Xs and -1s for Os.
@@ -71,9 +76,6 @@ class Game {
   //     player's board positions, the order of these matrices as returned by
   //     StateToMatrix() should be rotated such that CurrentPlayerI()'s board
   //     matrix is always in the first array position.
-  //
-  //     In short, the network should know who's move it is to make based on
-  //     what this function returns.
   //
   virtual std::vector<nn::DynamicMatrix> StateToMatrix() const = 0;
 

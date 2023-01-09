@@ -48,15 +48,17 @@ class Ignoble4 : public Game<4> {
   };
   RoundPhase round_phase_;
   
-  // A random player order determined at the start of the game that breaks ties for
-  // deck selection
+  // A random player order determined at the start of the game that breaks ties
+  // for deck selection on [0, 3]. Lower numbers go first.
   std::array<IndexT, 4> deck_select_tie_order_;
 
   // The hands available to players 1-4. On current_location_i_ = 0, 4 cards are
   // available so indices [0, 3], on current_location_i_ = 1, 3 cards are
-  // available so indices [1, 3] and so on.
+  // available so indices [0, 2] and so on.
   std::array<std::array<IndexT, 4>, 4> hand_;
-  
+  // The number of cards held by each player 1-4.
+  std::array<IndexT, 4> hand_size_;
+
   // The index into order_ that yields the player who is currently selecting a
   // deck, a card, or repenting.
   IndexT player_turn_i_;

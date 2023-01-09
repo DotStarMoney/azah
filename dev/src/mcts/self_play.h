@@ -401,7 +401,7 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
       for (std::size_t player_i = 0; player_i < Game::players_n(); ++player_i) {
         results[0].outcome(player_i, 0) = root->predicted_outcome[player_i];
       }
-      return std::move(results);
+      return results;
     }
     // Next, and the last step in self-play, we sample from the search policy
     int move_index = internal::SamplePolicy(search_policy, 
@@ -426,7 +426,7 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
     }
   }
 
-  return std::move(results);
+  return results;
 }
 
 }  // namespace self_play
