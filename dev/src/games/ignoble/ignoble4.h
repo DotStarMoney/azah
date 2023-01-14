@@ -37,7 +37,24 @@ class Ignoble4 : public Game<4> {
  private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
 
+  int policy_class() const;
+
   typedef std::int8_t IndexT;
+
+  enum class Decisions {
+    kUnknown = 0,
+    kTeamSelect = 1,
+    kCharacterSelect = 2,
+    kPrincessStock = 3,
+    kMeatBunglerBounty = 4,
+    kMerryPiemanStock = 5,
+    kBenedictIncrease = 6,
+    kBethesdaSwap = 7,
+    kOunceStealStock = 8,
+    kMagicianStockTakeToss = 9,
+    kRepentStock = 10
+  };
+  Decisions decision_class_;
 
   enum class RoundPhase {
     kUnknown = 0,
@@ -100,7 +117,6 @@ class Ignoble4 : public Game<4> {
   // Cached values.
   int available_actions_n_;
   int current_player_i_;
-  int policy_class_i_;
 };
 
 }  // namespace ignoble

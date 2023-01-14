@@ -12,6 +12,7 @@
 #include "../game.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "glog/logging.h"
 
 namespace azah {
 namespace games {
@@ -59,7 +60,7 @@ Ignoble4::Ignoble4() :
   locations_in_play_[3] = location_deck_[8];
   current_player_i_ = deck_select_tie_order_[0];
   available_actions_n_ = 4;
-  policy_class_i_ = 0;
+  decision_class_ = Decisions::kTeamSelect;
 }
 
 const std::string_view Ignoble4::name() const {
@@ -155,13 +156,50 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
   return inputs;
 }
 
+int Ignoble4::policy_class() const {
+  return static_cast<int>(decision_class_) - 1;
+}
+
 int Ignoble4::PolicyClassI() const {
-  return policy_class_i_;
+  return policy_class();
 }
 
 float Ignoble4::PolicyForMoveI(const nn::DynamicMatrix& policy,
                                int move_i) const {
-  return 0.0f;
+  switch (decision_class_) {
+  case Decisions::kTeamSelect:
+  
+    return;
+  case Decisions::kCharacterSelect:
+  
+    return;
+  case Decisions::kPrincessStock:
+  
+    return;
+  case Decisions::kMeatBunglerBounty:
+  
+    return;
+  case Decisions::kMerryPiemanStock:
+  
+    return;
+  case Decisions::kBenedictIncrease:
+  
+    return;
+  case Decisions::kBethesdaSwap:
+    
+    return;
+  case Decisions::kOunceStealStock:
+  
+    return;
+  case Decisions::kMagicianStockTakeToss:
+
+    return;
+  case Decisions::kRepentStock:
+
+    return;
+  default:
+    LOG(FATAL) << "Unknown decision class";
+  }
 }
 
 nn::DynamicMatrix Ignoble4::PolicyMask() const {
