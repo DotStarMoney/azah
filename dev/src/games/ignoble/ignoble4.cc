@@ -282,7 +282,6 @@ void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
           }
           hand_size_[player_x] = 4;
 
-          // -------------------------------------------------------------------
           // Now set up for the first round:
           decision_class_ = Decisions::kCharacterSelect;
 
