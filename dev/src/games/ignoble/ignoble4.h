@@ -38,6 +38,9 @@ class Ignoble4 : public Game<4> {
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
 
   int current_bounty() const;
+  // True if player_a should pick before player_b.
+  bool ComparePlayerPickOrder(int player_a, int player_b) const;
+  void SortPickOrder();
 
   typedef std::int8_t IndexT;
 
@@ -59,22 +62,27 @@ class Ignoble4 : public Game<4> {
   // A random player order determined at the start of the game that breaks ties
   // for deck selection on [0, 3]. Lower numbers go first.
   std::array<IndexT, 4> deck_select_tie_order_;
+  // Evaluated prior to picking, each element marks the player who will pick
+  // 1st through 4th.
+  std::array<IndexT, 4> deck_select_order_;
 
   // The hands available to players 1-4. On current_location_i_ = 0, 4 cards are
   // available so indices [0, 3], on current_location_i_ = 1, 3 cards are
-  // available so indices [0, 2] and so on.
+  // available so indices [0, 2] and so on. Cards are always in sorted value
+  // order in a hand.
   std::array<std::array<IndexT, 4>, 4> hand_;
   // The number of cards held by each player 1-4.
   std::array<IndexT, 4> hand_size_;
-  // Whether a given deck is available. In order of: Ounce, King, Magician, Death.
+  // Whether a given deck is available. In order of: Ounce, King, Magician,
+  // Death.
   std::array<bool, 4> decks_available_;
 
-  // The index into order_ that yields the player who is currently selecting a
-  // deck, a card, or repenting.
+  // The index into order_ or deck_select_order_ that yields the player who is
+  // currently selecting a deck, a card, or repenting.
   IndexT player_turn_i_;
 
-  // Broken down by type, the stock for players 1-4. So [0, 0] is player 1's soil,
-  // [0, 1] is player 1's herb etc...
+  // Broken down by type, the stock for players 1-4. So [0][0] is player 1's
+  // soil, [0][1] is player 1's herb etc...
   //
   // Stock types are in order: soil, herb, beast, coin.
   std::array<std::array<IndexT, 4>, 4> stock_n_;
@@ -112,7 +120,7 @@ class Ignoble4 : public Game<4> {
 
   // Cached values.
   int available_actions_n_;
-  int current_player_i_;
+  int current_player_x_;
   std::array<int, 16> move_to_policy_i_;
 };
 
