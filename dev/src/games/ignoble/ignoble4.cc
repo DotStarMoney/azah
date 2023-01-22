@@ -327,6 +327,12 @@ void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
         // there.
         if (player_turn_i_ < 3) return;
       }
+      // Character Select-------------------------------------------------------
+      case Decisions::kCharacterSelect: {
+        //
+        //
+        //
+      }
       default: {
         LOG(FATAL) << "Unknown decision class.";
       }
