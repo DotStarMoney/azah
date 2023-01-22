@@ -14,15 +14,15 @@
 #include "absl/random/random.h"
 #include "glog/logging.h"
 
+#undef max
+
 namespace azah {
 namespace games {
 namespace ignoble {
 namespace {
 
-constexpr int kSoilOffset = 0;
-constexpr int kHerbOffset = 23;
-constexpr int kBeastOffset = 46;
-constexpr int kCoinOffset = 69;
+// The stock state offsets in order of soil, herb, beast, coin.
+constexpr int kStockStateOffsets[] = {0, 23, 46, 69};
 
 constexpr int kHandCardsOffset = 92;
 constexpr int kPlayedCardsOffset = 108;
@@ -33,21 +33,56 @@ constexpr int kTieOrderOffset = 140;
 constexpr int kLocationOffset = 0;
 constexpr int kRemainingLocations = 48;
 
+// Decisions where cards are in play.
+constexpr bool kCardsInPlayDecisions[] = {
+        false,  // Unknown
+        false,  // Selecting team 
+        true,   // Selecting character.
+        true,   // Princess
+        true,   // Meat Bungler
+        true,   // Merry Pieman
+        true,   // Benedict
+        true,   // Bethesda
+        true,   // Ounce
+        true,   // Magician
+        false   // Repent
+    };
+
+struct Location {
+  // 0=soil, 1=herb, 2=beast, 3=coin
+  int type;
+  int bounty_n;
+};
+constexpr Location kLocations[] = {
+        {0, 2},  // Soot Cellar
+        {0, 3},  // Swamp
+        {0, 3},  // Peasant Village
+        {1, 1},  // The Hedgerow
+        {1, 2},  // Grove
+        {1, 3},  // Vegetable Garden
+        {2, 1},  // Thy Frigid Plunge
+        {2, 2},  // Pig Sty
+        {2, 2},  // Plains
+        {3, 1},  // Market
+        {3, 1},  // The Tomb
+        {3, 2}   // The Coiniary
+    };
+
 }  // namespace
 
 Ignoble4::Ignoble4() :
-    round_phase_(RoundPhase::kTeamSelect),
+    decision_class_(Decisions::kTeamSelect),
     deck_select_tie_order_{0, 1, 2, 3},
     hand_size_{0, 0, 0, 0},
+    decks_available_{true, true, true, true},
     player_turn_i_(0),
-    soil_n_{0, 0, 0, 0},
-    herb_n_{0, 0, 0, 0},
-    beast_n_{0, 0, 0, 0},
-    coin_n_{0, 0, 0, 0},
+    stock_n_{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}},
     current_location_i_(0),
+    stock_modifier(0),
     location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
     top_of_deck_i_(7),
-    winning_player_i_(-1) {
+    winning_player_i_(-1),
+    available_actions_n_(4) {
   absl::BitGen bitgen;
   // This will never change, and is the equivalent of picking a player to start
   // and the seating order at the table.
@@ -59,8 +94,6 @@ Ignoble4::Ignoble4() :
   locations_in_play_[2] = location_deck_[9];
   locations_in_play_[3] = location_deck_[8];
   current_player_i_ = deck_select_tie_order_[0];
-  available_actions_n_ = 4;
-  decision_class_ = Decisions::kTeamSelect;
 }
 
 const std::string_view Ignoble4::name() const {
@@ -101,21 +134,11 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
     // elements are a one-hot vector of the discrete amount of that stock owned,
     // and the 23rd marks that the stock is "overflowing" the required amount.
 
-    int soil = soil_n_[player_i];
-    f(kSoilOffset + soil, 0) = 1.0f;
-    if (soil > 5) f(kSoilOffset + 22) = 1.0f;
-
-    int herb = herb_n_[player_i];
-    f(kHerbOffset + herb, 0) = 1.0f;
-    if (herb > 5) f(kHerbOffset + 22) = 1.0f;
-
-    int beast = beast_n_[player_i];
-    f(kBeastOffset + beast, 0) = 1.0f;
-    if (beast > 5) f(kBeastOffset + 22) = 1.0f;
-
-    int coin = coin_n_[player_i];
-    f(kCoinOffset + coin, 0) = 1.0f;
-    if (coin > 5) f(kCoinOffset + 22) = 1.0f;
+    for (int stock_i = 0; stock_i < 4; ++stock_i) {
+      int stock = stock_n_[player_i][stock_i];
+      f(kStockStateOffsets[stock_i] + stock, 0) = 1.0f;
+      if (stock > 5) f(kStockStateOffsets[stock_i] + 22) = 1.0f;
+    }
 
     // 16 Multi-hot cards still in the player's hand.
     
@@ -123,7 +146,7 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
       f(kHandCardsOffset + hand_[player_i][card_i], 0) = 1.0f;
     }
 
-    if (round_phase_ == RoundPhase::kResolveActions) {
+    if (kCardsInPlayDecisions[PolicyClassI()]) {
       // 16 Multi-hot cards in play.
       for (std::size_t card_i = 0; card_i < 4; ++card_i) {
         f(kPlayedCardsOffset + cards_in_play_[card_i].value, 0) = 1.0f;
@@ -156,50 +179,101 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
   return inputs;
 }
 
-int Ignoble4::policy_class() const {
+int Ignoble4::PolicyClassI() const {
   return static_cast<int>(decision_class_) - 1;
 }
 
-int Ignoble4::PolicyClassI() const {
-  return policy_class();
+int Ignoble4::current_bounty() const {
+  return std::max(
+      kLocations[locations_in_play_[current_location_i_]].bounty_n 
+          + stock_modifier, 
+      0);
 }
 
 float Ignoble4::PolicyForMoveI(const nn::DynamicMatrix& policy,
                                int move_i) const {
+  //
+  //
+  //
+  // TODO: Ditch this and replace with a lookup into a simple scratch array of
+  //     offsets. MakeMove should set this array up so we're not re-doing this
+  //     calculation for each move.
+  //
+  //
+  //
+
   switch (decision_class_) {
-  case Decisions::kTeamSelect:
-  
-    return;
-  case Decisions::kCharacterSelect:
-  
-    return;
-  case Decisions::kPrincessStock:
-  
-    return;
-  case Decisions::kMeatBunglerBounty:
-  
-    return;
-  case Decisions::kMerryPiemanStock:
-  
-    return;
-  case Decisions::kBenedictIncrease:
-  
-    return;
-  case Decisions::kBethesdaSwap:
+  case Decisions::kTeamSelect: {
+    // 4d; Which team would the current player select:
+    //
+    //  [King, Ounce, Magician, Death]
+    //
+    for (int i = 0, open_move_i = 0; i < 4; ++i) {
+      if (!decks_available_[i]) continue;
+      if (move_i == open_move_i) return policy(i, 0);
+      ++open_move_i;
+    }
+    break;
+  } case Decisions::kCharacterSelect: {
+    // 16d; Which card would the current player select from their hand:
+    //
+    //  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    //
+    return policy(hand_[current_player_i_][move_i], 0);
+  } case Decisions::kPrincessStock: {
+    // 4d; Which stock type would the princess take the bounty in:
+    //
+    //  [soil, herb, beast, coin]
+    //
+    return policy(move_i, 0);
+  } case Decisions::kMeatBunglerBounty: {
+    // 3d; What action will the meat bungler take?
+    //
+    //  [NA, Toss, Take]
+    //
     
-    return;
-  case Decisions::kOunceStealStock:
-  
-    return;
-  case Decisions::kMagicianStockTakeToss:
+    // We can always take the N/A action.
+    if (move_i == 0) return policy(0, 0);
 
-    return;
-  case Decisions::kRepentStock:
+    // If we're making this decision one of the other two options must be
+    // available.
 
-    return;
-  default:
+    const auto& location = kLocations[locations_in_play_[current_location_i_]];
+    // We have stock to trash so move_i = 1 must mean toss.
+    if (stock_n_[current_player_i_][location.type] > 0) {
+      if (move_i == 1) return policy(1, 0);
+      // If we get here in error, that's bad, but otherwise we'll assume that
+      // move_i == 2 iff we could toss or take the bounty.
+      return policy(2, 0);
+    }
+
+    // We're here which means we have a move to make, but its not toss, and its not
+    // N/A, so we must be taking.
+    return policy(2, 0);
+  } case Decisions::kMerryPiemanStock: {
+
+    break;
+  } case Decisions::kBenedictIncrease: {
+
+    break;
+  } case Decisions::kBethesdaSwap: {
+
+    break;
+  } case Decisions::kOunceStealStock: {
+
+    break;
+  } case Decisions::kMagicianStockTakeToss: {
+
+    break;
+  } case Decisions::kRepentStock: {
+
+    break;
+  } default: {
     LOG(FATAL) << "Unknown decision class";
   }
+  }
+  LOG(FATAL) << "Decision " << move_i << " not available for policy class " 
+      << PolicyClassI() << ".";
 }
 
 nn::DynamicMatrix Ignoble4::PolicyMask() const {

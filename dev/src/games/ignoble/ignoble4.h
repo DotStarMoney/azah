@@ -37,7 +37,7 @@ class Ignoble4 : public Game<4> {
  private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
 
-  int policy_class() const;
+  int current_bounty() const;
 
   typedef std::int8_t IndexT;
 
@@ -55,15 +55,6 @@ class Ignoble4 : public Game<4> {
     kRepentStock = 10
   };
   Decisions decision_class_;
-
-  enum class RoundPhase {
-    kUnknown = 0,
-    kTeamSelect = 1,
-    kCharacterSelect = 2,
-    kResolveActions = 3,
-    kRepent = 4
-  };
-  RoundPhase round_phase_;
   
   // A random player order determined at the start of the game that breaks ties
   // for deck selection on [0, 3]. Lower numbers go first.
@@ -75,21 +66,26 @@ class Ignoble4 : public Game<4> {
   std::array<std::array<IndexT, 4>, 4> hand_;
   // The number of cards held by each player 1-4.
   std::array<IndexT, 4> hand_size_;
+  // Whether a given deck is available. In order of: Ounce, King, Magician, Death.
+  std::array<bool, 4> decks_available_;
 
   // The index into order_ that yields the player who is currently selecting a
   // deck, a card, or repenting.
   IndexT player_turn_i_;
 
-  // Broken down by type, the stock for players 1-4.
-  std::array<IndexT, 4> soil_n_;
-  std::array<IndexT, 4> herb_n_;
-  std::array<IndexT, 4> beast_n_;
-  std::array<IndexT, 4> coin_n_;
+  // Broken down by type, the stock for players 1-4. So [0, 0] is player 1's soil,
+  // [0, 1] is player 1's herb etc...
+  //
+  // Stock types are in order: soil, herb, beast, coin.
+  std::array<std::array<IndexT, 4>, 4> stock_n_;
 
   // The locations dealt, with the current location referenced by
   // current_location_i_
   std::array<IndexT, 4> locations_in_play_;
   IndexT current_location_i_;
+
+  // A modifier to the bounty imparted by cards like The Benedict and The Knave.
+  IndexT stock_modifier;
   
   // The shuffled location deck, with top_of_deck_i starting at 11 and working
   // down to 0.
