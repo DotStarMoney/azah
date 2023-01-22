@@ -37,7 +37,7 @@ constexpr int kRemainingLocations = 48;
 constexpr bool kCardsInPlayDecisions[] = {
         false,  // Unknown
         false,  // Selecting team 
-        true,   // Selecting character.
+        true,   // Selecting character
         true,   // Princess
         true,   // Meat Bungler
         true,   // Merry Pieman
@@ -46,6 +46,19 @@ constexpr bool kCardsInPlayDecisions[] = {
         true,   // Ounce
         true,   // Magician
         false   // Repent
+    };
+
+constexpr int kMaxDecisionsN[] = {
+        4,   // Selecting team 
+        4,   // Selecting character
+        4,   // Princess
+        3,   // Meat Bungler
+        4,   // Merry Pieman
+        2,   // Benedict
+        2,   // Bethesda
+        12,  // Ounce
+        8,   // Magician
+        4    // Repent
     };
 
 struct Location {
@@ -82,7 +95,8 @@ Ignoble4::Ignoble4() :
     location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
     top_of_deck_i_(7),
     winning_player_i_(-1),
-    available_actions_n_(4) {
+    available_actions_n_(4),
+    move_to_policy_i_{0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} {
   absl::BitGen bitgen;
   // This will never change, and is the equivalent of picking a player to start
   // and the seating order at the table.
@@ -192,92 +206,14 @@ int Ignoble4::current_bounty() const {
 
 float Ignoble4::PolicyForMoveI(const nn::DynamicMatrix& policy,
                                int move_i) const {
-  //
-  //
-  //
-  // TODO: Ditch this and replace with a lookup into a simple scratch array of
-  //     offsets. MakeMove should set this array up so we're not re-doing this
-  //     calculation for each move.
-  //
-  //
-  //
-
-  switch (decision_class_) {
-  case Decisions::kTeamSelect: {
-    // 4d; Which team would the current player select:
-    //
-    //  [King, Ounce, Magician, Death]
-    //
-    for (int i = 0, open_move_i = 0; i < 4; ++i) {
-      if (!decks_available_[i]) continue;
-      if (move_i == open_move_i) return policy(i, 0);
-      ++open_move_i;
-    }
-    break;
-  } case Decisions::kCharacterSelect: {
-    // 16d; Which card would the current player select from their hand:
-    //
-    //  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-    //
-    return policy(hand_[current_player_i_][move_i], 0);
-  } case Decisions::kPrincessStock: {
-    // 4d; Which stock type would the princess take the bounty in:
-    //
-    //  [soil, herb, beast, coin]
-    //
-    return policy(move_i, 0);
-  } case Decisions::kMeatBunglerBounty: {
-    // 3d; What action will the meat bungler take?
-    //
-    //  [NA, Toss, Take]
-    //
-    
-    // We can always take the N/A action.
-    if (move_i == 0) return policy(0, 0);
-
-    // If we're making this decision one of the other two options must be
-    // available.
-
-    const auto& location = kLocations[locations_in_play_[current_location_i_]];
-    // We have stock to trash so move_i = 1 must mean toss.
-    if (stock_n_[current_player_i_][location.type] > 0) {
-      if (move_i == 1) return policy(1, 0);
-      // If we get here in error, that's bad, but otherwise we'll assume that
-      // move_i == 2 iff we could toss or take the bounty.
-      return policy(2, 0);
-    }
-
-    // We're here which means we have a move to make, but its not toss, and its not
-    // N/A, so we must be taking.
-    return policy(2, 0);
-  } case Decisions::kMerryPiemanStock: {
-
-    break;
-  } case Decisions::kBenedictIncrease: {
-
-    break;
-  } case Decisions::kBethesdaSwap: {
-
-    break;
-  } case Decisions::kOunceStealStock: {
-
-    break;
-  } case Decisions::kMagicianStockTakeToss: {
-
-    break;
-  } case Decisions::kRepentStock: {
-
-    break;
-  } default: {
-    LOG(FATAL) << "Unknown decision class";
-  }
-  }
-  LOG(FATAL) << "Decision " << move_i << " not available for policy class " 
-      << PolicyClassI() << ".";
+  return policy(move_to_policy_i_[move_i], 0);
 }
 
 nn::DynamicMatrix Ignoble4::PolicyMask() const {
-  return nn::DynamicMatrix();
+  nn::DynamicMatrix mask(kMaxDecisionsN[static_cast<int>(decision_class_)], 1);
+  mask.setZero();
+  for (std::size_t i = 0; i < available_actions_n_; ++i) mask(i, 0) = 1.0f;
+  return mask;
 }
 
 void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {

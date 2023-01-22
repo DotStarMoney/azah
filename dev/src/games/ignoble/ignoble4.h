@@ -113,6 +113,7 @@ class Ignoble4 : public Game<4> {
   // Cached values.
   int available_actions_n_;
   int current_player_i_;
+  std::array<int, 16> move_to_policy_i_;
 };
 
 }  // namespace ignoble
