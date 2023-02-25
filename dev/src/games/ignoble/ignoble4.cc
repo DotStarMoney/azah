@@ -32,7 +32,20 @@ constexpr int kOunceHotSeat = 128;
 constexpr int kLocationOffset = 0;
 constexpr int kRemainingLocations = 48;
 
+constexpr int kMagicianIndex = 14;
+constexpr int kKingIndex = 13;
+constexpr int kOunceIndex = 12;
+constexpr int kSirStrawberryIndex = 11;
 constexpr int kBethesdaIndex = 10;
+constexpr int kBenedictIndex = 9;
+constexpr int kPiemanIndex = 8;
+constexpr int kBunglerIndex = 7;
+constexpr int kPinderIndex = 6;
+constexpr int kPrincessIndex = 5;
+constexpr int kBroomemanIndex = 4;
+constexpr int kPageboyIndex = 3;
+constexpr int kKnaveIndex = 2;
+constexpr int kTavernFoolIndex = 1;
 
 // Decisions where cards are in play.
 constexpr bool kCardsInPlayDecisions[] = {
@@ -386,6 +399,19 @@ coroutine::Void Ignoble4::RunGame() {
 
       // Now run through the played cards from highest to lowest.
 
+      for (IndexT i = 0; i < 4; ++i) {
+        switch (cards_in_play_[i].value) {
+          case kMagicianIndex: {
+
+
+
+            break;
+          }
+          default: {
+            LOG(FATAL) << "Unknown played card.";
+          }
+        }
+      }
 
 
 
