@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "../../nn/data_types.h"
+#include "../coroutine.h"
 #include "../game.h"
 #include "absl/random/bit_gen_ref.h"
 
@@ -18,6 +19,8 @@ namespace ignoble {
 class Ignoble4 : public Game<4> {
  public:
   Ignoble4();
+  ~Ignoble4();
+
   const std::string_view name() const override;
 
   int CurrentPlayerI() const override;
@@ -36,13 +39,15 @@ class Ignoble4 : public Game<4> {
 
  private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
+  typedef std::int8_t IndexT;
 
-  int current_bounty() const;
+  int current_bounty(IndexT stock_modifier) const;
   // True if player_a should pick before player_b.
   bool ComparePlayerPickOrder(int player_a, int player_b) const;
-  void SortPickOrder();
 
-  typedef std::int8_t IndexT;
+  int move_i_;
+  coroutine::Void RunGame(absl::BitGenRef bitgen);
+  coroutine::VoidHandle run_handle_;
 
   enum class Decisions {
     kUnknown = 0,
@@ -62,9 +67,6 @@ class Ignoble4 : public Game<4> {
   // A random player order determined at the start of the game that breaks ties
   // for deck selection on [0, 3]. Lower numbers go first.
   std::array<IndexT, 4> deck_select_tie_order_;
-  // Evaluated prior to picking, each element marks the player who will pick
-  // 1st through 4th.
-  std::array<IndexT, 4> deck_select_order_;
 
   // The hands available to players 1-4. On current_location_i_ = 0, 4 cards are
   // available so indices [0, 3], on current_location_i_ = 1, 3 cards are
@@ -73,13 +75,6 @@ class Ignoble4 : public Game<4> {
   std::array<std::array<IndexT, 4>, 4> hand_;
   // The number of cards held by each player 1-4.
   std::array<IndexT, 4> hand_size_;
-  // Whether a given deck is available. In order of: Ounce, King, Magician,
-  // Death.
-  std::array<bool, 4> decks_available_;
-
-  // The index into order_ or deck_select_order_ that yields the player who is
-  // currently selecting a deck, a card, or repenting.
-  IndexT player_turn_i_;
 
   // Broken down by type, the stock for players 1-4. So [0][0] is player 1's
   // soil, [0][1] is player 1's herb etc...
@@ -92,33 +87,25 @@ class Ignoble4 : public Game<4> {
   std::array<IndexT, 4> locations_in_play_;
   IndexT current_location_i_;
 
-  // A modifier to the bounty imparted by cards like The Benedict and The Knave.
-  IndexT stock_modifier;
-  
   // The shuffled location deck, with top_of_deck_i starting at 11 and working
   // down to 0.
   std::array<IndexT, 12> location_deck_;
   IndexT top_of_deck_i_;
 
   // The cards played for the current location, sorted from highest to lowest
-  // value. current_card_in_play_i_ refers to the card about which we must make
-  // the next decision (assuming such a card exists).
+  // value.
   struct PlayedCard {
     IndexT value;
     IndexT player_i;
   };
   std::array<PlayedCard, 4> cards_in_play_;
-  IndexT current_card_in_play_i_;
-
-  // Used to scramble decision orders when multiple players must take an action
-  // simultaneously.
-  std::array<IndexT, 4> order_;
 
   // If -1, nobody has won yet. Otherwise, this is the index of the winning
   // player [0, 3].
   IndexT winning_player_i_;
 
   // Cached values.
+
   int available_actions_n_;
   int current_player_x_;
   std::array<int, 16> move_to_policy_i_;

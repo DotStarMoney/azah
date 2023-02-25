@@ -9,6 +9,7 @@
 
 #include "../../nn/data_types.h"
 #include "../../nn/init.h"
+#include "../coroutine.h"
 #include "../game.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
@@ -25,10 +26,8 @@ namespace {
 constexpr int kStockStateOffsets[] = {0, 23, 46, 69};
 
 constexpr int kHandCardsOffset = 92;
-constexpr int kPlayedCardsOffset = 108;
-constexpr int kPlayerCardOffset = 124;
-
-constexpr int kTieOrderOffset = 140;
+constexpr int kPlayerCardOffset = 108;
+constexpr int kTieOrderOffset = 124;
 
 constexpr int kLocationOffset = 0;
 constexpr int kRemainingLocations = 48;
@@ -95,32 +94,16 @@ Ignoble4::Ignoble4() :
     decision_class_(Decisions::kTeamSelect),
     deck_select_tie_order_{0, 1, 2, 3},
     hand_size_{0, 0, 0, 0},
-    decks_available_{true, true, true, true},
-    player_turn_i_(0),
     stock_n_{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}},
-    current_location_i_(0),
-    stock_modifier(0),
     location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
-    top_of_deck_i_(7),
-    order_{0, 1, 2, 3},
-    winning_player_i_(-1),
-    available_actions_n_(4),
-    move_to_policy_i_{0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} {
+    top_of_deck_i_(-1),
+    winning_player_i_(-1) {
   absl::BitGen bitgen;
-  // This will never change, and is the equivalent of picking a player to start
-  // and the seating order at the table.
-  std::shuffle(deck_select_tie_order_.begin(), deck_select_tie_order_.end(), 
-               bitgen);
-  std::shuffle(location_deck_.begin(), location_deck_.end(), bitgen);
-  locations_in_play_[0] = location_deck_[11];
-  locations_in_play_[1] = location_deck_[10];
-  locations_in_play_[2] = location_deck_[9];
-  locations_in_play_[3] = location_deck_[8];
-  current_player_x_ = deck_select_tie_order_[0];
-  deck_select_order_[0] = deck_select_tie_order_[0];
-  deck_select_order_[1] = deck_select_tie_order_[1];
-  deck_select_order_[2] = deck_select_tie_order_[2];
-  deck_select_order_[3] = deck_select_tie_order_[3];
+  run_handle_ = RunGame(bitgen);
+}
+
+Ignoble4::~Ignoble4() {
+  run_handle_.destroy();
 }
 
 const std::string_view Ignoble4::name() const {
@@ -147,7 +130,7 @@ std::array<float, 4> Ignoble4::Outcome() const {
 
 std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
   // This provides 5 inputs:
-  //   - 4x player state as a 144-D vector.
+  //   - 4x player state as a 128-D vector.
   //   - 1x global state as a 60-D vector.
   // 
   // The player currently making a decision is rotated into the first slot.
@@ -174,9 +157,8 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
     }
 
     if (kCardsInPlayDecisions[PolicyClassI()]) {
-      // 16 Multi-hot cards in play.
+      // 16 Multi-hot card in play.
       for (std::size_t card_i = 0; card_i < 4; ++card_i) {
-        f(kPlayedCardsOffset + cards_in_play_[card_i].value, 0) = 1.0f;
         // The card played by player_i.
         if (cards_in_play_[card_i].player_i == player_i) {
           f(kPlayerCardOffset + cards_in_play_[card_i].value, 0) = 1.0f;
@@ -210,7 +192,7 @@ int Ignoble4::PolicyClassI() const {
   return static_cast<int>(decision_class_) - 1;
 }
 
-int Ignoble4::current_bounty() const {
+int Ignoble4::current_bounty(IndexT stock_modifier) const {
   return std::max(
       kLocations[locations_in_play_[current_location_i_]].bounty_n 
           + stock_modifier, 
@@ -239,16 +221,6 @@ bool Ignoble4::ComparePlayerPickOrder(int player_a, int player_b) const {
       << " and " << player_b << ".";
 }
 
-void Ignoble4::SortPickOrder() {
-  for (int i = 1; i < 4; ++i) {
-    int q = i - 1;
-    while ((q >= 0) && ComparePlayerPickOrder(q + 1, q)) {
-      std::swap(deck_select_order_[q + 1], deck_select_order_[q]);
-      --q;
-    }
-  }
-}
-
 float Ignoble4::PolicyForMoveI(const nn::DynamicMatrix& policy,
                                int move_i) const {
   return policy(move_to_policy_i_[move_i], 0);
@@ -265,77 +237,55 @@ nn::DynamicMatrix Ignoble4::PolicyMask() const {
 }
 
 void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
+  move_i_ = move_i;
+  RunGame(bitgen);
+}
+
+coroutine::Void Ignoble4::RunGame(absl::BitGenRef bitgen) {
+  // This will never change, and is the equivalent of picking a player to start
+  // and the seating order at the table.
+  std::shuffle(deck_select_tie_order_.begin(), deck_select_tie_order_.end(),
+               bitgen);
+  current_player_x_ = deck_select_tie_order_[0];
+
   for (;;) {
-    switch (decision_class_) {
-      // Team Select------------------------------------------------------------
-      case Decisions::kTeamSelect: {
-        IndexT player_x = deck_select_order_[player_turn_i_];
-        if (player_turn_i_ == 3) {
-          // Auto-pick: this player doesn't get a choice and we move on to card
-          // selection.
-          std::size_t deck_i = 0;
-          for (; deck_i < 4; ++deck_i) if (decks_available_[deck_i]) break;
-          // Unnecessary but nice to do.
-          decks_available_[deck_i] = false;
-          for (std::size_t i = 0; i < 4; ++i) {
-            hand_[player_x][i] = kDeckContents[deck_i][i];
-          }
-          hand_size_[player_x] = 4;
+    // Start of a new round. First we check to see if a location shuffle is in
+    // order.
+    if (top_of_deck_i_ == -1) {
+      std::shuffle(location_deck_.begin(), location_deck_.end(), bitgen);
+      top_of_deck_i_ = 11;
+    }
 
-          // Now set up for the first round:
-          decision_class_ = Decisions::kCharacterSelect;
+    // Deal the four locations.
+    for (int i = 0; i < 4; ++i) {
+      locations_in_play_[i] = location_deck_[top_of_deck_i_ - i];
+    }
 
-          // Shuffle the character select order.
-          std::shuffle(order_.begin(), order_.end(), bitgen);
-          player_turn_i_ = 0;
-          current_player_x_ = order_[player_turn_i_];
-          // Always 4 cards to choose from at the beginning.
-          //
-          // This is one the case where the policy vector height is different
-          // than the maximum number of decision choices.
-          available_actions_n_ = 4;
-          for (std::size_t i = 0; i < 4; ++i) {
-            move_to_policy_i_[i] = hand_[current_player_x_][i];
-          }
-
-          // We can just leave since there's always a real right now.
-          return;
-        }
-
-        std::size_t deck_i = 0;
-        for (std::size_t move_to_deck_i = 0; deck_i < 4; ++deck_i) {
-          if (!decks_available_[deck_i]) continue;
-          if (move_i == move_to_deck_i++) break;
-          ++move_to_deck_i;
-        }
-        decks_available_[deck_i] = false;
-        for (std::size_t i = 0; i < 4; ++i) {
-          hand_[player_x][i] = kDeckContents[deck_i][i];
-        }
-        hand_size_[player_x] = 4;
-
-        for (std::size_t i = 0, move_to_deck_i = 0; i < 4; ++i) {
-          if (!decks_available_[i]) continue;
-          move_to_policy_i_[move_to_deck_i] = i;
-          ++move_to_deck_i;
-        }
-
-        ++player_turn_i_;
-        --available_actions_n_;
-        // We make another loop if it's last pick since there's no decision
-        // there.
-        if (player_turn_i_ < 3) return;
-      }
-      // Character Select-------------------------------------------------------
-      case Decisions::kCharacterSelect: {
-        //
-        //
-        //
-      }
-      default: {
-        LOG(FATAL) << "Unknown decision class.";
+    // Figure out the pick order.
+    std::array<int, 4> pick_order{0, 1, 2, 3};
+    for (int i = 1; i < 4; ++i) {
+      int q = i - 1;
+      while ((q >= 0) && ComparePlayerPickOrder(q + 1, q)) {
+        std::swap(pick_order[q + 1], pick_order[q]);
+        --q;
       }
     }
+
+    // Each player picks a deck.
+    decision_class_ = Decisions::kTeamSelect;
+    for (int i = 0; i < 4; ++i) {
+      available_actions_n_ = 4 - i;
+      current_player_x_ = pick_order[i];
+      
+      //
+      //
+      //
+
+    }
+
+
+
+
   }
 }
 

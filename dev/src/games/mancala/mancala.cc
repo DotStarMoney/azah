@@ -118,17 +118,17 @@ void Mancala::MakeMove(int move_i) {
     board_[last_sow_space] = 0;
   }
 
-  std::size_t side_a_stones_ = 0;
-  std::size_t side_b_stones_ = 0;
+  std::size_t side_a_stones = 0;
+  std::size_t side_b_stones = 0;
   for (int i = 0; i < 6; ++i) {
-    side_a_stones_ += board_[i];
-    side_b_stones_ += board_[7 + i];
+    side_a_stones += board_[i];
+    side_b_stones += board_[7 + i];
   }
-  over_ = (side_a_stones_ == 0) || (side_b_stones_ == 0);
+  over_ = (side_a_stones == 0) || (side_b_stones == 0);
 
   if (over_) {
-    board_[kPlayerAWellI_] += side_a_stones_;
-    board_[kPlayerBWellI_] += side_b_stones_;
+    board_[kPlayerAWellI_] += side_a_stones;
+    board_[kPlayerBWellI_] += side_b_stones;
     // Clearing here isn't neccessary, but is nice to do anyway.
     for (int i = 0; i < 6; ++i) {
       board_[i] = 0;
