@@ -98,8 +98,7 @@ Ignoble4::Ignoble4() :
     location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
     top_of_deck_i_(-1),
     winning_player_i_(-1) {
-  absl::BitGen bitgen;
-  run_handle_ = RunGame(bitgen);
+  run_handle_ = RunGame();
 }
 
 Ignoble4::~Ignoble4() {
@@ -192,13 +191,6 @@ int Ignoble4::PolicyClassI() const {
   return static_cast<int>(decision_class_) - 1;
 }
 
-int Ignoble4::current_bounty(IndexT stock_modifier) const {
-  return std::max(
-      kLocations[locations_in_play_[current_location_i_]].bounty_n 
-          + stock_modifier, 
-      0);
-}
-
 bool Ignoble4::ComparePlayerPickOrder(int player_a, int player_b) const {
   // Whoever has the least amount of the good stuff goes first.
   for (std::size_t stock_i = 0; stock_i < 4; ++stock_i) {
@@ -236,35 +228,33 @@ nn::DynamicMatrix Ignoble4::PolicyMask() const {
   return mask;
 }
 
-void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
+void Ignoble4::MakeMove(int move_i) {
   move_i_ = move_i;
-  RunGame(bitgen);
+  run_handle_();
 }
 
-coroutine::Void Ignoble4::RunGame(absl::BitGenRef bitgen) {
+coroutine::Void Ignoble4::RunGame() {
   // This will never change, and is the equivalent of picking a player to start
   // and the seating order at the table.
   std::shuffle(deck_select_tie_order_.begin(), deck_select_tie_order_.end(),
-               bitgen);
-  current_player_x_ = deck_select_tie_order_[0];
-
+               bitgen_);
   for (;;) {
     // Start of a new round. First we check to see if a location shuffle is in
     // order.
     if (top_of_deck_i_ == -1) {
-      std::shuffle(location_deck_.begin(), location_deck_.end(), bitgen);
+      std::shuffle(location_deck_.begin(), location_deck_.end(), bitgen_);
       top_of_deck_i_ = 11;
     }
 
     // Deal the four locations.
-    for (int i = 0; i < 4; ++i) {
+    for (IndexT i = 0; i < 4; ++i) {
       locations_in_play_[i] = location_deck_[top_of_deck_i_ - i];
     }
 
     // Figure out the pick order.
-    std::array<int, 4> pick_order{0, 1, 2, 3};
-    for (int i = 1; i < 4; ++i) {
-      int q = i - 1;
+    std::array<IndexT, 4> pick_order{0, 1, 2, 3};
+    for (IndexT i = 1; i < 4; ++i) {
+      IndexT q = i - 1;
       while ((q >= 0) && ComparePlayerPickOrder(q + 1, q)) {
         std::swap(pick_order[q + 1], pick_order[q]);
         --q;
@@ -273,15 +263,15 @@ coroutine::Void Ignoble4::RunGame(absl::BitGenRef bitgen) {
 
     // Each player picks a deck.
     decision_class_ = Decisions::kTeamSelect;
-    std::vector<int> available_decks{0, 1, 2, 3};
-    for (int i = 0; i < 4; ++i) {
+    std::vector<IndexT> available_decks{0, 1, 2, 3};
+    for (IndexT i = 0; i < 4; ++i) {
       available_actions_n_ = 4 - i;
       current_player_x_ = pick_order[i];
-      for (int q = 0; q < available_actions_n_; ++q) {
+      for (IndexT q = 0; q < available_actions_n_; ++q) {
         move_to_policy_i_[q] = available_decks[q];
       }
 
-      int pick;
+      IndexT pick;
       if (available_actions_n_ > 1) {
         // Wait for an answer.
         co_await coroutine::Suspend();
@@ -292,7 +282,7 @@ coroutine::Void Ignoble4::RunGame(absl::BitGenRef bitgen) {
       
       // Deal the deck to the player.
       hand_size_[current_player_x_] = 4;
-      for (int q = 0; q < 4; ++q) {
+      for (IndexT q = 0; q < 4; ++q) {
         hand_[current_player_x_][q] = kDeckContents[pick][q];
       }
 

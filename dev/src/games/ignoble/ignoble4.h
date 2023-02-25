@@ -10,7 +10,7 @@
 #include "../../nn/data_types.h"
 #include "../coroutine.h"
 #include "../game.h"
-#include "absl/random/bit_gen_ref.h"
+#include "absl/random/random.h"
 
 namespace azah {
 namespace games {
@@ -35,18 +35,20 @@ class Ignoble4 : public Game<4> {
 
   nn::DynamicMatrix PolicyMask() const override;
 
-  void MakeMove(int move_i, absl::BitGenRef bitgen);
+  void MakeMove(int move_i);
 
  private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
   typedef std::int8_t IndexT;
 
-  int current_bounty(IndexT stock_modifier) const;
   // True if player_a should pick before player_b.
   bool ComparePlayerPickOrder(int player_a, int player_b) const;
 
+  absl::BitGen bitgen_;
+
+  // Used to pass messages to RunGame.
   int move_i_;
-  coroutine::Void RunGame(absl::BitGenRef bitgen);
+  coroutine::Void RunGame();
   coroutine::VoidHandle run_handle_;
 
   enum class Decisions {

@@ -115,6 +115,9 @@ class Game {
   //
   // Undefined if the game is over.
   // virtual void MakeMove(int move_i, absl::BitGenRef bitgen) = 0;
+  //
+  // Games can maintain their own RNG, but this is discouraged for speed.
+  //
 };
 
 namespace internal {
