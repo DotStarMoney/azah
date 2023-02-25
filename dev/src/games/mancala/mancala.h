@@ -31,7 +31,7 @@ class Mancala : public Game<2> {
 
   nn::DynamicMatrix PolicyMask() const override;
 
-  void MakeMove(int move_i);
+  void MakeMove(int move_i) override;
 
  private:
   static constexpr std::string_view kName_ = "Mancala";

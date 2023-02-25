@@ -35,7 +35,7 @@ class Ignoble4 : public Game<4> {
 
   nn::DynamicMatrix PolicyMask() const override;
 
-  void MakeMove(int move_i);
+  void MakeMove(int move_i) override;
 
  private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";

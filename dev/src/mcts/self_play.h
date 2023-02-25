@@ -23,7 +23,7 @@ namespace mcts {
 namespace self_play {
 namespace internal {
 
-template <games::AnyGameType Game>
+template <games::GameType Game>
 struct TreeEdge {
   TreeEdge(float search_prob, std::size_t parent_i) :
       search_prob(search_prob), parent_i(parent_i) {
@@ -57,7 +57,7 @@ struct TreeEdge {
   }
 };
 
-template <games::AnyGameType Game>
+template <games::GameType Game>
 struct TreeNode {
   TreeNode(Game&& game, std::size_t parent_i) :
       game(std::move(game)), parent_i(parent_i) {
@@ -89,7 +89,7 @@ struct TreeNode {
   }
 };
 
-template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
+template <games::GameType Game, games::GameNetworkType GameNetwork>
 class GameTree {
  public:
   std::vector<TreeNode<Game>> nodes;
@@ -157,11 +157,7 @@ class GameTree {
         }
       } else {
         Game expanded_game(node->game);
-        if constexpr (games::DeterministicGameType<Game>) {
-          expanded_game.MakeMove(max_edge_index);
-        } else {
-          expanded_game.MakeMove(max_edge_index, bitgen);
-        }
+        expanded_game.MakeMove(max_edge_index);
         leaf_outcome = ExpandNode(std::move(expanded_game), 
                                   node->children_i[max_edge_index], network);
         node = &(nodes.back());
@@ -273,7 +269,7 @@ static inline int SamplePolicy(const std::unique_ptr<float[]>& prop, int size,
 
 }  // namespace internal
 
-template <games::AnyGameType Game>
+template <games::GameType Game>
 struct MoveOutcome {
   // The outcome order-rotated s.t. the player who's move it is to make is in
   // the first row.
@@ -328,7 +324,7 @@ struct Config {
 };
 
 // See MoveOutcome for the return values of this function.
-template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
+template <games::GameType Game, games::GameNetworkType GameNetwork>
 std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
                                         GameNetwork* network) {
   if (game.State() == games::GameState::kOver) {
