@@ -26,6 +26,8 @@ struct Void {
 
 using VoidHandle = std::coroutine_handle<Void::promise_type>;
 
+using Suspend = std::suspend_always;
+
 }  // namespace coroutine
 }  // namespace games
 }  // namespace azah

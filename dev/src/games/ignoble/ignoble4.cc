@@ -273,18 +273,38 @@ coroutine::Void Ignoble4::RunGame(absl::BitGenRef bitgen) {
 
     // Each player picks a deck.
     decision_class_ = Decisions::kTeamSelect;
+    std::vector<int> available_decks{0, 1, 2, 3};
     for (int i = 0; i < 4; ++i) {
       available_actions_n_ = 4 - i;
       current_player_x_ = pick_order[i];
-      
-      //
-      //
-      //
+      for (int q = 0; q < available_actions_n_; ++q) {
+        move_to_policy_i_[q] = available_decks[q];
+      }
 
+      int pick;
+      if (available_actions_n_ > 1) {
+        // Wait for an answer.
+        co_await coroutine::Suspend();
+        pick = move_i_;
+      } else {
+        pick = 0;
+      }
+      
+      // Deal the deck to the player.
+      hand_size_[current_player_x_] = 4;
+      for (int q = 0; q < 4; ++q) {
+        hand_[current_player_x_][q] = kDeckContents[pick][q];
+      }
+
+      // Remove the deck from those available.
+      available_decks.erase(available_decks.begin() + pick);
     }
 
+    // Now play through the 4 locations.
 
-
+    //
+    // Card selection happens in a random order.
+    //
 
   }
 }
