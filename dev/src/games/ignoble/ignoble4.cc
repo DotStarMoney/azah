@@ -11,7 +11,6 @@
 #include "../../nn/init.h"
 #include "../coroutine.h"
 #include "../game.h"
-#include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "glog/logging.h"
 
@@ -28,15 +27,18 @@ constexpr int kStockStateOffsets[] = {0, 23, 46, 69};
 constexpr int kHandCardsOffset = 92;
 constexpr int kPlayerCardOffset = 108;
 constexpr int kTieOrderOffset = 124;
+constexpr int kOunceHotSeat = 128;
 
 constexpr int kLocationOffset = 0;
 constexpr int kRemainingLocations = 48;
+
+constexpr int kBethesdaIndex = 10;
 
 // Decisions where cards are in play.
 constexpr bool kCardsInPlayDecisions[] = {
         false,  // Unknown
         false,  // Selecting team 
-        true,   // Selecting character
+        false,  // Selecting character
         true,   // Princess
         true,   // Meat Bungler
         true,   // Merry Pieman
@@ -55,7 +57,7 @@ constexpr int kMaxDecisionRowsN[] = {
         3,   // Meat Bungler
         4,   // Merry Pieman
         2,   // Benedict
-        2,   // Bethesda
+        16,  // Bethesda 
         4,   // Ounce
         8,   // Magician
         4    // Repent
@@ -129,7 +131,7 @@ std::array<float, 4> Ignoble4::Outcome() const {
 
 std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
   // This provides 5 inputs:
-  //   - 4x player state as a 128-D vector.
+  //   - 4x player state as a 129-D vector.
   //   - 1x global state as a 60-D vector.
   // 
   // The player currently making a decision is rotated into the first slot.
@@ -155,17 +157,22 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
       f(kHandCardsOffset + hand_[player_i][card_i], 0) = 1.0f;
     }
 
-    if (kCardsInPlayDecisions[PolicyClassI()]) {
-      // 16 Multi-hot card in play.
+    if (kCardsInPlayDecisions[static_cast<int>(decision_class_)]) {
+      // 16 One-hot card in play.
       for (std::size_t card_i = 0; card_i < 4; ++card_i) {
-        // The card played by player_i.
         if (cards_in_play_[card_i].player_i == player_i) {
           f(kPlayerCardOffset + cards_in_play_[card_i].value, 0) = 1.0f;
+          break;
         }
       }
     }
 
     f(kTieOrderOffset + deck_select_tie_order_[player_i]) = 1.0f;
+
+    if ((decision_class_ == Decisions::kOunceStealStock) 
+        && (player_i == ounce_hot_seat_)) {
+      f(kOunceHotSeat) = 1.0f;
+    }
   }
 
   // Now the final input which is the global board state (so locations).
@@ -188,6 +195,9 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
 }
 
 int Ignoble4::PolicyClassI() const {
+  if (decision_class_ == Decisions::kUnknown) {
+    LOG(FATAL) << "Unknown policy class.";
+  }
   return static_cast<int>(decision_class_) - 1;
 }
 
@@ -250,6 +260,7 @@ coroutine::Void Ignoble4::RunGame() {
     for (IndexT i = 0; i < 4; ++i) {
       locations_in_play_[i] = location_deck_[top_of_deck_i_ - i];
     }
+    top_of_deck_i_ -= 4;
 
     // Figure out the pick order.
     std::array<IndexT, 4> pick_order{0, 1, 2, 3};
@@ -265,14 +276,15 @@ coroutine::Void Ignoble4::RunGame() {
     decision_class_ = Decisions::kTeamSelect;
     std::vector<IndexT> available_decks{0, 1, 2, 3};
     for (IndexT i = 0; i < 4; ++i) {
-      available_actions_n_ = 4 - i;
       current_player_x_ = pick_order[i];
-      for (IndexT q = 0; q < available_actions_n_; ++q) {
-        move_to_policy_i_[q] = available_decks[q];
-      }
-
       IndexT pick;
-      if (available_actions_n_ > 1) {
+      // We only get to pick a deck if there's more than one option availble.
+      if (i < 3) {
+        available_actions_n_ = 4 - i;
+        for (IndexT q = 0; q < available_actions_n_; ++q) {
+          move_to_policy_i_[q] = available_decks[q];
+        }
+
         // Wait for an answer.
         co_await coroutine::Suspend();
         pick = move_i_;
@@ -283,18 +295,107 @@ coroutine::Void Ignoble4::RunGame() {
       // Deal the deck to the player.
       hand_size_[current_player_x_] = 4;
       for (IndexT q = 0; q < 4; ++q) {
-        hand_[current_player_x_][q] = kDeckContents[pick][q];
+        hand_[current_player_x_][q] = kDeckContents[available_decks[pick]][q];
       }
 
       // Remove the deck from those available.
       available_decks.erase(available_decks.begin() + pick);
     }
 
-    // Now play through the 4 locations.
+    std::array<IndexT, 4> player_selected_index;
+    std::array<IndexT, 4> pick_order{0, 1, 2, 3};
+    for (current_location_i_ = 0; 
+         current_location_i_ < 4;
+         ++current_location_i_) {
+      // Each player picks a card in a random order.
+      std::shuffle(pick_order.begin(), pick_order.end(), bitgen_);
 
-    //
-    // Card selection happens in a random order.
-    //
+      // The index of the hand card selected by each player 1-4.
+
+      // We only get to pick our cards if there's more than one option availble.
+      if (current_location_i_ < 3) {
+        decision_class_ = Decisions::kCharacterSelect;
+        for (IndexT x : pick_order) {
+          current_player_x_ = x;
+          available_actions_n_ = hand_size_[x];
+          for (IndexT q = 0; q < available_actions_n_; ++q) {
+            move_to_policy_i_[q] = hand_[x][q];
+          }
+
+          // Wait for an answer.
+          co_await coroutine::Suspend();
+          player_selected_index[x] = move_i_;
+        }
+      } else {
+        for (IndexT i = 0; i < 4; player_selected_index[i++] = 0);
+      }
+
+      // Now remove everyone's selected cards from their hands and put them out.
+      // Hand cards need to stay in sorted order as do played cards.
+
+      for (IndexT i = 0; i < 4; ++i) {
+        cards_in_play_[i].value = hand_[i][player_selected_index[i]];
+        cards_in_play_[i].player_i = i;
+
+        // Remove the card from the player's hand preserving numeric order.
+        --hand_size_[i];
+        for (IndexT q = player_selected_index[i]; q < hand_size_[i]; ++q) {
+          std::swap(hand_[i][q], hand_[i][q + 1]);
+        }
+      }
+
+      // Sort the played cards.
+      std::sort(
+          cards_in_play_.begin(),
+          cards_in_play_.end(),
+          [](PlayedCard a, PlayedCard b) { return a.value < b.value; });
+
+      // Give Bethesda a chance (if she's there, and not alone) to trade places.
+      if (current_location_i_ < 3) {
+        for (IndexT i = 0; i < 4; ++i) {
+          if (cards_in_play_[i].value != kBethesdaIndex) continue;
+          decision_class_ = Decisions::kBethesdaSwap;
+          current_player_x_ = cards_in_play_[i].player_i;
+          available_actions_n_ = hand_size_[current_player_x_] + 1;
+          // Move 0 is pick Bethesda (11), other moves are other hand cards.
+          move_to_policy_i_[0] = kBethesdaIndex;
+          for (IndexT q = 1; q < available_actions_n_; ++q) {
+            move_to_policy_i_[q] = hand_[current_player_x_][q - 1];
+          }
+
+          // Wait for an answer.
+          co_await coroutine::Suspend();
+
+          // No swap.
+          if (move_i_ == 0) break;
+          
+          // Swap!
+          cards_in_play_[i].value = hand_[current_player_x_][move_i_ - 1];
+          hand_[current_player_x_][move_i_ - 1] = kBethesdaIndex;
+
+          // Re-sort both played cards and hand cards.
+          std::sort(
+              cards_in_play_.begin(),
+              cards_in_play_.end(),
+              [](PlayedCard a, PlayedCard b) { return a.value < b.value; });
+          std::sort(
+              hand_[current_player_x_].begin(),
+              hand_[current_player_x_].begin() + hand_size_[current_player_x_]);
+        }
+      }
+
+      // Now run through the played cards from highest to lowest.
+
+
+
+
+
+
+
+    }
+
+
+
 
   }
 }

@@ -102,6 +102,9 @@ class Ignoble4 : public Game<4> {
   };
   std::array<PlayedCard, 4> cards_in_play_;
 
+  // If The Ounce is stealing, the index of the player who's getting robbed.
+  IndexT ounce_hot_seat_;
+
   // If -1, nobody has won yet. Otherwise, this is the index of the winning
   // player [0, 3].
   IndexT winning_player_i_;
