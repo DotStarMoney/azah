@@ -27,10 +27,10 @@ constexpr int kStockStateOffsets[] = {0, 23, 46, 69};
 constexpr int kHandCardsOffset = 92;
 constexpr int kPlayerCardOffset = 108;
 constexpr int kTieOrderOffset = 124;
-constexpr int kOunceHotSeat = 128;
+constexpr int kOunceHotSeatOffset = 128;
 
 constexpr int kLocationOffset = 0;
-constexpr int kRemainingLocations = 48;
+constexpr int kRemainingLocationsOffset = 48;
 
 constexpr int kMagicianIndex = 14;
 constexpr int kKingIndex = 13;
@@ -184,7 +184,7 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
 
     if ((decision_class_ == Decisions::kOunceStealStock) 
         && (player_i == ounce_hot_seat_)) {
-      f(kOunceHotSeat) = 1.0f;
+      f(kOunceHotSeatOffset) = 1.0f;
     }
   }
 
@@ -201,7 +201,7 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
 
   // The locations not yet played.
   for (std::size_t card_i = 0; card_i <= top_of_deck_i_; ++card_i) {
-    g(kRemainingLocations + location_deck_[card_i], 0) = 1.0f;
+    g(kRemainingLocationsOffset + location_deck_[card_i], 0) = 1.0f;
   }
  
   return inputs;
@@ -251,7 +251,18 @@ nn::DynamicMatrix Ignoble4::PolicyMask() const {
   return mask;
 }
 
+bool Ignoble4::CheckForWin(IndexT player_x) {
+  for (std::size_t i = 0; i < 4; ++i) {
+    if (stock_n_[player_x][i] < 5) return false;
+  }
+  winning_player_i_ = player_x;
+  return true;
+}
+
 void Ignoble4::MakeMove(int move_i) {
+  if (winning_player_i_ == -1) {
+    LOG(FATAL) << "Can't make a move, the game is over.";
+  }
   move_i_ = move_i;
   run_handle_();
 }
@@ -400,10 +411,68 @@ coroutine::Void Ignoble4::RunGame() {
       // Now run through the played cards from highest to lowest.
 
       for (IndexT i = 0; i < 4; ++i) {
+        current_player_x_ = cards_in_play_[i].player_i;
         switch (cards_in_play_[i].value) {
           case kMagicianIndex: {
+            decision_class_ = Decisions::kMagicianStockTakeToss;
 
+            // First determine what is possible. We can only toss stock we have,
+            // and only take when we're not full.
+            IndexT total_stock;
+            for (IndexT q = 0; q < 4; ++q) {
+              total_stock += stock_n_[current_player_x_][q];
+            }
 
+            bool full;
+            if (total_stock < 22) {
+              full = true;
+              available_actions_n_ = 4;
+            } else {
+              full = false;
+              available_actions_n_ = 0;
+            }
+
+            std::vector<IndexT> tossable_types;
+            for (IndexT q = 0; q < 4; ++q) {
+              if (stock_n_[current_player_x_][q] == 0) continue;
+              tossable_types.push_back(q);
+              ++available_actions_n_;
+            }
+            
+            // First 4 actions are for tossing, last 4 actions are for taking.
+            for (IndexT q = 0; q < tossable_types.size(); ++q) {
+              move_to_policy_i_[q] = tossable_types[q];
+            }
+
+            if (!full) {
+              for (IndexT q = 0; q < 4; ++q) {
+                move_to_policy_i_[tossable_types.size() + q] = 4 + q;
+              }
+            }
+            
+            // Wait for an answer.
+            co_await coroutine::Suspend();
+
+            IndexT type;
+            if (move_i_ >= tossable_types.size()) {
+              // We took one.
+              type = move_i_ - tossable_types.size();
+              ++stock_n_[current_player_x_][type];
+              if (CheckForWin(current_player_x_)) co_return;
+            } else {
+              // We tossed one.
+              type = tossable_types[move_i_];
+              --stock_n_[current_player_x_][type];
+            }
+            
+            break;
+          }
+          case kOunceIndex: {
+            decision_class_ = Decisions::kOunceStealStock;
+
+            //
+            //
+            //
 
             break;
           }

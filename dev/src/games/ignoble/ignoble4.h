@@ -51,6 +51,8 @@ class Ignoble4 : public Game<4> {
   coroutine::Void RunGame();
   coroutine::VoidHandle run_handle_;
 
+  bool CheckForWin(IndexT player_x);
+
   enum class Decisions {
     kUnknown = 0,
     kTeamSelect = 1,
