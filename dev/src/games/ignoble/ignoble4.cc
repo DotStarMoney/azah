@@ -224,7 +224,7 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
   }
 
   // The locations not yet played.
-  for (std::size_t card_i = 0; card_i <= top_of_deck_i_; ++card_i) {
+  for (int card_i = 0; card_i <= top_of_deck_i_; ++card_i) {
     g(kRemainingLocationsOffset + location_deck_[card_i], 0) = 1.0f;
   }
  
@@ -383,7 +383,7 @@ MakeMove_TeamSelect:
       }
 
       // Remove the deck from those available.
-      for (s_.q = s_.pick; s_.q < 3; ++s_.q) {
+      for (s_.q = s_.pick; s_.q < (3 - s_.i); ++s_.q) {
         std::swap(s_.available_decks[s_.q], s_.available_decks[s_.q + 1]);
       }
     }
