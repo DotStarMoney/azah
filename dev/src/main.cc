@@ -18,6 +18,15 @@ int main(int argc, char* argv[]) {
 
   Game game;
 
+  //
+  //
+  //
+  // UGH co-routines don't copy cleanly at all (state is compiler dependent),
+  // and so we're going to be stuck rolling our own with a jump-table. Sad. Bad.
+  //
+  //
+  //
+
   while (game.State() == azah::games::GameState::kOngoing) {
     int move = absl::Uniform(rng, 0, game.CurrentMovesN());
     game.MakeMove(move);
