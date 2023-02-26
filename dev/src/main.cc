@@ -25,7 +25,11 @@ int main(int argc, char* argv[]) {
     ++i;
   }
 
-  std::cout << i;
+  std::cout << i << std::endl;
+  auto state = game.StateToMatrix();
+  for (int q = 0; q < state.size(); ++q) {
+    std::cout << state[q].size() << std::endl;
+  }
 
   return 0;
 }

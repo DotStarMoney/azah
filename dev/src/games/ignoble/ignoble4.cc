@@ -174,7 +174,7 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
   // The player currently making a decision is rotated into the first slot.
   std::vector<nn::DynamicMatrix> inputs;
   for (std::size_t i = 0; i < 4; ++i) {
-    inputs.push_back(nn::init::Zeros<144, 1>());
+    inputs.push_back(nn::init::Zeros<129, 1>());
     auto& f = inputs.back();
     std::size_t player_i = (current_player_x_ + i) % 4;
     
