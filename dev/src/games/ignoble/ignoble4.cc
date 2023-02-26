@@ -14,7 +14,9 @@
 #include "absl/random/random.h"
 #include "glog/logging.h"
 
+// I'm so sick of people doing this, like its 2023. Stop.
 #undef max
+#undef min
 
 namespace azah {
 namespace games {
@@ -73,7 +75,7 @@ constexpr int kMaxDecisionRowsN[] = {
         16,  // Bethesda 
         4,   // Ounce
         8,   // Magician
-        4    // Repent
+        5    // Repent
     };
 
 struct Location {
@@ -335,6 +337,10 @@ coroutine::Void Ignoble4::RunGame() {
       available_decks.erase(available_decks.begin() + pick);
     }
 
+    // We use this to track if someone took stock, since if they did, they don't
+    // get to repent.
+    std::array<bool, 4> repent_check{true, true, true, true};
+
     std::array<IndexT, 4> player_selected_index;
     std::array<IndexT, 4> pick_order{0, 1, 2, 3};
     for (current_location_i_ = 0; 
@@ -420,9 +426,8 @@ coroutine::Void Ignoble4::RunGame() {
       // Now run through the played cards from highest to lowest.
       const Location& current_loc =
           kLocations[locations_in_play_[current_location_i_]];
+      IndexT stock_modifier = 0;
       for (IndexT i = 3; i >= 0; --i) {
-        IndexT stock_modifier = 0;
-
         current_player_x_ = cards_in_play_[i].player_i;
         switch (cards_in_play_[i].value) {
           case kMagicianIndex: {
@@ -463,6 +468,7 @@ coroutine::Void Ignoble4::RunGame() {
               // We took one.
               type = move_i_ - tossable_types.size();
               ++stock_n_[current_player_x_][type];
+              repent_check[current_player_x_] = false;
               if (CheckForWin(current_player_x_)) co_return;
             } else {
               // We tossed one.
@@ -474,7 +480,7 @@ coroutine::Void Ignoble4::RunGame() {
           }
           case kOunceIndex: {
             decision_class_ = Decisions::kOunceStealStock;
-            // For each player we can steal from...
+            // For each player we can steal from, from highest card to lowest...
             for (IndexT q = i + 1; q < 4; ++q) {
               // Leave if we're at capacity.
               if (PlayerFull(current_player_x_)) break;
@@ -496,6 +502,7 @@ coroutine::Void Ignoble4::RunGame() {
               IndexT type = move_to_policy_i_[move_i_];
               --stock_n_[ounce_hot_seat_][type];
               ++stock_n_[current_player_x_][type];
+              repent_check[current_player_x_] = false;
               if (CheckForWin(current_player_x_)) co_return;
             }
             break;
@@ -504,6 +511,7 @@ coroutine::Void Ignoble4::RunGame() {
             // This one is easy, if we can take one of the current stock, do it.
             if (PlayerFull(current_player_x_)) break;
             ++stock_n_[current_player_x_][current_loc.type];
+            repent_check[current_player_x_] = false;
             if (CheckForWin(current_player_x_)) co_return;
             break;
           }
@@ -536,6 +544,7 @@ coroutine::Void Ignoble4::RunGame() {
             co_await coroutine::Suspend();
 
             ++stock_n_[current_player_x_][move_i_];
+            repent_check[current_player_x_] = false;
             if (CheckForWin(current_player_x_)) co_return;
             break;
           }
@@ -546,6 +555,7 @@ coroutine::Void Ignoble4::RunGame() {
             for (IndexT q = i + 1; q < 4; ++q) {
               if (cards_in_play_[q].value == kOunceIndex) {
                 ++stock_n_[current_player_x_][current_loc.type];
+                repent_check[current_player_x_] = false;
                 if (CheckForWin(current_player_x_)) co_return;
                 break;
               }
@@ -558,9 +568,9 @@ coroutine::Void Ignoble4::RunGame() {
             if ((i == 3) || PlayerFull(current_player_x_)) break;
             // If there's at least 3 stock here after modifiers, take a free
             // one.
-            if (PlayerFull(current_player_x_)) break;
             if ((current_loc.bounty_n + stock_modifier) >= 3) {
               ++stock_n_[current_player_x_][current_loc.type];
+              repent_check[current_player_x_] = false;
               if (CheckForWin(current_player_x_)) co_return;
             }
             break;
@@ -584,16 +594,167 @@ coroutine::Void Ignoble4::RunGame() {
 
       // Resolve taking the bounty.
 
-      //
-      //
-      //
+      IndexT bounty_value = std::max(current_loc.bounty_n + stock_modifier, 0);
+      IndexT bounty_type = current_loc.type;
+      // This is mostly for The Meat Bungler since cards can change the value /
+      // color for their own benefit.
+      IndexT original_bounty_value = bounty_value;
+      IndexT original_bounty_type = bounty_type;
 
+      current_player_x_ = cards_in_play_[3].player_i;
 
+      switch (cards_in_play_[3].value) {
+        case kKingIndex: {
+          // The King always takes as if it were worth 2.
+          bounty_value = 2;
+          break;
+        }
+        case kPiemanIndex: {
+          // The pieman doesn't get to take at all (weird).
+          bounty_value = 0;
+          break;
+        }
+        case kBunglerIndex: {
+          // If there's no bounty, we can't do anything.
+          if (bounty_value <= 0) break;
+          // Determine what the options are.
+          bool can_toss = 
+              stock_n_[current_player_x_][current_loc.type] > 0;
+          bool can_take = !PlayerFull(current_player_x_);
+          if (!can_take && !can_toss) break;
+          // Okay, we have at least one option here (other than do nothing).
+          decision_class_ = Decisions::kMeatBunglerBounty;
+          available_actions_n_ = 1 + ((can_toss && can_take) ? 2 : 1);
+          // We define the action vector as [do nothing, toss it, take it].
+          move_to_policy_i_[0] = 0;
+          if (available_actions_n_ == 3) {
+            move_to_policy_i_[1] = 1;
+            move_to_policy_i_[2] = 2;
+          } else if (can_toss) {
+            move_to_policy_i_[1] = 1;
+          } else {
+            move_to_policy_i_[1] = 2;
+          }
+
+          // Wait for an answer.
+          co_await coroutine::Suspend();
+
+          if (move_i_ == 0) {
+            // Do nothing.
+            bounty_value = 0;
+          } else if ((move_i_ == 1) && can_toss) {
+            // If move_i_ == 1, and tossing was an option, toss it.
+            bounty_value *= -1;
+          }
+            
+          break;
+        }
+        case kPrincessIndex: {
+          // If there's no bounty, or we're full, we can't do anything.
+          if ((bounty_value <= 0) || PlayerFull(current_player_x_)) break;
+          decision_class_ = Decisions::kPrincessStock;
+          available_actions_n_ = 4;
+          for (IndexT i = 0; i < 4; ++i) move_to_policy_i_[i] = i;
+
+          // Wait for an answer.
+          co_await coroutine::Suspend();
+
+          bounty_type = move_i_;
+
+          break;
+        }
+        case kPageboyIndex: {
+          // The Pageboy always takes as if it were worth 6, lol.
+          bounty_value = 6;
+          break;
+        }
+        default: {
+          // The card has no effect on the bounty. 
+        }
+      }
+
+      IndexT total_stock = 0;
+      for (IndexT i = 0; i < 4; ++i) {
+        total_stock += stock_n_[current_player_x_][i];
+      }
+      // Cap the bounty on the storage limit.
+      IndexT adj_bounty_value = std::min(static_cast<IndexT>(22 - total_stock), 
+                                         bounty_value);
+      stock_n_[current_player_x_][bounty_type] += adj_bounty_value;
+      if (adj_bounty_value > 0) repent_check[current_player_x_] = false;
+      if (stock_n_[current_player_x_][bounty_type] < 0) {
+        stock_n_[current_player_x_][bounty_type] = 0;
+      } else if (CheckForWin(current_player_x_)) {
+        co_return;
+      }
+
+      // One last thing to do, the Meat Bungler can bungle the meats if he
+      // didn't win.
+
+      if ((original_bounty_value > 0) 
+          && (cards_in_play_[3].value != kBunglerIndex)) {
+        for (IndexT i = 0; i < 3; ++i) {
+          if (cards_in_play_[i].value == kBunglerIndex) {
+            // The Meat Bungler was played, but didn't win.
+            current_player_x_ = cards_in_play_[i].player_i;
+            if (stock_n_[current_player_x_][original_bounty_type] == 0) break;
+            // By now, there is something we *could* toss if we wanted to.
+            decision_class_ = Decisions::kMeatBunglerBounty;
+            available_actions_n_ = 2;
+            move_to_policy_i_[0] = 0;
+            move_to_policy_i_[1] = 1;
+
+            // Wait for an answer.
+            co_await coroutine::Suspend();
+
+            if (move_i_ == 1) {
+              // Toss it!
+              stock_n_[current_player_x_][original_bounty_type] -= 
+                  original_bounty_value;
+              if (stock_n_[current_player_x_][original_bounty_type] < 0) {
+                stock_n_[current_player_x_][original_bounty_type] = 0;
+              }
+            }
+
+            break;
+          }
+        }
+      }
+
+      // That's a hand, on to the next one!
     }
 
+    // Repent in a random order.
+    std::array<IndexT, 4> repent_order{0, 1, 2, 3};
+    std::shuffle(repent_order.begin(), repent_order.end(), bitgen_);
 
+    // Before we go to the next round, determine which players may repent for
+    // their sins.
+    decision_class_ = Decisions::kRepentStock;
+    for (IndexT i = 0; i < 4; ++i) {
+      current_player_x_ = repent_order[i];
+      if (!repent_check[current_player_x_]) continue;
 
+      // Determine what could be tossed.
+      available_actions_n_ = 1;
+      move_to_policy_i_[0] = 0;
+      for (IndexT q = 0; q < 4; ++q) {
+        if (stock_n_[current_player_x_][q] == 0) continue;
+        move_to_policy_i_[available_actions_n_++] = 1 + q;
+      }
 
+      // We're poor, we took nothing, and so we are not worthy of atonement.
+      if (available_actions_n_ == 1) continue;
+
+      // Wait for an answer.
+      co_await coroutine::Suspend();
+
+      if (move_i_ == 0) continue;
+      IndexT type = move_to_policy_i_[move_i_];
+      --stock_n_[current_player_x_][type];
+    }
+
+    // That's a round, on to the next one!
   }
 }
 
