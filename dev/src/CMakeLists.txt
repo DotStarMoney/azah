@@ -86,8 +86,10 @@ set(SRC_NN_H
     nn/node_base.h
     nn/op.h
     nn/op/add.h
+    nn/op/broadcast_add.h
     nn/op/broadcast_matmul.h
     nn/op/concat.h
+    nn/op/concat_cols.h
     nn/op/fmadd.h
     nn/op/fork.h
     nn/op/group_matmul.h

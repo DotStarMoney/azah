@@ -2,8 +2,6 @@
 #define AZAH_GAMES_MANCALA_MANCALA_NETWORK_H_
 
 #include "../../nn/constant.h"
-#include "../../nn/init.h"
-#include "../../nn/network.h"
 #include "../../nn/op/fork.h"
 #include "../../nn/op/layer_norm.h"
 #include "../../nn/op/matmul.h"

@@ -565,12 +565,17 @@ MakeMove_MagicianStockTakeToss:
               // Player is poor, move on to the next sucker.
               if (available_actions_n_ == 0) continue;
 
-              // Wait for an answer.
-              jump_label_ = kJumpOunceStealStock; return;
+              if (available_actions_n_ > 1) {
+                // Wait for an answer.
+                jump_label_ = kJumpOunceStealStock; return;
 MakeMove_OunceStealStock:
+                s_.type = move_to_policy_i_[move_i];
+              } else {
+                // If they only have one type to filch, just take that.
+                s_.type = move_to_policy_i_[0];
+              }
 
               // Perform the steal.
-              s_.type = move_to_policy_i_[move_i];
               --stock_n_[ounce_hot_seat_][s_.type];
               ++stock_n_[current_player_x_][s_.type];
               s_.repent_check[current_player_x_] = false;

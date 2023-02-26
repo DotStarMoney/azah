@@ -16,7 +16,7 @@ template <int InputRowsA, int InputColsA, int OutputCols>
 class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputColsA, 1,
                                         InputRowsA / OutputCols, OutputCols> {
   static_assert(InputRowsA % OutputCols == 0,
-                "The rows of A must divide the output columns.");
+                "The output columns must divide the rows of A.");
  public:
   BroadcastMatmul(const BroadcastMatmul&) = delete;
   BroadcastMatmul& operator=(const BroadcastMatmul&) = delete;
@@ -28,7 +28,8 @@ class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputColsA, 1,
 
   void Backprop(
       uint32_t cycle,
-      const MatrixRef<InputRowsA / OutputCols, OutputCols>& output_dx) override {
+      const MatrixRef<InputRowsA / OutputCols, 
+                      OutputCols>& output_dx) override {
     if (!this->input_a_.constant) {
       Matrix<InputRowsA, InputColsA> j;
       auto b_trans = this->input_b_.Output(cycle).transpose();
@@ -56,7 +57,8 @@ class BroadcastMatmul : public BinaryOp<InputRowsA, InputColsA, InputColsA, 1,
     const auto& b = this->input_b_.Output(cycle);
     for (int c = 0; c < OutputCols; ++c) {
       this->cached_output_.col(c) = 
-          a.middleRows(c * (InputRowsA / OutputCols), InputRowsA / OutputCols) * b;
+          a.middleRows(c * (InputRowsA / OutputCols), 
+                       InputRowsA / OutputCols) * b;
     }
   }
 };

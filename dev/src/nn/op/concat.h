@@ -11,23 +11,22 @@ namespace azah {
 namespace nn {
 namespace op {
 
-template <int InputRowsA, int InputColsA, int InputRowsB, int InputColsB>
-class Concat : public BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB, 
-                               InputRowsA + InputRowsB, InputColsA> {
-  static_assert(InputColsA == InputColsB, 
-                "Inputs must have the same number of columns.");
+template <int InputRowsA, int InputRowsB, int InputCols>
+class Concat : public BinaryOp<InputRowsA, InputCols, InputRowsB, InputCols, 
+                               InputRowsA + InputRowsB, InputCols> {
  public:
   Concat(const Concat&) = delete;
   Concat& operator=(const Concat&) = delete;
 
-  Concat(Node<InputRowsA, InputColsA>& input_a, 
-         Node<InputRowsB, InputColsB>& input_b)
-      : BinaryOp<InputRowsA, InputColsA, InputRowsB, InputColsB, 
-                 InputRowsA + InputRowsB, InputColsA>(input_a, input_b) {}
+  Concat(Node<InputRowsA, InputCols>& input_a, 
+         Node<InputRowsB, InputCols>& input_b)
+      : BinaryOp<InputRowsA, InputCols, InputRowsB, InputCols, 
+                 InputRowsA + InputRowsB, InputCols>(input_a, input_b) {}
 
   void Backprop(
       uint32_t cycle,
-      const MatrixRef<InputRowsA + InputRowsB, InputColsA>& output_dx) override {
+      const MatrixRef<InputRowsA + InputRowsB, 
+                      InputCols>& output_dx) override {
     if (!this->input_a_.constant) {
       this->input_a_.Backprop(cycle, output_dx.topRows(InputRowsA));
     }
