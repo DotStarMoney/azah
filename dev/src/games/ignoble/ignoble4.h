@@ -135,8 +135,13 @@ class Ignoble4 : public Game<4> {
   IndexT ounce_hot_seat_;
 
   // If -1, nobody has won yet. Otherwise, this is the index of the winning
-  // player [0, 3].
+  // player [0, 3]. When there's a tie, this is set to 0.
   IndexT winning_player_i_;
+  // When nobody won, this is set to true.
+  bool tie_;
+
+  // Tracks the maximum number of decisions made.
+  int depth_;
 
   // Cached values.
 

@@ -119,6 +119,9 @@ constexpr int kJumpOunceStealStock = 8;
 constexpr int kJumpMagicianStockTakeToss = 9;
 constexpr int kJumpRepentStock = 10;
 
+// After 500 decisions, it's a tie.
+constexpr int kMaxDepth = 500;
+
 }  // namespace
 
 Ignoble4::Ignoble4() :
@@ -129,7 +132,9 @@ Ignoble4::Ignoble4() :
     stock_n_{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}},
     location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
     top_of_deck_i_(-1),
-    winning_player_i_(-1) {
+    winning_player_i_(-1),
+    tie_(false),
+    depth_(0) {
   // Just for the first shuffle.
   absl::BitGen bitgen;
   MakeMove(-1, bitgen);
@@ -152,9 +157,13 @@ GameState Ignoble4::State() const {
 }
 
 std::array<float, 4> Ignoble4::Outcome() const {
-  std::array<float, 4> outcome{0.0f, 0.0f, 0.0f, 0.0f};
-  outcome[winning_player_i_] = 1.0f;
-  return outcome;
+  if (tie_) {
+    return {0.25f, 0.25f, 0.25f, 0.25f};
+  } else {
+    std::array<float, 4> outcome{0.0f, 0.0f, 0.0f, 0.0f};
+    outcome[winning_player_i_] = 1.0f;
+    return outcome;
+  }
 }
 
 std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
@@ -284,6 +293,13 @@ bool Ignoble4::PlayerFull(IndexT player_x) const {
 }
 
 void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
+  depth_ += 1;
+  if (depth_ > kMaxDepth) {
+    winning_player_i_ = 0;
+    tie_ = true;
+    return;
+  }
+
   // So a word on how we got here: first I implemented this as a coroutine, and
   // it was clean and lovely. Then I found out C++ really doesn't want to give
   // you access to the underlying state in a cross-platform way, but by then I
