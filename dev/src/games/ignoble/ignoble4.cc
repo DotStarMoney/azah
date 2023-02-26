@@ -72,7 +72,7 @@ constexpr int kMaxDecisionRowsN[] = {
         3,   // Meat Bungler
         4,   // Merry Pieman
         2,   // Benedict
-        16,  // Bethesda 
+        2,   // Bethesda 
         4,   // Ounce
         8,   // Magician
         5    // Repent
@@ -271,7 +271,7 @@ bool Ignoble4::PlayerFull(IndexT player_x) const {
 }
 
 void Ignoble4::MakeMove(int move_i) {
-  if (winning_player_i_ == -1) {
+  if (winning_player_i_ != -1) {
     LOG(FATAL) << "Can't make a move, the game is over.";
   }
   move_i_ = move_i;
@@ -301,7 +301,8 @@ coroutine::Void Ignoble4::RunGame() {
     std::array<IndexT, 4> pick_order{0, 1, 2, 3};
     for (IndexT i = 1; i < 4; ++i) {
       IndexT q = i - 1;
-      while ((q >= 0) && ComparePlayerPickOrder(q + 1, q)) {
+      while ((q >= 0) && ComparePlayerPickOrder(pick_order[q + 1], 
+                                                pick_order[q])) {
         std::swap(pick_order[q + 1], pick_order[q]);
         --q;
       }
@@ -342,19 +343,19 @@ coroutine::Void Ignoble4::RunGame() {
     std::array<bool, 4> repent_check{true, true, true, true};
 
     std::array<IndexT, 4> player_selected_index;
-    std::array<IndexT, 4> pick_order{0, 1, 2, 3};
     for (current_location_i_ = 0; 
          current_location_i_ < 4;
          ++current_location_i_) {
-      // Each player picks a card in a random order.
-      std::shuffle(pick_order.begin(), pick_order.end(), bitgen_);
+      // Each player select a card in a random order.
+      std::array<IndexT, 4> select_order{0, 1, 2, 3};
+      std::shuffle(select_order.begin(), select_order.end(), bitgen_);
 
       // The index of the hand card selected by each player 1-4.
 
       // We only get to pick our cards if there's more than one option availble.
       if (current_location_i_ < 3) {
         decision_class_ = Decisions::kCharacterSelect;
-        for (IndexT x : pick_order) {
+        for (IndexT x : select_order) {
           current_player_x_ = x;
           available_actions_n_ = hand_size_[x];
           for (IndexT q = 0; q < available_actions_n_; ++q) {
@@ -389,18 +390,36 @@ coroutine::Void Ignoble4::RunGame() {
           cards_in_play_.end(),
           [](PlayedCard a, PlayedCard b) { return a.value < b.value; });
 
-      // Give Bethesda a chance (if she's there, and not alone) to trade places.
+      // Give Bethesda a chance (if she's still in someone's hand) to trade
+      // places.
       if (current_location_i_ < 3) {
         for (IndexT i = 0; i < 4; ++i) {
-          if (cards_in_play_[i].value != kBethesdaIndex) continue;
-          decision_class_ = Decisions::kBethesdaSwap;
-          current_player_x_ = cards_in_play_[i].player_i;
-          available_actions_n_ = hand_size_[current_player_x_] + 1;
-          // Move 0 is pick Bethesda (11), other moves are other hand cards.
-          move_to_policy_i_[0] = kBethesdaIndex;
-          for (IndexT q = 1; q < available_actions_n_; ++q) {
-            move_to_policy_i_[q] = hand_[current_player_x_][q - 1];
+          IndexT bethesda_hand_i = -1;
+          for (IndexT q = 0; q < hand_size_[i]; ++q) {
+            if (hand_[i][q] == kBethesdaIndex) {
+              bethesda_hand_i = q;
+              break;
+            }
           }
+          if (bethesda_hand_i == -1) continue;
+          IndexT played_card_i;
+          current_player_x_ = i;
+          for (IndexT q = 0; q < 4; ++q) {
+            if (cards_in_play_[q].player_i == current_player_x_) {
+              played_card_i = q;
+              break;
+            }
+          }     
+
+          // bethesda_hand_i is the index in current_player_x_'s hand that has
+          // Bethesda, and played_card_i is in the index in cards_in_play_ that
+          // has the card that would be swapped with Bethesda.
+
+          decision_class_ = Decisions::kBethesdaSwap;
+          available_actions_n_ = 2;
+          // Move 0 is stay, otherwise swap.
+          move_to_policy_i_[0] = 0;
+          move_to_policy_i_[1] = 1;
 
           // Wait for an answer.
           co_await coroutine::Suspend();
@@ -409,8 +428,8 @@ coroutine::Void Ignoble4::RunGame() {
           if (move_i_ == 0) break;
           
           // Swap!
-          cards_in_play_[i].value = hand_[current_player_x_][move_i_ - 1];
-          hand_[current_player_x_][move_i_ - 1] = kBethesdaIndex;
+          std::swap(cards_in_play_[played_card_i].value, 
+                    hand_[current_player_x_][bethesda_hand_i]);
 
           // Re-sort both played cards and hand cards.
           std::sort(
@@ -688,7 +707,7 @@ coroutine::Void Ignoble4::RunGame() {
         co_return;
       }
 
-      // One last thing to do, the Meat Bungler can bungle the meats if he
+      // One last thing to do: the Meat Bungler can bungle the meats if he
       // didn't win.
 
       if ((original_bounty_value > 0) 
