@@ -310,7 +310,7 @@ coroutine::Void Ignoble4::RunGame() {
 
     // Each player picks a deck.
     decision_class_ = Decisions::kTeamSelect;
-    std::vector<IndexT> available_decks{0, 1, 2, 3};
+    std::array<IndexT, 4> available_decks{0, 1, 2, 3};
     for (IndexT i = 0; i < 4; ++i) {
       current_player_x_ = pick_order[i];
       IndexT pick;
@@ -335,7 +335,9 @@ coroutine::Void Ignoble4::RunGame() {
       }
 
       // Remove the deck from those available.
-      available_decks.erase(available_decks.begin() + pick);
+      for (IndexT q = pick; q < 3; ++q) {
+        std::swap(available_decks[q], available_decks[q + 1]);
+      }
     }
 
     // We use this to track if someone took stock, since if they did, they don't
@@ -461,21 +463,22 @@ coroutine::Void Ignoble4::RunGame() {
             bool full = PlayerFull(current_player_x_);
             available_actions_n_ = full ? 0 : 4;
 
-            std::vector<IndexT> tossable_types;
+            std::array<IndexT, 4> tossable_types;
+            IndexT tossable_types_n = 0;
             for (IndexT q = 0; q < 4; ++q) {
               if (stock_n_[current_player_x_][q] == 0) continue;
-              tossable_types.push_back(q);
+              tossable_types[tossable_types_n++] = q;
               ++available_actions_n_;
             }
             
             // First 4 actions are for tossing, last 4 actions are for taking.
-            for (IndexT q = 0; q < tossable_types.size(); ++q) {
+            for (IndexT q = 0; q < tossable_types_n; ++q) {
               move_to_policy_i_[q] = tossable_types[q];
             }
 
             if (!full) {
               for (IndexT q = 0; q < 4; ++q) {
-                move_to_policy_i_[tossable_types.size() + q] = 4 + q;
+                move_to_policy_i_[tossable_types_n + q] = 4 + q;
               }
             }
             
@@ -483,9 +486,9 @@ coroutine::Void Ignoble4::RunGame() {
             co_await coroutine::Suspend();
 
             IndexT type;
-            if (move_i_ >= tossable_types.size()) {
+            if (move_i_ >= tossable_types_n) {
               // We took one.
-              type = move_i_ - tossable_types.size();
+              type = move_i_ - tossable_types_n;
               ++stock_n_[current_player_x_][type];
               repent_check[current_player_x_] = false;
               if (CheckForWin(current_player_x_)) co_return;
@@ -769,7 +772,7 @@ coroutine::Void Ignoble4::RunGame() {
       co_await coroutine::Suspend();
 
       if (move_i_ == 0) continue;
-      IndexT type = move_to_policy_i_[move_i_];
+      IndexT type = move_to_policy_i_[move_i_] - 1;
       --stock_n_[current_player_x_][type];
     }
 

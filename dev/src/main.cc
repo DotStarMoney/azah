@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
   Game game;
 
-  for (;;) {
+  while (game.State() == azah::games::GameState::kOngoing) {
     int move = absl::Uniform(rng, 0, game.CurrentMovesN());
     game.MakeMove(move);
   }
