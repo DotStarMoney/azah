@@ -259,6 +259,15 @@ bool Ignoble4::CheckForWin(IndexT player_x) {
   return true;
 }
 
+bool Ignoble4::PlayerFull(IndexT player_x) const {
+  IndexT total_stock = 0;
+  for (IndexT q = 0; q < 4; ++q) {
+    total_stock += stock_n_[player_x][q];
+    if (total_stock >= 22) return true;
+  }
+  return false;
+}
+
 void Ignoble4::MakeMove(int move_i) {
   if (winning_player_i_ == -1) {
     LOG(FATAL) << "Can't make a move, the game is over.";
@@ -409,28 +418,24 @@ coroutine::Void Ignoble4::RunGame() {
       }
 
       // Now run through the played cards from highest to lowest.
+      const Location& current_loc =
+          kLocations[locations_in_play_[current_location_i_]];
+      for (IndexT i = 3; i >= 0; --i) {
+        IndexT stock_modifier = 0;
 
-      for (IndexT i = 0; i < 4; ++i) {
         current_player_x_ = cards_in_play_[i].player_i;
         switch (cards_in_play_[i].value) {
           case kMagicianIndex: {
+            // If we didn't win, we don't get to use the ability.
+            if (i < 3) break;
+
             decision_class_ = Decisions::kMagicianStockTakeToss;
 
             // First determine what is possible. We can only toss stock we have,
             // and only take when we're not full.
-            IndexT total_stock;
-            for (IndexT q = 0; q < 4; ++q) {
-              total_stock += stock_n_[current_player_x_][q];
-            }
-
-            bool full;
-            if (total_stock < 22) {
-              full = true;
-              available_actions_n_ = 4;
-            } else {
-              full = false;
-              available_actions_n_ = 0;
-            }
+        
+            bool full = PlayerFull(current_player_x_);
+            available_actions_n_ = full ? 0 : 4;
 
             std::vector<IndexT> tossable_types;
             for (IndexT q = 0; q < 4; ++q) {
@@ -464,27 +469,124 @@ coroutine::Void Ignoble4::RunGame() {
               type = tossable_types[move_i_];
               --stock_n_[current_player_x_][type];
             }
-            
+
             break;
           }
           case kOunceIndex: {
             decision_class_ = Decisions::kOunceStealStock;
+            // For each player we can steal from...
+            for (IndexT q = i + 1; q < 4; ++q) {
+              // Leave if we're at capacity.
+              if (PlayerFull(current_player_x_)) break;
+              ounce_hot_seat_ = cards_in_play_[q].player_i;
 
-            //
-            //
-            //
+              // Lets see what's available...
+              available_actions_n_ = 0;
+              for (IndexT s = 0; s < 4; ++s) {
+                if (stock_n_[ounce_hot_seat_][s] == 0) continue;
+                move_to_policy_i_[available_actions_n_++] = s;
+              }
+              // Player is poor, move on to the next sucker.
+              if (available_actions_n_ == 0) continue;
+
+              // Wait for an answer.
+              co_await coroutine::Suspend();
+
+              // Perform the steal.
+              IndexT type = move_to_policy_i_[move_i_];
+              --stock_n_[ounce_hot_seat_][type];
+              ++stock_n_[current_player_x_][type];
+              if (CheckForWin(current_player_x_)) co_return;
+            }
+            break;
+          }
+          case kSirStrawberryIndex: {
+            // This one is easy, if we can take one of the current stock, do it.
+            if (PlayerFull(current_player_x_)) break;
+            ++stock_n_[current_player_x_][current_loc.type];
+            if (CheckForWin(current_player_x_)) co_return;
+            break;
+          }
+          case kBenedictIndex: {
+            // Raise the bounty by 2 or don't.
+            decision_class_ = Decisions::kBenedictIncrease;
+            available_actions_n_ = 2;
+            move_to_policy_i_[0] = 0;
+            move_to_policy_i_[1] = 1;
+
+            // Wait for an answer.
+            co_await coroutine::Suspend();
+
+            if (move_i_ == 1) {
+              stock_modifier += 2;
+            }
 
             break;
           }
+          case kPiemanIndex: {
+            // If we did win (weird), we don't get to use the ability.
+            // If we're full, can't take anything.
+            if ((i == 3) || PlayerFull(current_player_x_)) break;
+
+            decision_class_ = Decisions::kMerryPiemanStock;
+            available_actions_n_ = 4;
+            for (IndexT q = 0; q < 4; ++q) move_to_policy_i_[q] = q;
+
+            // Wait for an answer.
+            co_await coroutine::Suspend();
+
+            ++stock_n_[current_player_x_][move_i_];
+            if (CheckForWin(current_player_x_)) co_return;
+            break;
+          }
+          case kPinderIndex: {
+            // If we're full, can't take anything.
+            if (PlayerFull(current_player_x_)) break;
+            // If The Ounce was played, take a free one.
+            for (IndexT q = i + 1; q < 4; ++q) {
+              if (cards_in_play_[q].value == kOunceIndex) {
+                ++stock_n_[current_player_x_][current_loc.type];
+                if (CheckForWin(current_player_x_)) co_return;
+                break;
+              }
+            }
+            break;
+          }
+          case kBroomemanIndex: {
+            // If we did win, we don't get to use the ability.
+            // If we're full, can't take anything.
+            if ((i == 3) || PlayerFull(current_player_x_)) break;
+            // If there's at least 3 stock here after modifiers, take a free
+            // one.
+            if (PlayerFull(current_player_x_)) break;
+            if ((current_loc.bounty_n + stock_modifier) >= 3) {
+              ++stock_n_[current_player_x_][current_loc.type];
+              if (CheckForWin(current_player_x_)) co_return;
+            }
+            break;
+          }
+          case kKnaveIndex: {
+            // Dec the stock modifier, that's it!
+            --stock_modifier;
+            break;
+          }
+          case kTavernFoolIndex: {
+            // Toss one of the current stock if we can.
+            if (stock_n_[current_player_x_][current_loc.type] == 0) break;
+            --stock_n_[current_player_x_][current_loc.type];
+            break;
+          }
           default: {
-            LOG(FATAL) << "Unknown played card.";
+            // The card has no effect when resolving order.
           }
         }
       }
 
+      // Resolve taking the bounty.
 
-
-
+      //
+      //
+      //
 
 
     }
