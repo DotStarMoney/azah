@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "../../nn/data_types.h"
-#include "../coroutine.h"
 #include "../game.h"
+#include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 
 namespace azah {
@@ -19,7 +19,6 @@ namespace ignoble {
 class Ignoble4 : public Game<4> {
  public:
   Ignoble4();
-  ~Ignoble4();
 
   const std::string_view name() const override;
 
@@ -35,21 +34,48 @@ class Ignoble4 : public Game<4> {
 
   nn::DynamicMatrix PolicyMask() const override;
 
-  void MakeMove(int move_i) override;
+  void MakeMove(int move_i, absl::BitGenRef bitgen);
 
  private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
   typedef std::int8_t IndexT;
 
+  IndexT jump_label_;
+  // "s_" is for state, basically since we can't use real coroutines (non-
+  // copyable) we need to explicitly store run state.
+  struct PlayState {
+    IndexT i;
+    IndexT q;
+    std::array<IndexT, 4> pick_order;
+    std::array<IndexT, 4> available_decks;
+    IndexT pick;
+    std::array<bool, 4> repent_check;
+    std::array<IndexT, 4> player_selected_index;
+    std::array<IndexT, 4> select_order;
+    IndexT x;
+    IndexT bethesda_hand_i;
+    IndexT played_card_i;
+    IndexT loc_i;
+    IndexT stock_modifier;
+    bool full;
+    std::array<IndexT, 4> tossable_types;
+    IndexT tossable_types_n;
+    IndexT type;
+    IndexT s;
+    IndexT bounty_value;
+    IndexT bounty_type;
+    IndexT original_bounty_value;
+    IndexT original_bounty_type;
+    bool can_toss;
+    bool can_take;
+    IndexT total_stock;
+    IndexT adj_bounty_value;
+    std::array<IndexT, 4> repent_order;
+  } s_;
+
+
   // True if player_a should pick before player_b.
   bool ComparePlayerPickOrder(int player_a, int player_b) const;
-
-  absl::BitGen bitgen_;
-
-  // Used to pass messages to RunGame.
-  int move_i_;
-  coroutine::Void RunGame();
-  coroutine::VoidHandle run_handle_;
 
   bool CheckForWin(IndexT player_x);
   bool PlayerFull(IndexT player_x) const;

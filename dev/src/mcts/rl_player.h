@@ -20,7 +20,7 @@
 namespace azah {
 namespace mcts {
 
-template <games::GameType Game, games::GameNetworkType GameNetwork>
+template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
 class RLPlayer {
  public:
   struct Options {

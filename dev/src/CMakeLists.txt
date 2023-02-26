@@ -43,7 +43,6 @@ set(SRC_GAMES_IGNOBLE
     ${SRC_GAMES_IGNOBLE_CC})
 
 set(SRC_GAMES_H
-    games/coroutine.h
     games/game.h
     games/game_network.h)
 set(SRC_GAMES_CC

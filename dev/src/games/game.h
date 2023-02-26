@@ -100,16 +100,43 @@ class Game {
   // Undefined if the game is over.
   virtual nn::DynamicMatrix PolicyMask() const = 0;
 
+  // Game subclasses must implement one of the following:
+  //
+  // 1.)
+  // 
   // Make the move for the given index deterministically.
   //
   // Undefined if the game is over.
-  virtual void MakeMove(int move_i) = 0;
+  // virtual void MakeMove(int move_i) = 0;
+  //
+  // 2.)
+  // 
+  // Make the move for the given index potentially with random events.
+  //
+  // Undefined if the game is over.
+  // virtual void MakeMove(int move_i, absl::BitGenRef bitgen) = 0;
 };
+
+namespace internal {
 
 template <typename T>
 concept GameType =
     requires { T::players_n(); }
     && std::is_base_of<Game<T::players_n()>, T>::value;
+
+}  // namespace internal
+
+template <typename T>
+concept DeterministicGameType = 
+    internal::GameType<T> && requires(T& game) { game.MakeMove(0); };
+
+template <typename T>
+concept NonDeterministicGameType =
+    internal::GameType<T> && requires(T & game) {
+        game.MakeMove(0, absl::BitGen()); };
+
+template <typename T>
+concept AnyGameType = DeterministicGameType<T> || NonDeterministicGameType<T>;
 
 }  // namespace games
 }  // namespace azah

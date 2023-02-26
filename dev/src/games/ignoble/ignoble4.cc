@@ -9,12 +9,12 @@
 
 #include "../../nn/data_types.h"
 #include "../../nn/init.h"
-#include "../coroutine.h"
 #include "../game.h"
+#include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "glog/logging.h"
 
-// I'm so sick of people doing this, like its 2023. Stop.
+// I'm so sick of people doing this, it's 2023. Stop.
 #undef max
 #undef min
 
@@ -105,9 +105,24 @@ constexpr std::array<std::array<int, 4>, 4> kDeckContents = {{
         {1, 4, 10, 15}   // Death
     }};
 
+// Labels for the horrid jump table.
+constexpr int kJumpInit = -1;
+constexpr int kJumpTeamSelect = 0;
+constexpr int kJumpCharacterSelect = 1;
+constexpr int kJumpPrincessStock = 2;
+constexpr int kJumpMeatBunglerBountyWin = 3;
+constexpr int kJumpMeatBunglerBountyLose = 4;
+constexpr int kJumpMerryPiemanStock = 5;
+constexpr int kJumpBenedictIncrease = 6;
+constexpr int kJumpBethesdaSwap = 7;
+constexpr int kJumpOunceStealStock = 8;
+constexpr int kJumpMagicianStockTakeToss = 9;
+constexpr int kJumpRepentStock = 10;
+
 }  // namespace
 
 Ignoble4::Ignoble4() :
+    jump_label_(kJumpInit),
     decision_class_(Decisions::kTeamSelect),
     deck_select_tie_order_{0, 1, 2, 3},
     hand_size_{0, 0, 0, 0},
@@ -115,11 +130,9 @@ Ignoble4::Ignoble4() :
     location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
     top_of_deck_i_(-1),
     winning_player_i_(-1) {
-  run_handle_ = RunGame();
-}
-
-Ignoble4::~Ignoble4() {
-  run_handle_.destroy();
+  // Just for the first shuffle.
+  absl::BitGen bitgen;
+  MakeMove(-1, bitgen);
 }
 
 const std::string_view Ignoble4::name() const {
@@ -270,119 +283,141 @@ bool Ignoble4::PlayerFull(IndexT player_x) const {
   return false;
 }
 
-void Ignoble4::MakeMove(int move_i) {
-  if (winning_player_i_ != -1) {
-    LOG(FATAL) << "Can't make a move, the game is over.";
+void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
+  // So a word on how we got here: first I implemented this as a coroutine, and
+  // it was clean and lovely. Then I found out C++ really doesn't want to give
+  // you access to the underlying state in a cross-platform way, but by then I
+  // had already realized how much cleaner it is to implement games using
+  // asynchronous transfer... so I split the difference and made a fauxroutine.
+  //
+  // That being said, I'm so mad at C++ and MSVC. Coroutines aren't copyable, 
+  // dynamic jump tables aren't possible since label addresses aren't storable, 
+  // all fine features that just don't exist... so here we are... jumping
+  // twice...
+  switch (jump_label_) {
+  case kJumpTeamSelect: goto MakeMove_TeamSelect;
+  case kJumpCharacterSelect: goto MakeMove_CharacterSelect;
+  case kJumpPrincessStock: goto MakeMove_PrincessStock;
+  case kJumpMeatBunglerBountyWin: goto MakeMove_MeatBunglerBounty_Win;
+  case kJumpMeatBunglerBountyLose: goto MakeMove_MeatBunglerBounty_Lose;
+  case kJumpMerryPiemanStock: goto MakeMove_MerryPiemanStock;
+  case kJumpBenedictIncrease: goto MakeMove_BenedictIncrease;
+  case kJumpBethesdaSwap: goto MakeMove_BethesdaSwap;
+  case kJumpOunceStealStock: goto MakeMove_OunceStealStock;
+  case kJumpMagicianStockTakeToss: goto MakeMove_MagicianStockTakeToss;
+  case kJumpRepentStock: goto MakeMove_RepentStock;
+  default:;
   }
-  move_i_ = move_i;
-  run_handle_();
-}
 
-coroutine::Void Ignoble4::RunGame() {
   // This will never change, and is the equivalent of picking a player to start
   // and the seating order at the table.
   std::shuffle(deck_select_tie_order_.begin(), deck_select_tie_order_.end(),
-               bitgen_);
+               bitgen);
   for (;;) {
     // Start of a new round. First we check to see if a location shuffle is in
     // order.
     if (top_of_deck_i_ == -1) {
-      std::shuffle(location_deck_.begin(), location_deck_.end(), bitgen_);
+      std::shuffle(location_deck_.begin(), location_deck_.end(), bitgen);
       top_of_deck_i_ = 11;
     }
 
     // Deal the four locations.
-    for (IndexT i = 0; i < 4; ++i) {
-      locations_in_play_[i] = location_deck_[top_of_deck_i_ - i];
+    for (s_.i = 0; s_.i < 4; ++s_.i) {
+      locations_in_play_[s_.i] = location_deck_[top_of_deck_i_ - s_.i];
     }
     top_of_deck_i_ -= 4;
 
     // Figure out the pick order.
-    std::array<IndexT, 4> pick_order{0, 1, 2, 3};
-    for (IndexT i = 1; i < 4; ++i) {
-      IndexT q = i - 1;
-      while ((q >= 0) && ComparePlayerPickOrder(pick_order[q + 1], 
-                                                pick_order[q])) {
-        std::swap(pick_order[q + 1], pick_order[q]);
-        --q;
+    s_.pick_order = {0, 1, 2, 3};
+    for (s_.i = 1; s_.i < 4; ++s_.i) {
+      s_.q = s_.i - 1;
+      while ((s_.q >= 0) && ComparePlayerPickOrder(s_.pick_order[s_.q + 1], 
+                                                   s_.pick_order[s_.q])) {
+        std::swap(s_.pick_order[s_.q + 1], s_.pick_order[s_.q]);
+        --s_.q;
       }
     }
 
     // Each player picks a deck.
     decision_class_ = Decisions::kTeamSelect;
-    std::array<IndexT, 4> available_decks{0, 1, 2, 3};
-    for (IndexT i = 0; i < 4; ++i) {
-      current_player_x_ = pick_order[i];
-      IndexT pick;
+    s_.available_decks = {0, 1, 2, 3};
+    for (s_.i = 0; s_.i < 4; ++s_.i) {
+      current_player_x_ = s_.pick_order[s_.i];
+
       // We only get to pick a deck if there's more than one option availble.
-      if (i < 3) {
-        available_actions_n_ = 4 - i;
-        for (IndexT q = 0; q < available_actions_n_; ++q) {
-          move_to_policy_i_[q] = available_decks[q];
+      if (s_.i < 3) {
+        available_actions_n_ = 4 - s_.i;
+        for (s_.q = 0; s_.q < available_actions_n_; ++s_.q) {
+          move_to_policy_i_[s_.q] = s_.available_decks[s_.q];
         }
 
         // Wait for an answer.
-        co_await coroutine::Suspend();
-        pick = move_i_;
+        jump_label_ = kJumpTeamSelect; return;
+MakeMove_TeamSelect:
+        s_.pick = move_i;
       } else {
-        pick = 0;
+        s_.pick = 0;
       }
       
       // Deal the deck to the player.
       hand_size_[current_player_x_] = 4;
-      for (IndexT q = 0; q < 4; ++q) {
-        hand_[current_player_x_][q] = kDeckContents[available_decks[pick]][q];
+      for (s_.q = 0; s_.q < 4; ++s_.q) {
+        hand_[current_player_x_][s_.q] = 
+            kDeckContents[s_.available_decks[s_.pick]][s_.q];
       }
 
       // Remove the deck from those available.
-      for (IndexT q = pick; q < 3; ++q) {
-        std::swap(available_decks[q], available_decks[q + 1]);
+      for (s_.q = s_.pick; s_.q < 3; ++s_.q) {
+        std::swap(s_.available_decks[s_.q], s_.available_decks[s_.q + 1]);
       }
     }
 
     // We use this to track if someone took stock, since if they did, they don't
     // get to repent.
-    std::array<bool, 4> repent_check{true, true, true, true};
-
-    std::array<IndexT, 4> player_selected_index;
+    s_.repent_check = {true, true, true, true};
     for (current_location_i_ = 0; 
          current_location_i_ < 4;
          ++current_location_i_) {
       // Each player select a card in a random order.
-      std::array<IndexT, 4> select_order{0, 1, 2, 3};
-      std::shuffle(select_order.begin(), select_order.end(), bitgen_);
+      s_.select_order = {0, 1, 2, 3};
+      std::shuffle(s_.select_order.begin(), s_.select_order.end(), bitgen);
 
       // The index of the hand card selected by each player 1-4.
 
       // We only get to pick our cards if there's more than one option availble.
       if (current_location_i_ < 3) {
         decision_class_ = Decisions::kCharacterSelect;
-        for (IndexT x : select_order) {
-          current_player_x_ = x;
-          available_actions_n_ = hand_size_[x];
-          for (IndexT q = 0; q < available_actions_n_; ++q) {
-            move_to_policy_i_[q] = hand_[x][q];
+        for (s_.i = 0; s_.i < 4; ++s_.i) {
+          s_.x = s_.select_order[s_.i];
+          current_player_x_ = s_.x;
+          available_actions_n_ = hand_size_[s_.x];
+          for (s_.q = 0; s_.q < available_actions_n_; ++s_.q) {
+            move_to_policy_i_[s_.q] = hand_[s_.x][s_.q];
           }
 
           // Wait for an answer.
-          co_await coroutine::Suspend();
-          player_selected_index[x] = move_i_;
+          jump_label_ = kJumpCharacterSelect; return;
+MakeMove_CharacterSelect:
+          s_.player_selected_index[s_.x] = move_i;
         }
       } else {
-        for (IndexT i = 0; i < 4; player_selected_index[i++] = 0);
+        for (s_.i = 0; s_.i < 4; s_.player_selected_index[s_.i++] = 0);
       }
 
       // Now remove everyone's selected cards from their hands and put them out.
       // Hand cards need to stay in sorted order as do played cards.
 
-      for (IndexT i = 0; i < 4; ++i) {
-        cards_in_play_[i].value = hand_[i][player_selected_index[i]];
-        cards_in_play_[i].player_i = i;
+      for (s_.i = 0; s_.i < 4; ++s_.i) {
+        cards_in_play_[s_.i].value = 
+            hand_[s_.i][s_.player_selected_index[s_.i]];
+        cards_in_play_[s_.i].player_i = s_.i;
 
         // Remove the card from the player's hand preserving numeric order.
-        --hand_size_[i];
-        for (IndexT q = player_selected_index[i]; q < hand_size_[i]; ++q) {
-          std::swap(hand_[i][q], hand_[i][q + 1]);
+        --hand_size_[s_.i];
+        for (s_.q = s_.player_selected_index[s_.i]; 
+             s_.q < hand_size_[s_.i]; 
+             ++s_.q) {
+          std::swap(hand_[s_.i][s_.q], hand_[s_.i][s_.q + 1]);
         }
       }
 
@@ -395,23 +430,22 @@ coroutine::Void Ignoble4::RunGame() {
       // Give Bethesda a chance (if she's still in someone's hand) to trade
       // places.
       if (current_location_i_ < 3) {
-        for (IndexT i = 0; i < 4; ++i) {
-          IndexT bethesda_hand_i = -1;
-          for (IndexT q = 0; q < hand_size_[i]; ++q) {
-            if (hand_[i][q] == kBethesdaIndex) {
-              bethesda_hand_i = q;
+        for (s_.i = 0; s_.i < 4; ++s_.i) {
+          s_.bethesda_hand_i = -1;
+          for (s_.q = 0; s_.q < hand_size_[s_.i]; ++s_.q) {
+            if (hand_[s_.i][s_.q] == kBethesdaIndex) {
+              s_.bethesda_hand_i = s_.q;
               break;
             }
           }
-          if (bethesda_hand_i == -1) continue;
-          IndexT played_card_i;
-          current_player_x_ = i;
-          for (IndexT q = 0; q < 4; ++q) {
-            if (cards_in_play_[q].player_i == current_player_x_) {
-              played_card_i = q;
+          if (s_.bethesda_hand_i == -1) continue;
+          current_player_x_ = s_.i;
+          for (s_.q = 0; s_.q < 4; ++s_.q) {
+            if (cards_in_play_[s_.q].player_i == current_player_x_) {
+              s_.played_card_i = s_.q;
               break;
             }
-          }     
+          }
 
           // bethesda_hand_i is the index in current_player_x_'s hand that has
           // Bethesda, and played_card_i is in the index in cards_in_play_ that
@@ -424,14 +458,14 @@ coroutine::Void Ignoble4::RunGame() {
           move_to_policy_i_[1] = 1;
 
           // Wait for an answer.
-          co_await coroutine::Suspend();
-
+          jump_label_ = kJumpBethesdaSwap; return;
+MakeMove_BethesdaSwap:
           // No swap.
-          if (move_i_ == 0) break;
+          if (move_i == 0) break;
           
           // Swap!
-          std::swap(cards_in_play_[played_card_i].value, 
-                    hand_[current_player_x_][bethesda_hand_i]);
+          std::swap(cards_in_play_[s_.played_card_i].value,
+                    hand_[current_player_x_][s_.bethesda_hand_i]);
 
           // Re-sort both played cards and hand cards.
           std::sort(
@@ -445,57 +479,55 @@ coroutine::Void Ignoble4::RunGame() {
       }
 
       // Now run through the played cards from highest to lowest.
-      const Location& current_loc =
-          kLocations[locations_in_play_[current_location_i_]];
-      IndexT stock_modifier = 0;
-      for (IndexT i = 3; i >= 0; --i) {
-        current_player_x_ = cards_in_play_[i].player_i;
-        switch (cards_in_play_[i].value) {
+      s_.loc_i = locations_in_play_[current_location_i_];
+      s_.stock_modifier = 0;
+      for (s_.i = 3; s_.i >= 0; --s_.i) {
+        current_player_x_ = cards_in_play_[s_.i].player_i;
+        switch (cards_in_play_[s_.i].value) {
           case kMagicianIndex: {
             // If we didn't win, we don't get to use the ability.
-            if (i < 3) break;
+            if (s_.i < 3) break;
 
             decision_class_ = Decisions::kMagicianStockTakeToss;
 
             // First determine what is possible. We can only toss stock we have,
             // and only take when we're not full.
         
-            bool full = PlayerFull(current_player_x_);
-            available_actions_n_ = full ? 0 : 4;
+            s_.full = PlayerFull(current_player_x_);
+            available_actions_n_ = s_.full ? 0 : 4;
 
-            std::array<IndexT, 4> tossable_types;
-            IndexT tossable_types_n = 0;
-            for (IndexT q = 0; q < 4; ++q) {
-              if (stock_n_[current_player_x_][q] == 0) continue;
-              tossable_types[tossable_types_n++] = q;
+            s_.tossable_types_n = 0;
+            for (s_.q = 0; s_.q < 4; ++s_.q) {
+              if (stock_n_[current_player_x_][s_.q] == 0) continue;
+              s_.tossable_types[s_.tossable_types_n++] = s_.q;
               ++available_actions_n_;
             }
             
             // First 4 actions are for tossing, last 4 actions are for taking.
-            for (IndexT q = 0; q < tossable_types_n; ++q) {
-              move_to_policy_i_[q] = tossable_types[q];
+            for (s_.q = 0; s_.q < s_.tossable_types_n; ++s_.q) {
+              move_to_policy_i_[s_.q] = s_.tossable_types[s_.q];
             }
 
-            if (!full) {
-              for (IndexT q = 0; q < 4; ++q) {
-                move_to_policy_i_[tossable_types_n + q] = 4 + q;
+            if (!s_.full) {
+              for (s_.q = 0; s_.q < 4; ++s_.q) {
+                move_to_policy_i_[s_.tossable_types_n + s_.q] = 4 + s_.q;
               }
             }
             
             // Wait for an answer.
-            co_await coroutine::Suspend();
+            jump_label_ = kJumpMagicianStockTakeToss; return;
+MakeMove_MagicianStockTakeToss:
 
-            IndexT type;
-            if (move_i_ >= tossable_types_n) {
+            if (move_i >= s_.tossable_types_n) {
               // We took one.
-              type = move_i_ - tossable_types_n;
-              ++stock_n_[current_player_x_][type];
-              repent_check[current_player_x_] = false;
-              if (CheckForWin(current_player_x_)) co_return;
+              s_.type = move_i - s_.tossable_types_n;
+              ++stock_n_[current_player_x_][s_.type];
+              s_.repent_check[current_player_x_] = false;
+              if (CheckForWin(current_player_x_)) return;
             } else {
               // We tossed one.
-              type = tossable_types[move_i_];
-              --stock_n_[current_player_x_][type];
+              s_.type = s_.tossable_types[move_i];
+              --stock_n_[current_player_x_][s_.type];
             }
 
             break;
@@ -503,38 +535,39 @@ coroutine::Void Ignoble4::RunGame() {
           case kOunceIndex: {
             decision_class_ = Decisions::kOunceStealStock;
             // For each player we can steal from, from highest card to lowest...
-            for (IndexT q = i + 1; q < 4; ++q) {
+            for (s_.q = s_.i + 1; s_.q < 4; ++s_.q) {
               // Leave if we're at capacity.
               if (PlayerFull(current_player_x_)) break;
-              ounce_hot_seat_ = cards_in_play_[q].player_i;
+              ounce_hot_seat_ = cards_in_play_[s_.q].player_i;
 
               // Lets see what's available...
               available_actions_n_ = 0;
-              for (IndexT s = 0; s < 4; ++s) {
-                if (stock_n_[ounce_hot_seat_][s] == 0) continue;
-                move_to_policy_i_[available_actions_n_++] = s;
+              for (s_.s = 0; s_.s < 4; ++s_.s) {
+                if (stock_n_[ounce_hot_seat_][s_.s] == 0) continue;
+                move_to_policy_i_[available_actions_n_++] = s_.s;
               }
               // Player is poor, move on to the next sucker.
               if (available_actions_n_ == 0) continue;
 
               // Wait for an answer.
-              co_await coroutine::Suspend();
+              jump_label_ = kJumpOunceStealStock; return;
+MakeMove_OunceStealStock:
 
               // Perform the steal.
-              IndexT type = move_to_policy_i_[move_i_];
-              --stock_n_[ounce_hot_seat_][type];
-              ++stock_n_[current_player_x_][type];
-              repent_check[current_player_x_] = false;
-              if (CheckForWin(current_player_x_)) co_return;
+              s_.type = move_to_policy_i_[move_i];
+              --stock_n_[ounce_hot_seat_][s_.type];
+              ++stock_n_[current_player_x_][s_.type];
+              s_.repent_check[current_player_x_] = false;
+              if (CheckForWin(current_player_x_)) return;
             }
             break;
           }
           case kSirStrawberryIndex: {
             // This one is easy, if we can take one of the current stock, do it.
             if (PlayerFull(current_player_x_)) break;
-            ++stock_n_[current_player_x_][current_loc.type];
-            repent_check[current_player_x_] = false;
-            if (CheckForWin(current_player_x_)) co_return;
+            ++stock_n_[current_player_x_][kLocations[s_.loc_i].type];
+            s_.repent_check[current_player_x_] = false;
+            if (CheckForWin(current_player_x_)) return;
             break;
           }
           case kBenedictIndex: {
@@ -545,10 +578,11 @@ coroutine::Void Ignoble4::RunGame() {
             move_to_policy_i_[1] = 1;
 
             // Wait for an answer.
-            co_await coroutine::Suspend();
+            jump_label_ = kJumpBenedictIncrease; return;
+MakeMove_BenedictIncrease:
 
-            if (move_i_ == 1) {
-              stock_modifier += 2;
+            if (move_i == 1) {
+              s_.stock_modifier += 2;
             }
 
             break;
@@ -556,29 +590,30 @@ coroutine::Void Ignoble4::RunGame() {
           case kPiemanIndex: {
             // If we did win (weird), we don't get to use the ability.
             // If we're full, can't take anything.
-            if ((i == 3) || PlayerFull(current_player_x_)) break;
+            if ((s_.i == 3) || PlayerFull(current_player_x_)) break;
 
             decision_class_ = Decisions::kMerryPiemanStock;
             available_actions_n_ = 4;
-            for (IndexT q = 0; q < 4; ++q) move_to_policy_i_[q] = q;
+            for (s_.q = 0; s_.q < 4; ++s_.q) move_to_policy_i_[s_.q] = s_.q;
 
             // Wait for an answer.
-            co_await coroutine::Suspend();
+            jump_label_ = kJumpMerryPiemanStock; return;
+MakeMove_MerryPiemanStock:
 
-            ++stock_n_[current_player_x_][move_i_];
-            repent_check[current_player_x_] = false;
-            if (CheckForWin(current_player_x_)) co_return;
+            ++stock_n_[current_player_x_][move_i];
+            s_.repent_check[current_player_x_] = false;
+            if (CheckForWin(current_player_x_)) return;
             break;
           }
           case kPinderIndex: {
             // If we're full, can't take anything.
             if (PlayerFull(current_player_x_)) break;
             // If The Ounce was played, take a free one.
-            for (IndexT q = i + 1; q < 4; ++q) {
-              if (cards_in_play_[q].value == kOunceIndex) {
-                ++stock_n_[current_player_x_][current_loc.type];
-                repent_check[current_player_x_] = false;
-                if (CheckForWin(current_player_x_)) co_return;
+            for (s_.q = s_.i + 1; s_.q < 4; ++s_.q) {
+              if (cards_in_play_[s_.q].value == kOunceIndex) {
+                ++stock_n_[current_player_x_][kLocations[s_.loc_i].type];
+                s_.repent_check[current_player_x_] = false;
+                if (CheckForWin(current_player_x_)) return;
                 break;
               }
             }
@@ -587,25 +622,27 @@ coroutine::Void Ignoble4::RunGame() {
           case kBroomemanIndex: {
             // If we did win, we don't get to use the ability.
             // If we're full, can't take anything.
-            if ((i == 3) || PlayerFull(current_player_x_)) break;
+            if ((s_.i == 3) || PlayerFull(current_player_x_)) break;
             // If there's at least 3 stock here after modifiers, take a free
             // one.
-            if ((current_loc.bounty_n + stock_modifier) >= 3) {
-              ++stock_n_[current_player_x_][current_loc.type];
-              repent_check[current_player_x_] = false;
-              if (CheckForWin(current_player_x_)) co_return;
+            if ((kLocations[s_.loc_i].bounty_n + s_.stock_modifier) >= 3) {
+              ++stock_n_[current_player_x_][kLocations[s_.loc_i].type];
+              s_.repent_check[current_player_x_] = false;
+              if (CheckForWin(current_player_x_)) return;
             }
             break;
           }
           case kKnaveIndex: {
             // Dec the stock modifier, that's it!
-            --stock_modifier;
+            --s_.stock_modifier;
             break;
           }
           case kTavernFoolIndex: {
             // Toss one of the current stock if we can.
-            if (stock_n_[current_player_x_][current_loc.type] == 0) break;
-            --stock_n_[current_player_x_][current_loc.type];
+            if (stock_n_[current_player_x_][kLocations[s_.loc_i].type] == 0) {
+              break;
+            }
+            --stock_n_[current_player_x_][kLocations[s_.loc_i].type];
             break;
           }
           default: {
@@ -616,78 +653,80 @@ coroutine::Void Ignoble4::RunGame() {
 
       // Resolve taking the bounty.
 
-      IndexT bounty_value = std::max(current_loc.bounty_n + stock_modifier, 0);
-      IndexT bounty_type = current_loc.type;
+      s_.bounty_value = std::max(
+          kLocations[s_.loc_i].bounty_n + s_.stock_modifier, 0);
+      s_.bounty_type = kLocations[s_.loc_i].type;
       // This is mostly for The Meat Bungler since cards can change the value /
       // color for their own benefit.
-      IndexT original_bounty_value = bounty_value;
-      IndexT original_bounty_type = bounty_type;
+      s_.original_bounty_value = s_.bounty_value;
+      s_.original_bounty_type = s_.bounty_type;
 
       current_player_x_ = cards_in_play_[3].player_i;
 
       switch (cards_in_play_[3].value) {
         case kKingIndex: {
           // The King always takes as if it were worth 2.
-          bounty_value = 2;
+          s_.bounty_value = 2;
           break;
         }
         case kPiemanIndex: {
           // The pieman doesn't get to take at all (weird).
-          bounty_value = 0;
+          s_.bounty_value = 0;
           break;
         }
         case kBunglerIndex: {
           // If there's no bounty, we can't do anything.
-          if (bounty_value <= 0) break;
+          if (s_.bounty_value <= 0) break;
           // Determine what the options are.
-          bool can_toss = 
-              stock_n_[current_player_x_][current_loc.type] > 0;
-          bool can_take = !PlayerFull(current_player_x_);
-          if (!can_take && !can_toss) break;
+          s_.can_toss =
+              stock_n_[current_player_x_][kLocations[s_.loc_i].type] > 0;
+          s_.can_take = !PlayerFull(current_player_x_);
+          if (!s_.can_take && !s_.can_toss) break;
           // Okay, we have at least one option here (other than do nothing).
           decision_class_ = Decisions::kMeatBunglerBounty;
-          available_actions_n_ = 1 + ((can_toss && can_take) ? 2 : 1);
+          available_actions_n_ = 1 + ((s_.can_toss && s_.can_take) ? 2 : 1);
           // We define the action vector as [do nothing, toss it, take it].
           move_to_policy_i_[0] = 0;
           if (available_actions_n_ == 3) {
             move_to_policy_i_[1] = 1;
             move_to_policy_i_[2] = 2;
-          } else if (can_toss) {
+          } else if (s_.can_toss) {
             move_to_policy_i_[1] = 1;
           } else {
             move_to_policy_i_[1] = 2;
           }
 
           // Wait for an answer.
-          co_await coroutine::Suspend();
+          jump_label_ = kJumpMeatBunglerBountyWin; return;
+MakeMove_MeatBunglerBounty_Win:
 
-          if (move_i_ == 0) {
+          if (move_i == 0) {
             // Do nothing.
-            bounty_value = 0;
-          } else if ((move_i_ == 1) && can_toss) {
+            s_.bounty_value = 0;
+          } else if ((move_i == 1) && s_.can_toss) {
             // If move_i_ == 1, and tossing was an option, toss it.
-            bounty_value *= -1;
+            s_.bounty_value *= -1;
           }
             
           break;
         }
         case kPrincessIndex: {
           // If there's no bounty, or we're full, we can't do anything.
-          if ((bounty_value <= 0) || PlayerFull(current_player_x_)) break;
+          if ((s_.bounty_value <= 0) || PlayerFull(current_player_x_)) break;
           decision_class_ = Decisions::kPrincessStock;
           available_actions_n_ = 4;
-          for (IndexT i = 0; i < 4; ++i) move_to_policy_i_[i] = i;
+          for (s_.i = 0; s_.i < 4; ++s_.i) move_to_policy_i_[s_.i] = s_.i;
 
           // Wait for an answer.
-          co_await coroutine::Suspend();
+          jump_label_ = kJumpPrincessStock; return;
+MakeMove_PrincessStock:
 
-          bounty_type = move_i_;
-
+          s_.bounty_type = move_i;
           break;
         }
         case kPageboyIndex: {
           // The Pageboy always takes as if it were worth 6, lol.
-          bounty_value = 6;
+          s_.bounty_value = 6;
           break;
         }
         default: {
@@ -695,31 +734,31 @@ coroutine::Void Ignoble4::RunGame() {
         }
       }
 
-      IndexT total_stock = 0;
-      for (IndexT i = 0; i < 4; ++i) {
-        total_stock += stock_n_[current_player_x_][i];
+      s_.total_stock = 0;
+      for (s_.i = 0; s_.i < 4; ++s_.i) {
+        s_.total_stock += stock_n_[current_player_x_][s_.i];
       }
       // Cap the bounty on the storage limit.
-      IndexT adj_bounty_value = std::min(static_cast<IndexT>(22 - total_stock), 
-                                         bounty_value);
-      stock_n_[current_player_x_][bounty_type] += adj_bounty_value;
-      if (adj_bounty_value > 0) repent_check[current_player_x_] = false;
-      if (stock_n_[current_player_x_][bounty_type] < 0) {
-        stock_n_[current_player_x_][bounty_type] = 0;
+      s_.adj_bounty_value = std::min(static_cast<IndexT>(22 - s_.total_stock),
+                                     s_.bounty_value);
+      stock_n_[current_player_x_][s_.bounty_type] += s_.adj_bounty_value;
+      if (s_.adj_bounty_value > 0) s_.repent_check[current_player_x_] = false;
+      if (stock_n_[current_player_x_][s_.bounty_type] < 0) {
+        stock_n_[current_player_x_][s_.bounty_type] = 0;
       } else if (CheckForWin(current_player_x_)) {
-        co_return;
+        return;
       }
 
       // One last thing to do: the Meat Bungler can bungle the meats if he
       // didn't win.
 
-      if ((original_bounty_value > 0) 
+      if ((s_.original_bounty_value > 0)
           && (cards_in_play_[3].value != kBunglerIndex)) {
-        for (IndexT i = 0; i < 3; ++i) {
-          if (cards_in_play_[i].value == kBunglerIndex) {
+        for (s_.i = 0; s_.i < 3; ++s_.i) {
+          if (cards_in_play_[s_.i].value == kBunglerIndex) {
             // The Meat Bungler was played, but didn't win.
-            current_player_x_ = cards_in_play_[i].player_i;
-            if (stock_n_[current_player_x_][original_bounty_type] == 0) break;
+            current_player_x_ = cards_in_play_[s_.i].player_i;
+            if (stock_n_[current_player_x_][s_.original_bounty_type] == 0) break;
             // By now, there is something we *could* toss if we wanted to.
             decision_class_ = Decisions::kMeatBunglerBounty;
             available_actions_n_ = 2;
@@ -727,14 +766,15 @@ coroutine::Void Ignoble4::RunGame() {
             move_to_policy_i_[1] = 1;
 
             // Wait for an answer.
-            co_await coroutine::Suspend();
+            jump_label_ = kJumpMeatBunglerBountyLose; return;
+MakeMove_MeatBunglerBounty_Lose:
 
-            if (move_i_ == 1) {
+            if (move_i == 1) {
               // Toss it!
-              stock_n_[current_player_x_][original_bounty_type] -= 
-                  original_bounty_value;
-              if (stock_n_[current_player_x_][original_bounty_type] < 0) {
-                stock_n_[current_player_x_][original_bounty_type] = 0;
+              stock_n_[current_player_x_][s_.original_bounty_type] -=
+                  s_.original_bounty_value;
+              if (stock_n_[current_player_x_][s_.original_bounty_type] < 0) {
+                stock_n_[current_player_x_][s_.original_bounty_type] = 0;
               }
             }
 
@@ -747,33 +787,34 @@ coroutine::Void Ignoble4::RunGame() {
     }
 
     // Repent in a random order.
-    std::array<IndexT, 4> repent_order{0, 1, 2, 3};
-    std::shuffle(repent_order.begin(), repent_order.end(), bitgen_);
+    s_.repent_order = {0, 1, 2, 3};
+    std::shuffle(s_.repent_order.begin(), s_.repent_order.end(), bitgen);
 
     // Before we go to the next round, determine which players may repent for
     // their sins.
     decision_class_ = Decisions::kRepentStock;
-    for (IndexT i = 0; i < 4; ++i) {
-      current_player_x_ = repent_order[i];
-      if (!repent_check[current_player_x_]) continue;
+    for (s_.i = 0; s_.i < 4; ++s_.i) {
+      current_player_x_ = s_.repent_order[s_.i];
+      if (!s_.repent_check[current_player_x_]) continue;
 
       // Determine what could be tossed.
       available_actions_n_ = 1;
       move_to_policy_i_[0] = 0;
-      for (IndexT q = 0; q < 4; ++q) {
-        if (stock_n_[current_player_x_][q] == 0) continue;
-        move_to_policy_i_[available_actions_n_++] = 1 + q;
+      for (s_.q = 0; s_.q < 4; ++s_.q) {
+        if (stock_n_[current_player_x_][s_.q] == 0) continue;
+        move_to_policy_i_[available_actions_n_++] = 1 + s_.q;
       }
 
       // We're poor, we took nothing, and so we are not worthy of atonement.
       if (available_actions_n_ == 1) continue;
 
       // Wait for an answer.
-      co_await coroutine::Suspend();
+      jump_label_ = kJumpRepentStock; return;
+MakeMove_RepentStock:
 
-      if (move_i_ == 0) continue;
-      IndexT type = move_to_policy_i_[move_i_] - 1;
-      --stock_n_[current_player_x_][type];
+      if (move_i == 0) continue;
+      s_.type = move_to_policy_i_[move_i] - 1;
+      --stock_n_[current_player_x_][s_.type];
     }
 
     // That's a round, on to the next one!
