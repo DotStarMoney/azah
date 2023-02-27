@@ -12,9 +12,8 @@ MancalaNetwork::MancalaNetwork() :
     input_(nn::init::Zeros<48, 14>()),
     input_embedding_k_(nn::init::GlorotUniform<kFeatureDepth, 48>()),
     input_embedding_(input_embedding_k_, input_),
-    mix_1_(input_embedding_),
-    mix_2_(input_embedding_),
-    final_norm_(mix_2_),
+    mix_(input_embedding_),
+    final_norm_(mix_),
     pool_(final_norm_),
     pool_fork_(pool_, 2),
     policy_linear_k_(nn::init::GlorotUniform<6, kFeatureDepth>()),
@@ -34,8 +33,7 @@ MancalaNetwork::MancalaNetwork() :
   AddTarget(&outcome_loss_);
 
   AddVariable(&input_embedding_k_);
-  AddVariables(mix_1_);
-  AddVariables(mix_2_);
+  AddVariables(mix_);
   AddVariables(final_norm_);
   AddVariable(&policy_linear_k_);
   AddVariable(&outcome_linear_k_);

@@ -39,9 +39,8 @@ class MancalaNetwork : public GameNetwork {
   nn::Variable<kFeatureDepth, 48> input_embedding_k_;
   nn::op::Matmul<kFeatureDepth, 48, 48, 14> input_embedding_;
 
-  // 2x MLP-Mixer: https://arxiv.org/pdf/2105.01601.pdf
-  nn::op::Mixer<kFeatureDepth, 14, kMixerTokenDepth, kMixerFeatureDepth> mix_1_;
-  nn::op::Mixer<kFeatureDepth, 14, kMixerTokenDepth, kMixerFeatureDepth> mix_2_;
+  // MLP-Mixer: https://arxiv.org/pdf/2105.01601.pdf
+  nn::op::Mixer<kFeatureDepth, 14, kMixerTokenDepth, kMixerFeatureDepth> mix_;
 
   // One final norm and average pool.
   nn::op::LayerNorm<kFeatureDepth, 14> final_norm_;

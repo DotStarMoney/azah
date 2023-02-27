@@ -37,7 +37,11 @@ class Ignoble4Network : public GameNetwork {
 
   // We expand each input (non-global) into 4 kFeatureDepth vectors.
   nn::Variable<256, 129> input_embedding_k_;
-  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_;
+
+  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_1_;
+  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_2_;
+  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_3_;
+  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_4_;
 
   // Three concats to get a 64x16 column vector from 4 64x4s. 
   nn::op::ConcatCols<64, 4, 4> concat_1_;
@@ -56,10 +60,9 @@ class Ignoble4Network : public GameNetwork {
   static constexpr int kMixerTokenDepth = 64;
   static constexpr int kMixerFeatureDepth = 256;
 
-  // 3x MLP-Mixer: https://arxiv.org/pdf/2105.01601.pdf
+  // 2x MLP-Mixer: https://arxiv.org/pdf/2105.01601.pdf
   nn::op::Mixer<kFeatureDepth, 16, kMixerTokenDepth, kMixerFeatureDepth> mix_1_;
   nn::op::Mixer<kFeatureDepth, 16, kMixerTokenDepth, kMixerFeatureDepth> mix_2_;
-  nn::op::Mixer<kFeatureDepth, 16, kMixerTokenDepth, kMixerFeatureDepth> mix_3_;
 
   // One final norm and average pool.
   nn::op::LayerNorm<kFeatureDepth, 16> final_norm_;

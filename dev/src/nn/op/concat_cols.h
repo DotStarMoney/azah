@@ -15,8 +15,8 @@ template <int InputRows, int InputColsA, int InputColsB>
 class ConcatCols : public BinaryOp<InputRows, InputColsA, InputRows, InputColsB, 
                                    InputRows, InputColsA + InputColsB> {
  public:
-  ConcatCols(const Concat&) = delete;
-  ConcatCols& operator=(const Concat&) = delete;
+  ConcatCols(const ConcatCols&) = delete;
+  ConcatCols& operator=(const ConcatCols&) = delete;
 
   ConcatCols(Node<InputRows, InputColsA>& input_a,
              Node<InputRows, InputColsB>& input_b)

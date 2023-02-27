@@ -34,7 +34,7 @@ class BroadcastAdd : public BinaryOp<Rows, 1, Rows, Cols, Rows, Cols> {
   void ComputeOutput(uint32_t cycle) override {
     const auto& a = this->input_a_.Output(cycle);
     const auto& b = this->input_b_.Output(cycle);
-    this->cached_output_ = a + b.colwise();
+    this->cached_output_ = b.colwise() + a;
   }
 };
 

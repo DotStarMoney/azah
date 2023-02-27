@@ -19,9 +19,9 @@ inline Matrix<Rows, Cols> Ones() {
   return Matrix<Rows, Cols>::Constant(1);
 }
 
-template <int Rows, int Cols>
+template <int Rows, int Cols, int InRows = Rows, int InCols = Cols>
 inline Matrix<Rows, Cols> GlorotUniform() {
-  float limit = std::sqrt(6.0 / (Rows + Cols));
+  float limit = std::sqrt(6.0 / (InRows + InCols));
   return Matrix<Rows, Cols>::Random() * limit;
 }
 
