@@ -74,16 +74,101 @@ class Ignoble4Network : public GameNetwork {
 
   // Policy heads
 
-  //
-  // Implement 'em all!
-  //
+  // 1) TeamSelect
 
-  nn::Variable<6, kFeatureDepth> policy_linear_k_;
-  nn::op::Matmul<6, kFeatureDepth, kFeatureDepth, 1> policy_linear_;
-  nn::op::Softmax<6, 1> policy_;
+  nn::Variable<4, kFeatureDepth> p_team_select_linear_k_;
+  nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1> p_team_select_linear_;
+  nn::op::Softmax<4, 1> p_team_select_;
 
-  nn::Constant<6, 1> policy_target_;
-  nn::op::SoftmaxCrossEnt<6, 1> policy_loss_;
+  nn::Constant<4, 1> p_team_select_target_;
+  nn::op::SoftmaxCrossEnt<4, 1> p_team_select_loss_;
+
+  // 2) CharacterSelect
+
+  nn::Variable<16, kFeatureDepth> p_character_select_linear_k_;
+  nn::op::Matmul<16, kFeatureDepth, kFeatureDepth, 1> 
+      p_character_select_linear_;
+  nn::op::Softmax<16, 1> p_character_select_;
+
+  nn::Constant<16, 1> p_character_select_target_;
+  nn::op::SoftmaxCrossEnt<16, 1> p_character_select_loss_;
+
+  // 3) PrincessStock
+
+  nn::Variable<4, kFeatureDepth> p_princess_stock_linear_k_;
+  nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1> p_princess_stock_linear_;
+  nn::op::Softmax<4, 1> p_princess_stock_;
+
+  nn::Constant<4, 1> p_princess_stock_target_;
+  nn::op::SoftmaxCrossEnt<4, 1> p_princess_stock_loss_;
+
+  // 4) MeatBunglerBounty
+
+  nn::Variable<3, kFeatureDepth> p_meat_bungler_bounty_linear_k_;
+  nn::op::Matmul<3, kFeatureDepth, kFeatureDepth, 1> 
+      p_meat_bungler_bounty_linear_;
+  nn::op::Softmax<3, 1> p_meat_bungler_bounty_;
+
+  nn::Constant<3, 1> p_meat_bungler_bounty_target_;
+  nn::op::SoftmaxCrossEnt<3, 1> p_meat_bungler_bounty_loss_;
+
+  // 5) MerryPiemanStock
+
+  nn::Variable<4, kFeatureDepth> p_merry_pieman_stock_linear_k_;
+  nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1>
+      p_merry_pieman_stock_linear_;
+  nn::op::Softmax<4, 1> p_merry_pieman_stock_;
+
+  nn::Constant<4, 1> p_merry_pieman_stock_target_;
+  nn::op::SoftmaxCrossEnt<4, 1> p_merry_pieman_stock_loss_;
+
+  // 6) BenedictIncrease
+
+  nn::Variable<2, kFeatureDepth> p_benedict_increase_linear_k_;
+  nn::op::Matmul<2, kFeatureDepth, kFeatureDepth, 1>
+      p_benedict_increase_linear_;
+  nn::op::Softmax<2, 1> p_benedict_increase_;
+
+  nn::Constant<2, 1> p_benedict_increase_target_;
+  nn::op::SoftmaxCrossEnt<2, 1> p_benedict_increase_loss_;
+
+  // 7) BethesdaSwap
+
+  nn::Variable<2, kFeatureDepth> p_bethesda_swap_linear_k_;
+  nn::op::Matmul<2, kFeatureDepth, kFeatureDepth, 1> p_bethesda_swap_linear_;
+  nn::op::Softmax<2, 1> p_bethesda_swap_;
+
+  nn::Constant<2, 1> p_bethesda_swap_target_;
+  nn::op::SoftmaxCrossEnt<2, 1> p_bethesda_swap_loss_;
+
+  // 8) OunceStealStock
+
+  nn::Variable<4, kFeatureDepth> p_ounce_steal_stock_linear_k_;
+  nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1> 
+      p_ounce_steal_stock_linear_;
+  nn::op::Softmax<4, 1> p_ounce_steal_stock_;
+
+  nn::Constant<4, 1> p_ounce_steal_stock_target_;
+  nn::op::SoftmaxCrossEnt<4, 1> p_ounce_steal_stock_loss_;
+
+  // 9) MagicianStockTakeToss
+
+  nn::Variable<8, kFeatureDepth> p_magician_stock_take_toss_linear_k_;
+  nn::op::Matmul<8, kFeatureDepth, kFeatureDepth, 1>
+      p_magician_stock_take_toss_linear_;
+  nn::op::Softmax<8, 1> p_magician_stock_take_toss_;
+
+  nn::Constant<8, 1> p_magician_stock_take_toss_target_;
+  nn::op::SoftmaxCrossEnt<8, 1> p_magician_stock_take_toss_loss_;
+
+  // 10) RepentStock
+
+  nn::Variable<4, kFeatureDepth> p_repent_stock_linear_k_;
+  nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1> p_repent_stock_linear_;
+  nn::op::Softmax<4, 1> p_repent_stock_;
+
+  nn::Constant<4, 1> p_repent_stock_target_;
+  nn::op::SoftmaxCrossEnt<4, 1> p_repent_stock_loss_;
 
   // Outcome head
 
