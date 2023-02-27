@@ -34,8 +34,9 @@ Ignoble4Network::Ignoble4Network() :
     input_global_embedding_(input_global_embedding_k_, input_global_),
     global_to_features_(input_global_embedding_, concat_3_),
     mix_1_(global_to_features_),
-    mix_2_(mix_1_),
-    final_norm_(mix_1_),
+    // The cast is to prevent interpretation of this being a copy.
+    mix_2_(static_cast<nn::Node<64, 16>&>(mix_1_)),
+    final_norm_(mix_2_),
     pool_(final_norm_),
     pool_fork_(pool_, 2),
     p_team_select_linear_k_(nn::init::GlorotUniform<4, kFeatureDepth>()),

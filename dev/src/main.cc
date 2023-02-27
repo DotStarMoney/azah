@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 
 #include "absl/random/random.h"
 #include "games/game.h"
@@ -19,7 +20,8 @@ int main(int argc, char* argv[]) {
   absl::BitGen rng;
 
   Game game;
-  Network net;
+  Network* net_ptr = new Network();
+  delete(net_ptr);
 
   int i = 0;
   while (game.State() == azah::games::GameState::kOngoing) {
