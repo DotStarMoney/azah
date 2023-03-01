@@ -48,7 +48,7 @@ Ignoble4Network::Ignoble4Network() :
     p_character_select_linear_(p_character_select_linear_k_, pool_fork_),
     p_character_select_(p_character_select_linear_),
     p_character_select_target_(nn::init::Zeros<16, 1>()),
-    p_character_select_loss_(p_character_select_linear_, 
+    p_character_select_loss_(p_character_select_linear_,
                              p_character_select_target_),
     p_princess_stock_linear_k_(nn::init::GlorotUniform<4, kFeatureDepth>()),
     p_princess_stock_linear_(p_princess_stock_linear_k_, pool_fork_),

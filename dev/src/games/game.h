@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "../nn/data_types.h"
-#include "absl/random/random.h"
+#include "absl/random/bit_gen_ref.h"
 
 namespace azah {
 namespace games {
@@ -132,8 +132,8 @@ concept DeterministicGameType =
 
 template <typename T>
 concept NonDeterministicGameType =
-    internal::GameType<T> && requires(T & game) {
-        game.MakeMove(0, absl::BitGen()); };
+    internal::GameType<T> && requires(T& game, absl::BitGenRef bitgen) {
+        game.MakeMove(0, bitgen); };
 
 template <typename T>
 concept AnyGameType = DeterministicGameType<T> || NonDeterministicGameType<T>;

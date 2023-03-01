@@ -1,39 +1,37 @@
 #include <iostream>
-#include <memory>
 
-#include "absl/random/random.h"
 #include "games/game.h"
 #include "games/ignoble/ignoble4.h"
 #include "games/ignoble/ignoble4_network.h"
 #include "glog/logging.h"
+#include "mcts/rl_player.h"
 
 namespace {
 
 using Game = azah::games::ignoble::Ignoble4;
-using Network = azah::games::ignoble::Ignoble4Network;
+using GameNetwork = azah::games::ignoble::Ignoble4Network;
+using RLPlayer = azah::mcts::RLPlayer<Game, GameNetwork>;
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  absl::BitGen rng;
+  RLPlayer player(1);
 
-  Game game;
-  Network* net_ptr = new Network();
-  delete(net_ptr);
+  RLPlayer::SelfPlayOptions options{
+      .learning_rate = 0.01,
+      .simulations_n = 1024,
+      .root_noise_alpha = 0.6,
+      .root_noise_lerp = 0.25,
+      .one_hot_breakover_moves_n = 80,
+      .exploration_scale = 0.25 };
 
-  int i = 0;
-  while (game.State() == azah::games::GameState::kOngoing) {
-    int move = absl::Uniform(rng, 0, game.CurrentMovesN());
-    game.MakeMove(move, rng);
-    ++i;
-  }
-
-  std::cout << i << std::endl;
-  auto state = game.StateToMatrix();
-  for (int q = 0; q < state.size(); ++q) {
-    std::cout << state[q].size() << std::endl;
+  for (int i = 0; i < 100; ++i) {
+    std::cout << "Playing games..." << std::endl;
+    auto losses = player.Train(1, options);
+    std::cout << "Finished " << (i + 1) << " games with loss " << losses
+        << std::endl;
   }
 
   return 0;

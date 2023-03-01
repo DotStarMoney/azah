@@ -4,6 +4,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#define EIGEN_STACK_ALLOCATION_LIMIT 262144
 #include "Eigen/Core"
 
 namespace azah {
