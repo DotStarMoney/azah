@@ -17,7 +17,7 @@ using RLPlayer = azah::mcts::RLPlayer<Game, GameNetwork>;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  RLPlayer player(1);
+  RLPlayer player(16);
 
   RLPlayer::SelfPlayOptions options{
       .learning_rate = 0.01,
@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
       .root_noise_alpha = 0.6,
       .root_noise_lerp = 0.25,
       .one_hot_breakover_moves_n = 80,
-      .exploration_scale = 0.25 };
+      .exploration_scale = 0.22 };
 
   for (int i = 0; i < 100; ++i) {
     std::cout << "Playing games..." << std::endl;

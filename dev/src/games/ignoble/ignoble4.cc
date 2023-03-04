@@ -66,6 +66,7 @@ constexpr bool kCardsInPlayDecisions[] = {
 
 // The size of the column vector representing an individual decision.
 constexpr int kMaxDecisionRowsN[] = {
+        0,    // Unknown
         4,   // Selecting team 
         16,  // Selecting character
         4,   // Princess
@@ -232,9 +233,8 @@ std::vector<nn::DynamicMatrix> Ignoble4::StateToMatrix() const {
 }
 
 int Ignoble4::PolicyClassI() const {
-  if (decision_class_ == Decisions::kUnknown) {
-    LOG(FATAL) << "Unknown policy class.";
-  }
+  DCHECK_NE(static_cast<int>(decision_class_), 
+            static_cast<int>(Decisions::kUnknown));
   return static_cast<int>(decision_class_) - 1;
 }
 
@@ -266,6 +266,8 @@ float Ignoble4::PolicyForMoveI(const nn::DynamicMatrix& policy,
 }
 
 nn::DynamicMatrix Ignoble4::PolicyMask() const {
+  DCHECK_NE(static_cast<int>(decision_class_),
+            static_cast<int>(Decisions::kUnknown));
   nn::DynamicMatrix mask(
       kMaxDecisionRowsN[static_cast<int>(decision_class_)], 1);
   mask.setZero();
@@ -309,7 +311,7 @@ void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
   // That being said, I'm so mad at C++ and MSVC. Coroutines aren't copyable, 
   // dynamic jump tables aren't possible since label addresses aren't storable, 
   // all fine features that just don't exist... so here we are... jumping
-  // twice...
+  // twice... (yes this will get jump threaded during optimization, still dumb).
   switch (jump_label_) {
   case kJumpTeamSelect: goto MakeMove_TeamSelect;
   case kJumpCharacterSelect: goto MakeMove_CharacterSelect;
