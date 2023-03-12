@@ -25,7 +25,7 @@ template <typename T>
 concept CallbacksType = std::is_base_of<CallbacksBase, T>::value;
 
 // Internal callbacks passed to per-replica functions. You probably don't want
-// this instead want to extend CallbacksBase.
+// this and instead want to extend CallbacksBase.
 template <CallbacksType Callbacks>
 class ReplicaCallbacks {
  public:
