@@ -3,7 +3,7 @@ project(azah)
 set(LOCAL_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(azah)
-target_link_libraries(azah absl_flat_hash_map absl_random_random absl_strings
+target_link_libraries(azah absl_flat_hash_map absl_random_random absl_str_format
                       eigen glog)
 
 set(SRC_GAMES_TICTACTOE_H
