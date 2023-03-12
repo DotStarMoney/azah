@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include <iostream>
 #include <vector>
 
 #include "data_types.h"
@@ -24,6 +25,9 @@ public:
       const std::vector<uint32_t>& variables_i, 
       const std::vector<DynamicMatrix>& grads, 
       Network& dest) override;
+
+  void Serialize(std::ostream& out) const override;
+  void Deserialize(std::istream& in) override;
 
  private:
   const float beta1_;

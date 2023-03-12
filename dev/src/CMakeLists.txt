@@ -56,6 +56,12 @@ set(SRC_GAMES
     ${SRC_GAMES_MANCALA}
     ${SRC_GAMES_IGNOBLE})
 
+set(SRC_IO_H
+    io/serializable.h)
+source_group("Header Files\\io" FILES ${SRC_IO_H})
+set(SRC_IO
+    ${SRC_IO_H})
+
 set(SRC_MCTS_H
     mcts/callbacks.h
     mcts/work_queue.h
@@ -137,6 +143,7 @@ set(SRC_THREAD
 target_sources(azah PRIVATE
     main.cc
     ${SRC_GAMES}
+    ${SRC_IO}
     ${SRC_MCTS}
     ${SRC_NN}
     ${SRC_THREAD})

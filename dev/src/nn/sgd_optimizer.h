@@ -3,15 +3,17 @@
 
 #include <stdint.h>
 
+#include <iostream>
 #include <vector>
 
+#include "../io/serializable.h"
 #include "data_types.h"
 #include "network.h"
 
 namespace azah {
 namespace nn {
 
-class SGDOptimizer {
+class SGDOptimizer : public io::Serializable {
  public:
   SGDOptimizer(const SGDOptimizer&) = delete;
   SGDOptimizer& operator=(const SGDOptimizer&) = delete;
@@ -21,6 +23,9 @@ class SGDOptimizer {
       const std::vector<uint32_t>& variables_i, 
       const std::vector<DynamicMatrix>& grads, 
       Network& dest) = 0;
+
+  void Serialize(std::ostream& out) const override;
+  void Deserialize(std::istream& in) override;
 
  protected:
   SGDOptimizer() {}

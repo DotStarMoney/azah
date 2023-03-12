@@ -3,13 +3,14 @@
 
 #include <stddef.h>
 
+#include <iostream>
 #include <memory>
-#include <ostream>
 #include <utility>
 #include <vector>
 
 #include "../games/game.h"
 #include "../games/game_network.h"
+#include "../io/serializable.h"
 #include "../nn/adam.h"
 #include "../nn/data_types.h"
 #include "absl/container/flat_hash_map.h"
@@ -25,7 +26,7 @@ CallbacksBase default_callbacks;
 
 template <games::AnyGameType Game, games::GameNetworkType GameNetwork, 
           CallbacksType Callbacks = CallbacksBase>
-class RLPlayer {
+class RLPlayer : public io::Serializable {
  public:
   struct Options {
     static constexpr std::size_t kDefaultAsyncDispatchQueueLength = 256;
@@ -158,6 +159,20 @@ class RLPlayer {
 
   void Reset() {
     ResetInternal(replicas_.size());
+  }
+
+  void Serialize(std::ostream& out) const override {
+    for (const auto& replica: replicas_) {
+      replica->network.Serialize(out);
+      replica->opt.Serialize(out);
+    }
+  }
+
+  void Deserialize(std::istream& in) override {
+    for (auto& replica : replicas_) {
+      replica->network.Deserialize(in);
+      replica->opt.Deserialize(in);
+    }
   }
 
  private:

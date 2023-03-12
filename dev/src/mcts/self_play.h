@@ -363,7 +363,7 @@ std::vector<MoveOutcome<Game>> SelfPlay(
       root = &(tree.nodes[root_i]);
     }
     const int moves_n = root->children_i.size();
-    callbacks.PostSearch(moves_n);
+    callbacks.PostSearch(total_moves);
 
     // Next, we take the search proportions at the root and create a policy
     // vector from them.

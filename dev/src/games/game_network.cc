@@ -2,7 +2,10 @@
 
 #include <stdint.h>
 
+#include <iostream>
 #include <vector>
+
+#include "../nn/data_types.h"
 
 namespace azah {
 namespace games {
@@ -57,6 +60,23 @@ uint32_t GameNetwork::outcome_output_index() const {
 
 int GameNetwork::policy_output_sizes(int policy_output_i) const {
   return policy_output_sizes_[policy_output_i];
+}
+
+void GameNetwork::Serialize(std::ostream& out) const {
+  std::vector<nn::ConstDynamicMatrixRef> vars;
+  GetVariables({}, vars);
+  for (const auto& var : vars) {
+    out.write(reinterpret_cast<const char*>(var.data()), 
+              sizeof(float) * var.size());
+  }
+}
+
+void GameNetwork::Deserialize(std::istream& in) {
+  std::vector<nn::DynamicMatrixRef> vars;
+  GetVariables({}, vars);
+  for (auto& var : vars) {
+    in.read(reinterpret_cast<char*>(var.data()), var.size());
+  }
 }
 
 }  // namespace games

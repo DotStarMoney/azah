@@ -1,5 +1,9 @@
-#include <iostream>
+#include <stdint.h>
 
+#include <iostream>
+#include <fstream>
+
+#include "absl/strings/str_format.h"
 #include "games/game.h"
 #include "games/ignoble/ignoble4.h"
 #include "games/ignoble/ignoble4_network.h"
@@ -11,6 +15,8 @@ namespace {
 using Game = azah::games::ignoble::Ignoble4;
 using GameNetwork = azah::games::ignoble::Ignoble4Network;
 using RLPlayer = azah::mcts::RLPlayer<Game, GameNetwork>;
+
+constexpr char kCheckpointFormat[] = "c:/usr/azah/checkpoints/ignoble4_%d.dat";
 
 }  // namespace
 
@@ -27,9 +33,17 @@ int main(int argc, char* argv[]) {
       .one_hot_breakover_moves_n = 80,
       .exploration_scale = 0.22};
 
-  for (int i = 0; i < 100; ++i) {
-    std::cout << "Playing games..." << std::endl;
+
+  for (int i = 0; i < 10000; ++i) {
+    std::cout << "Playing game..." << std::endl;
     auto losses = player.Train(1, options);
+
+    {
+      std::ofstream checkpoint(absl::StrFormat(kCheckpointFormat, i), 
+                               std::ios::out | std::ios::binary);
+      player.Serialize(checkpoint);
+    }
+
     std::cout << "Finished " << (i + 1) << " games with loss " << losses
         << std::endl;
   }

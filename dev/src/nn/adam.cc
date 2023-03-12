@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdint.h>
 
+#include <iostream>
 #include <vector>
 
 #include "data_types.h"
@@ -59,6 +60,32 @@ void Adam::Update(
     auto m2_debias = m2.array() / (1.0f - std::powf(beta2_, updates));
     
     var -= lr * (m1_debias / (m2_debias + kEpsilon).sqrt()).matrix();
+  }
+}
+
+void Adam::Serialize(std::ostream& out) const {
+  for (const auto& var : m1_) {
+    out.write(reinterpret_cast<const char*>(var.data()), 
+              sizeof(float) * var.size());
+  }
+  for (const auto& var : m2_) {
+    out.write(reinterpret_cast<const char*>(var.data()), 
+              sizeof(float) * var.size());
+  }
+  for (const auto& var : updates_) {
+    out.write(reinterpret_cast<const char*>(&var), sizeof(uint32_t));
+  }
+}
+
+void Adam::Deserialize(std::istream& in) {
+  for (auto& var : m1_) {
+    in.read(reinterpret_cast<char*>(var.data()), sizeof(float) * var.size());
+  }
+  for (auto& var : m2_) {
+    in.read(reinterpret_cast<char*>(var.data()), sizeof(float) * var.size());
+  }
+  for (auto& var : updates_) {
+    in.read(reinterpret_cast<char*>(&var), sizeof(uint32_t));
   }
 }
 

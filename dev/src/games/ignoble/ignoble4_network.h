@@ -166,12 +166,12 @@ class Ignoble4Network : public GameNetwork {
 
   // 10) RepentStock
 
-  nn::Variable<4, kFeatureDepth> p_repent_stock_linear_k_;
-  nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1> p_repent_stock_linear_;
-  nn::op::Softmax<4, 1> p_repent_stock_;
+  nn::Variable<5, kFeatureDepth> p_repent_stock_linear_k_;
+  nn::op::Matmul<5, kFeatureDepth, kFeatureDepth, 1> p_repent_stock_linear_;
+  nn::op::Softmax<5, 1> p_repent_stock_;
 
-  nn::Constant<4, 1> p_repent_stock_target_;
-  nn::op::SoftmaxCrossEnt<4, 1> p_repent_stock_loss_;
+  nn::Constant<5, 1> p_repent_stock_target_;
+  nn::op::SoftmaxCrossEnt<5, 1> p_repent_stock_loss_;
 
   // Outcome head
 

@@ -3,15 +3,17 @@
 
 #include <stdint.h>
 
+#include <iostream>
 #include <type_traits>
 #include <vector>
 
+#include "../io/serializable.h"
 #include "../nn/network.h"
 
 namespace azah {
 namespace games {
 
-class GameNetwork : public nn::Network {
+class GameNetwork : public nn::Network, io::Serializable {
  public:
   GameNetwork(const GameNetwork&) = delete;
   GameNetwork& operator=(const GameNetwork&) = delete;
@@ -38,6 +40,9 @@ class GameNetwork : public nn::Network {
   uint32_t outcome_output_index() const;
 
   int policy_output_sizes(int policy_output_i) const;
+
+  void Serialize(std::ostream& out) const override;
+  void Deserialize(std::istream& in) override;
 
  private:
   const std::vector<uint32_t> input_constant_indices_;
