@@ -13,14 +13,21 @@
 #include "../nn/adam.h"
 #include "../nn/data_types.h"
 #include "absl/container/flat_hash_map.h"
+#include "callbacks.h"
 #include "glog/logging.h"
 #include "self_play.h"
 #include "work_queue.h"
 
 namespace azah {
 namespace mcts {
+namespace internal {
 
-template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
+CallbacksBase default_callbacks;
+
+}  // namespace internal
+
+template <games::AnyGameType Game, games::GameNetworkType GameNetwork, 
+          CallbacksType Callbacks = CallbacksBase>
 class RLPlayer {
  public:
   struct Options {
@@ -29,11 +36,16 @@ class RLPlayer {
     std::size_t async_dispatch_queue_length = kDefaultAsyncDispatchQueueLength;
   };
 
-  RLPlayer(std::size_t replicas_n, const Options& options = Options()) : 
+  RLPlayer(std::size_t replicas_n, const Options& options = Options(), 
+           Callbacks& callbacks = internal::default_callbacks) :
       work_queue_(replicas_n, options.async_dispatch_queue_length) {
+    for (int i = 0; i < replicas_n; ++i) {
+      replica_callbacks_.push_back(ReplicaCallbacks<Callbacks>(i, callbacks));
+    }
     ResetInternal(replicas_n);
   }
 
+  // Options that control self-play.
   struct SelfPlayOptions {
     // The SGD learning rate used when training.
     //
@@ -77,6 +89,7 @@ class RLPlayer {
     std::vector<float> predicted_move;
   };
 
+  // Evaluate one game position.
   EvaluateResult Evaluate(const Game& position, 
                           const SelfPlayOptions& self_play_options) {
     if (position.State() == games::GameState::kOver) {
@@ -86,10 +99,10 @@ class RLPlayer {
 
     std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
         replicas_.size());
-    std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
-    for (auto& replica : replicas_) {
+    for (int i = 0; i < replicas_.size(); ++i) {
       work_queue_.AddWork(std::make_unique<ReplicaSelfPlayerFn>(
-          position, self_play_config, &(replica->network), moves_ptr++));
+          position, self_play_config, &(replicas_[i]->network), 
+          &(replica_moves[i]), replica_callbacks_[i]));
     }
     work_queue_.Drain();
 
@@ -129,6 +142,7 @@ class RLPlayer {
     }
   };
 
+  // Train the internal models using self-play.
   TrainResult Train(int games_n, const SelfPlayOptions& self_play_options) {
     auto self_play_config = SelfPlayOptionsToConfig(true, self_play_options);
 
@@ -151,6 +165,8 @@ class RLPlayer {
 
  private:
   internal::WorkQueue work_queue_;
+
+  std::vector<ReplicaCallbacks<Callbacks>> replica_callbacks_;
 
   struct Replica {
     Replica() : opt(network) {}
@@ -183,12 +199,14 @@ class RLPlayer {
     template <typename GameT>
     ReplicaSelfPlayerFn(GameT&& position, const self_play::Config& config,
                         GameNetwork* network,
-                        std::vector<self_play::MoveOutcome<Game>>* moves) :
+                        std::vector<self_play::MoveOutcome<Game>>* moves, 
+                        ReplicaCallbacks<Callbacks>& callbacks) :
         position_(std::forward<GameT>(position)), config_(config), 
-        network_(network), moves_(moves) {}
+        network_(network), moves_(moves), callbacks_(callbacks) {}
 
     void run() override {
-      *moves_ = std::move(self_play::SelfPlay(config_, position_, network_));
+      *moves_ = std::move(self_play::SelfPlay(config_, position_, network_, 
+                                              callbacks_));
     }
 
    private:
@@ -196,6 +214,7 @@ class RLPlayer {
     const self_play::Config& config_;
     GameNetwork* network_;
     std::vector<self_play::MoveOutcome<Game>>* moves_;
+    ReplicaCallbacks<Callbacks>& callbacks_;
   };
 
   class ReplicaSGDFn : public internal::WorkQueueElement {
@@ -204,11 +223,14 @@ class RLPlayer {
         float learning_rate,
         Replica& replica,
         const std::vector<const self_play::MoveOutcome<Game>*>& all_moves,
-        TrainResult& replica_loss) :
+        TrainResult& replica_loss,
+        ReplicaCallbacks<Callbacks>& callbacks) :
             learning_rate_(learning_rate), replica_(replica),
-            all_moves_(all_moves), replica_loss_(replica_loss) {}
+            all_moves_(all_moves), replica_loss_(replica_loss), 
+            callbacks_(callbacks) {}
 
     void run() override {
+      callbacks_.PreUpdate();
       GameNetwork& network = replica_.network;
       
       // These will be re-used between updates.
@@ -272,6 +294,7 @@ class RLPlayer {
 
       replica_.opt.Update(learning_rate_, acc_index, acc_grads, 
                           replica_.network);
+      callbacks_.PostUpdate(acc_grads.size());
     }
 
    private:
@@ -279,6 +302,7 @@ class RLPlayer {
     Replica& replica_;
     const std::vector<const self_play::MoveOutcome<Game>*>& all_moves_;
     TrainResult& replica_loss_;
+    ReplicaCallbacks<Callbacks>& callbacks_;
   };
 
   TrainResult TrainIteration(
@@ -287,10 +311,10 @@ class RLPlayer {
     // outlive gradient accumulation for obvious reasons.
     std::vector<std::vector<self_play::MoveOutcome<Game>>> replica_moves(
         replicas_.size());
-    std::vector<self_play::MoveOutcome<Game>>* moves_ptr = &(replica_moves[0]);
-    for (auto& replica : replicas_) {
+    for (int i = 0; i < replicas_.size(); ++i) {
       work_queue_.AddWork(std::make_unique<ReplicaSelfPlayerFn>(
-          Game(), self_play_config, &(replica->network), moves_ptr++));
+          Game(), self_play_config, &(replicas_[i]->network), 
+          &(replica_moves[i]), replica_callbacks_[i]));
     }
     work_queue_.Drain();
 
@@ -306,7 +330,8 @@ class RLPlayer {
     std::vector<TrainResult> replica_losses(replicas_.size(), {0.0f, 0.0f});
     for (std::size_t i = 0; i < replicas_.size(); ++i) {
       work_queue_.AddWork(std::make_unique<ReplicaSGDFn>(
-          learning_rate, *(replicas_[i]), all_moves, replica_losses[i]));
+          learning_rate, *(replicas_[i]), all_moves, replica_losses[i], 
+          replica_callbacks_[i]));
     }
     work_queue_.Drain();
 

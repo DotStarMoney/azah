@@ -57,6 +57,7 @@ set(SRC_GAMES
     ${SRC_GAMES_IGNOBLE})
 
 set(SRC_MCTS_H
+    mcts/callbacks.h
     mcts/work_queue.h
     mcts/self_play.h
     mcts/rl_player.h)

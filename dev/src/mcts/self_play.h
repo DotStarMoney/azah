@@ -16,6 +16,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
+#include "callbacks.h"
 #include "glog/logging.h"
 
 namespace azah {
@@ -328,9 +329,12 @@ struct Config {
 };
 
 // See MoveOutcome for the return values of this function.
-template <games::AnyGameType Game, games::GameNetworkType GameNetwork>
-std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
-                                        GameNetwork* network) {
+template <games::AnyGameType Game, games::GameNetworkType GameNetwork, 
+          CallbacksType Callbacks>
+std::vector<MoveOutcome<Game>> SelfPlay(
+    const Config& config, const Game& game, GameNetwork* network, 
+    ReplicaCallbacks<Callbacks>& callbacks) {
+  callbacks.PreGame();
   if (game.State() == games::GameState::kOver) {
     LOG(FATAL) << "Self play cannot begin from a terminal state.";
   }
@@ -351,6 +355,7 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
   int total_moves = 0;
   while (root->game.State() == games::GameState::kOngoing) {
     // To make a move, we first grow the tree a bunch from this position.
+    callbacks.PreSearch();
     for (int sim_i = 0; sim_i < config.simulations_n; ++sim_i) {
       tree.Search(root, network, config.exploration_scale,
           config.root_noise_alpha, config.root_noise_lerp, bitgen);
@@ -358,6 +363,7 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
       root = &(tree.nodes[root_i]);
     }
     const int moves_n = root->children_i.size();
+    callbacks.PostSearch(moves_n);
 
     // Next, we take the search proportions at the root and create a policy
     // vector from them.
@@ -401,6 +407,7 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
       for (std::size_t player_i = 0; player_i < Game::players_n(); ++player_i) {
         results[0].outcome(player_i, 0) = root->predicted_outcome[player_i];
       }
+      callbacks.PostGame(1);
       return results;
     }
     // Next, and the last step in self-play, we sample from the search policy
@@ -426,6 +433,7 @@ std::vector<MoveOutcome<Game>> SelfPlay(const Config& config, const Game& game,
     }
   }
 
+  callbacks.PostGame(results.size());
   return results;
 }
 
