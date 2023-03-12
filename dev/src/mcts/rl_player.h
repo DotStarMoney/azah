@@ -20,11 +20,8 @@
 
 namespace azah {
 namespace mcts {
-namespace internal {
 
 CallbacksBase default_callbacks;
-
-}  // namespace internal
 
 template <games::AnyGameType Game, games::GameNetworkType GameNetwork, 
           CallbacksType Callbacks = CallbacksBase>
@@ -36,8 +33,8 @@ class RLPlayer {
     std::size_t async_dispatch_queue_length = kDefaultAsyncDispatchQueueLength;
   };
 
-  RLPlayer(std::size_t replicas_n, const Options& options = Options(), 
-           Callbacks& callbacks = internal::default_callbacks) :
+  RLPlayer(std::size_t replicas_n, Callbacks& callbacks = default_callbacks,
+           const Options& options = Options()) :
       work_queue_(replicas_n, options.async_dispatch_queue_length) {
     for (int i = 0; i < replicas_n; ++i) {
       replica_callbacks_.push_back(ReplicaCallbacks<Callbacks>(i, callbacks));
