@@ -13,7 +13,6 @@
 #include "../games/game.h"
 #include "../games/game_network.h"
 #include "../nn/data_types.h"
-#include "absl/container/flat_hash_map.h"
 #include "absl/random/bit_gen_ref.h"
 #include "absl/random/random.h"
 #include "callbacks.h"

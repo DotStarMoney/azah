@@ -24,9 +24,6 @@ class SGDOptimizer : public io::Serializable {
       const std::vector<DynamicMatrix>& grads, 
       Network& dest) = 0;
 
-  void Serialize(std::ostream& out) const override;
-  void Deserialize(std::istream& in) override;
-
  protected:
   SGDOptimizer() {}
 };
