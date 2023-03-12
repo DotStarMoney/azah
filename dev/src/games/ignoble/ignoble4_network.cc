@@ -34,7 +34,7 @@ Ignoble4Network::Ignoble4Network() :
     input_global_embedding_(input_global_embedding_k_, input_global_),
     global_to_features_(input_global_embedding_, concat_3_),
     mix_1_(global_to_features_),
-    // This cast is to prevent the interpretation of this being a copy.
+    // This cast is to prevent this being interpreted as a copy.
     mix_2_(static_cast<nn::Node<64, 16>&>(mix_1_)),
     final_norm_(mix_2_),
     pool_(final_norm_),
