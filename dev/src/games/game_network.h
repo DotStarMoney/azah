@@ -25,8 +25,7 @@ class GameNetwork : public nn::Network, io::Serializable {
       std::vector<uint32_t>&& policy_loss_target_indices,
       uint32_t outcome_loss_target_index,
       std::vector<uint32_t>&& policy_output_indices,
-      uint32_t outcome_output_index,
-      std::vector<uint32_t>&& policy_output_sizes);
+      uint32_t outcome_output_index);
 
   const std::vector<uint32_t>& input_constant_indices() const;
   
@@ -38,8 +37,6 @@ class GameNetwork : public nn::Network, io::Serializable {
 
   const std::vector<uint32_t>& policy_output_indices() const;
   uint32_t outcome_output_index() const;
-
-  int policy_output_sizes(int policy_output_i) const;
 
   void Serialize(std::ostream& out) const override;
   void Deserialize(std::istream& in) override;
@@ -55,8 +52,6 @@ class GameNetwork : public nn::Network, io::Serializable {
 
   const std::vector<uint32_t> policy_output_indices_;
   const uint32_t outcome_output_index_;
-
-  const std::vector<uint32_t> policy_output_sizes_;
 };
 
 template <typename T>

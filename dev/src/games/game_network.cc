@@ -17,8 +17,7 @@ GameNetwork::GameNetwork(
     std::vector<uint32_t>&& policy_loss_target_indices,
     uint32_t outcome_loss_target_index,
     std::vector<uint32_t>&& policy_output_indices,
-    uint32_t outcome_output_index,
-    std::vector<uint32_t>&& policy_output_sizes) :
+    uint32_t outcome_output_index) :
         input_constant_indices_(std::move(input_constant_indices)),
         policy_target_constant_indices_(
             std::move(policy_target_constant_indices)),
@@ -26,8 +25,7 @@ GameNetwork::GameNetwork(
         policy_loss_target_indices_(std::move(policy_loss_target_indices)),
         outcome_loss_target_index_(outcome_loss_target_index),
         policy_output_indices_(std::move(policy_output_indices)),
-        outcome_output_index_(outcome_output_index),
-        policy_output_sizes_(std::move(policy_output_sizes)) {}
+        outcome_output_index_(outcome_output_index) {}
 
 const std::vector<uint32_t>& GameNetwork::input_constant_indices() const {
   return input_constant_indices_;
@@ -56,10 +54,6 @@ const std::vector<uint32_t>& GameNetwork::policy_output_indices() const {
 
 uint32_t GameNetwork::outcome_output_index() const {
   return outcome_output_index_;
-}
-
-int GameNetwork::policy_output_sizes(int policy_output_i) const {
-  return policy_output_sizes_[policy_output_i];
 }
 
 void GameNetwork::Serialize(std::ostream& out) const {

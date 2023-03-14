@@ -20,6 +20,8 @@ using RLPlayer = azah::mcts::RLPlayer<Game, GameNetwork>;
 constexpr std::string_view kCheckpointFormat = 
     "c:/usr/azah/checkpoints/ignoble4_%d.dat";
 
+constexpr int kCheckpointFreq = 10;
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -39,8 +41,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Playing game..." << std::endl;
     auto losses = player.Train(1, options);
 
-    {
-      std::ofstream checkpoint(absl::StrFormat(kCheckpointFormat, i), 
+    if (((i + 1) % kCheckpointFreq) == 0) {
+      std::ofstream checkpoint(absl::StrFormat(kCheckpointFormat, (i + 1)), 
                                std::ios::out | std::ios::binary);
       player.Serialize(checkpoint);
     }

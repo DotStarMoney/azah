@@ -8,7 +8,7 @@ namespace games {
 namespace mancala {
 
 MancalaNetwork::MancalaNetwork() :
-    GameNetwork({0}, {1}, 2, {0}, 1, {0}, 1, {6}),
+    GameNetwork({0}, {1}, 2, {0}, 1, {0}, 1),
     input_(nn::init::Zeros<48, 14>()),
     input_embedding_k_(nn::init::GlorotUniform<kFeatureDepth, 48>()),
     input_embedding_(input_embedding_k_, input_),
