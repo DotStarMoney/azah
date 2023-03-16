@@ -69,7 +69,7 @@ void GameNetwork::Deserialize(std::istream& in) {
   std::vector<nn::DynamicMatrixRef> vars;
   GetVariables({}, vars);
   for (auto& var : vars) {
-    in.read(reinterpret_cast<char*>(var.data()), var.size());
+    in.read(reinterpret_cast<char*>(var.data()), sizeof(float) * var.size());
   }
 }
 
