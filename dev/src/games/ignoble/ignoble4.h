@@ -36,6 +36,9 @@ class Ignoble4 : public Game<4> {
 
   void MakeMove(int move_i, absl::BitGenRef bitgen);
 
+  void SetLocations(const std::vector<int>& in_play, 
+                    const std::vector<int>& deck);
+
  private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
   typedef std::int8_t IndexT;
@@ -62,12 +65,9 @@ class Ignoble4 : public Game<4> {
     IndexT tossable_types_n;
     IndexT type;
     IndexT s;
+    bool bungler_tossed;
     IndexT bounty_value;
     IndexT bounty_type;
-    IndexT original_bounty_value;
-    IndexT original_bounty_type;
-    bool can_toss;
-    bool can_take;
     IndexT total_stock;
     IndexT adj_bounty_value;
     std::array<IndexT, 4> repent_order;
@@ -85,13 +85,14 @@ class Ignoble4 : public Game<4> {
     kTeamSelect = 1,
     kCharacterSelect = 2,
     kPrincessStock = 3,
-    kMeatBunglerBounty = 4,
-    kMerryPiemanStock = 5,
-    kBenedictIncrease = 6,
-    kBethesdaSwap = 7,
-    kOunceStealStock = 8,
-    kMagicianStockTakeToss = 9,
-    kRepentStock = 10
+    kMeatBunglerToss = 4,
+    kMeatBunglerStock = 5,
+    kMerryPiemanStock = 6,
+    kBenedictIncrease = 7,
+    kBethesdaSwap = 8,
+    kOunceStealStock = 9,
+    kMagicianStockTakeToss = 10,
+    kRepentStock = 11
   };
   Decisions decision_class_;
   

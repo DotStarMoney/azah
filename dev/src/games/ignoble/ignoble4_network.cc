@@ -10,12 +10,12 @@ namespace ignoble {
 Ignoble4Network::Ignoble4Network() :
     GameNetwork(
         {0, 1, 2, 3, 4}, 
-        {5, 6, 7, 8, 9, 10, 11, 12, 13, 14}, 
-        15, 
-        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, 
-        10, 
-        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, 
-        10),
+        {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, 
+        16, 
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 
+        11, 
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 
+        11),
     input_pos_1_(nn::init::Zeros<129, 1>()),
     input_pos_2_(nn::init::Zeros<129, 1>()),
     input_pos_3_(nn::init::Zeros<129, 1>()),
@@ -54,13 +54,20 @@ Ignoble4Network::Ignoble4Network() :
     p_princess_stock_(p_princess_stock_linear_),
     p_princess_stock_target_(nn::init::Zeros<4, 1>()),
     p_princess_stock_loss_(p_princess_stock_linear_, p_princess_stock_target_),
-    p_meat_bungler_bounty_linear_k_(
-        nn::init::GlorotUniform<3, kFeatureDepth>()),
-    p_meat_bungler_bounty_linear_(p_meat_bungler_bounty_linear_k_, pool_fork_),
-    p_meat_bungler_bounty_(p_meat_bungler_bounty_linear_),
-    p_meat_bungler_bounty_target_(nn::init::Zeros<3, 1>()),
-    p_meat_bungler_bounty_loss_(p_meat_bungler_bounty_linear_, 
-                                p_meat_bungler_bounty_target_),
+    p_meat_bungler_toss_linear_k_(
+        nn::init::GlorotUniform<2, kFeatureDepth>()),
+    p_meat_bungler_toss_linear_(p_meat_bungler_toss_linear_k_, pool_fork_),
+    p_meat_bungler_toss_(p_meat_bungler_toss_linear_),
+    p_meat_bungler_toss_target_(nn::init::Zeros<2, 1>()),
+    p_meat_bungler_toss_loss_(p_meat_bungler_toss_linear_,
+                              p_meat_bungler_toss_target_),
+    p_meat_bungler_stock_linear_k_(
+        nn::init::GlorotUniform<2, kFeatureDepth>()),
+    p_meat_bungler_stock_linear_(p_meat_bungler_stock_linear_k_, pool_fork_),
+    p_meat_bungler_stock_(p_meat_bungler_stock_linear_),
+    p_meat_bungler_stock_target_(nn::init::Zeros<2, 1>()),
+    p_meat_bungler_stock_loss_(p_meat_bungler_stock_linear_,
+                               p_meat_bungler_stock_target_),
     p_merry_pieman_stock_linear_k_(nn::init::GlorotUniform<4, kFeatureDepth>()),
     p_merry_pieman_stock_linear_(p_merry_pieman_stock_linear_k_, pool_fork_),
     p_merry_pieman_stock_(p_merry_pieman_stock_linear_),
@@ -105,7 +112,8 @@ Ignoble4Network::Ignoble4Network() :
   AddOutput(&p_team_select_);
   AddOutput(&p_character_select_);
   AddOutput(&p_princess_stock_);
-  AddOutput(&p_meat_bungler_bounty_);
+  AddOutput(&p_meat_bungler_toss_);
+  AddOutput(&p_meat_bungler_stock_);
   AddOutput(&p_merry_pieman_stock_);
   AddOutput(&p_benedict_increase_);
   AddOutput(&p_bethesda_swap_);
@@ -117,7 +125,8 @@ Ignoble4Network::Ignoble4Network() :
   AddTarget(&p_team_select_loss_);
   AddTarget(&p_character_select_loss_);
   AddTarget(&p_princess_stock_loss_);
-  AddTarget(&p_meat_bungler_bounty_loss_);
+  AddTarget(&p_meat_bungler_toss_loss_);
+  AddTarget(&p_meat_bungler_stock_loss_);
   AddTarget(&p_merry_pieman_stock_loss_);
   AddTarget(&p_benedict_increase_loss_);
   AddTarget(&p_bethesda_swap_loss_);
@@ -134,7 +143,8 @@ Ignoble4Network::Ignoble4Network() :
   AddVariable(&p_team_select_linear_k_);
   AddVariable(&p_character_select_linear_k_);
   AddVariable(&p_princess_stock_linear_k_);
-  AddVariable(&p_meat_bungler_bounty_linear_k_);
+  AddVariable(&p_meat_bungler_toss_linear_k_);
+  AddVariable(&p_meat_bungler_stock_linear_k_);
   AddVariable(&p_merry_pieman_stock_linear_k_);
   AddVariable(&p_benedict_increase_linear_k_);
   AddVariable(&p_bethesda_swap_linear_k_);
@@ -151,7 +161,8 @@ Ignoble4Network::Ignoble4Network() :
   AddConstant(&p_team_select_target_);
   AddConstant(&p_character_select_target_);
   AddConstant(&p_princess_stock_target_);
-  AddConstant(&p_meat_bungler_bounty_target_);
+  AddConstant(&p_meat_bungler_toss_target_);
+  AddConstant(&p_meat_bungler_stock_target_);
   AddConstant(&p_merry_pieman_stock_target_);
   AddConstant(&p_benedict_increase_target_);
   AddConstant(&p_bethesda_swap_target_);

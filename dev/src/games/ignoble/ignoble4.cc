@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <string_view>
 #include <vector>
 
@@ -55,7 +56,8 @@ constexpr bool kCardsInPlayDecisions[] = {
         false,  // Selecting team 
         false,  // Selecting character
         true,   // Princess
-        true,   // Meat Bungler
+        true,   // Meat Bungler toss
+        true,   // Meat Bungler stock
         true,   // Merry Pieman
         true,   // Benedict
         true,   // Bethesda
@@ -66,11 +68,12 @@ constexpr bool kCardsInPlayDecisions[] = {
 
 // The size of the column vector representing an individual decision.
 constexpr int kMaxDecisionRowsN[] = {
-        0,    // Unknown
+        0,   // Unknown
         4,   // Selecting team 
         16,  // Selecting character
         4,   // Princess
-        3,   // Meat Bungler
+        2,   // Meat Bungler toss
+        2,   // Meat Bungler stock
         4,   // Merry Pieman
         2,   // Benedict
         2,   // Bethesda 
@@ -111,8 +114,8 @@ constexpr int kJumpInit = -1;
 constexpr int kJumpTeamSelect = 0;
 constexpr int kJumpCharacterSelect = 1;
 constexpr int kJumpPrincessStock = 2;
-constexpr int kJumpMeatBunglerBountyWin = 3;
-constexpr int kJumpMeatBunglerBountyLose = 4;
+constexpr int kJumpMeatBunglerToss = 3;
+constexpr int kJumpMeatBunglerStock = 4;
 constexpr int kJumpMerryPiemanStock = 5;
 constexpr int kJumpBenedictIncrease = 6;
 constexpr int kJumpBethesdaSwap = 7;
@@ -122,6 +125,11 @@ constexpr int kJumpRepentStock = 10;
 
 // After 500 decisions, it's a tie.
 constexpr int kMaxDepth = 500;
+
+template <std::signed_integral IntType>
+IntType bounty_value(IntType stock_value, IntType modifier) {
+  return std::max(stock_value + modifier, 0);
+}
 
 }  // namespace
 
@@ -316,8 +324,8 @@ void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
   case kJumpTeamSelect: goto MakeMove_TeamSelect;
   case kJumpCharacterSelect: goto MakeMove_CharacterSelect;
   case kJumpPrincessStock: goto MakeMove_PrincessStock;
-  case kJumpMeatBunglerBountyWin: goto MakeMove_MeatBunglerBounty_Win;
-  case kJumpMeatBunglerBountyLose: goto MakeMove_MeatBunglerBounty_Lose;
+  case kJumpMeatBunglerToss: goto MakeMove_MeatBunglerToss;
+  case kJumpMeatBunglerStock: goto MakeMove_MeatBunglerStock;
   case kJumpMerryPiemanStock: goto MakeMove_MerryPiemanStock;
   case kJumpBenedictIncrease: goto MakeMove_BenedictIncrease;
   case kJumpBethesdaSwap: goto MakeMove_BethesdaSwap;
@@ -499,6 +507,7 @@ MakeMove_BethesdaSwap:
       // Now run through the played cards from highest to lowest.
       s_.loc_i = locations_in_play_[current_location_i_];
       s_.stock_modifier = 0;
+      s_.bungler_tossed = false;
       for (s_.i = 3; s_.i >= 0; --s_.i) {
         current_player_x_ = cards_in_play_[s_.i].player_i;
         switch (cards_in_play_[s_.i].value) {
@@ -553,7 +562,7 @@ MakeMove_MagicianStockTakeToss:
           case kOunceIndex: {
             decision_class_ = Decisions::kOunceStealStock;
             // For each player we can steal from, from highest card to lowest...
-            for (s_.q = s_.i + 1; s_.q < 4; ++s_.q) {
+            for (s_.q = 3; s_.q > s_.i; --s_.q) {
               // Leave if we're at capacity.
               if (PlayerFull(current_player_x_)) break;
               ounce_hot_seat_ = cards_in_play_[s_.q].player_i;
@@ -628,6 +637,39 @@ MakeMove_MerryPiemanStock:
             if (CheckForWin(current_player_x_)) return;
             break;
           }
+          case kBunglerIndex: {
+            s_.bounty_value = bounty_value(
+                static_cast<IndexT>(kLocations[s_.loc_i].bounty_n), 
+                s_.stock_modifier);
+
+            // If there's no bounty, we can't do anything.
+            if (s_.bounty_value <= 0) break;
+
+            // If we have nothing in the current stock type, we also can't do
+            // anything.
+            if (stock_n_[current_player_x_][kLocations[s_.loc_i].type] == 0) {
+              break;
+            }
+
+            decision_class_ = Decisions::kMeatBunglerToss;
+            // We define the action vector as [do nothing, toss it].
+            available_actions_n_ = 2;
+            move_to_policy_i_[0] = 0;
+            move_to_policy_i_[1] = 1;
+
+            // Wait for an answer.
+            jump_label_ = kJumpMeatBunglerToss; return;
+MakeMove_MeatBunglerToss:
+
+            if (move_i == 1) {
+              auto& stock = 
+                  stock_n_[current_player_x_][kLocations[s_.loc_i].type];
+              stock -= std::max(stock - s_.bounty_value, 0);
+              s_.bungler_tossed = true;
+            }
+
+            break;
+          }
           case kPinderIndex: {
             // If we're full, can't take anything.
             if (PlayerFull(current_player_x_)) break;
@@ -676,16 +718,12 @@ MakeMove_MerryPiemanStock:
 
       // Resolve taking the bounty.
 
-      s_.bounty_value = std::max(
-          kLocations[s_.loc_i].bounty_n + s_.stock_modifier, 0);
+      s_.bounty_value = bounty_value(
+          static_cast<IndexT>(kLocations[s_.loc_i].bounty_n),
+          s_.stock_modifier);
       s_.bounty_type = kLocations[s_.loc_i].type;
-      // This is mostly for The Meat Bungler since cards can change the value /
-      // color for their own benefit.
-      s_.original_bounty_value = s_.bounty_value;
-      s_.original_bounty_type = s_.bounty_type;
 
       current_player_x_ = cards_in_play_[3].player_i;
-
       switch (cards_in_play_[3].value) {
         case kKingIndex: {
           // The King always takes as if it were worth 2.
@@ -698,39 +736,27 @@ MakeMove_MerryPiemanStock:
           break;
         }
         case kBunglerIndex: {
-          // If there's no bounty, we can't do anything.
-          if (s_.bounty_value <= 0) break;
-          // Determine what the options are.
-          s_.can_toss =
-              stock_n_[current_player_x_][kLocations[s_.loc_i].type] > 0;
-          s_.can_take = !PlayerFull(current_player_x_);
-          if (!s_.can_take && !s_.can_toss) break;
-          // Okay, we have at least one option here (other than do nothing).
-          decision_class_ = Decisions::kMeatBunglerBounty;
-          available_actions_n_ = 1 + ((s_.can_toss && s_.can_take) ? 2 : 1);
-          // We define the action vector as [do nothing, toss it, take it].
-          move_to_policy_i_[0] = 0;
-          if (available_actions_n_ == 3) {
-            move_to_policy_i_[1] = 1;
-            move_to_policy_i_[2] = 2;
-          } else if (s_.can_toss) {
-            move_to_policy_i_[1] = 1;
-          } else {
-            move_to_policy_i_[1] = 2;
+          // If we already tossed, there's no bounty, or we're full, there's
+          // nothing to be done.
+          if (s_.bungler_tossed
+              || (s_.bounty_value == 0)
+              || (PlayerFull(current_player_x_))) {
+            break;
           }
+
+          decision_class_ = Decisions::kMeatBunglerStock;
+
+          // We define the action vector as [take it (do nothing), ignore it].
+          available_actions_n_ = 2;
+          move_to_policy_i_[0] = 0;
+          move_to_policy_i_[1] = 1;
 
           // Wait for an answer.
-          jump_label_ = kJumpMeatBunglerBountyWin; return;
-MakeMove_MeatBunglerBounty_Win:
+          jump_label_ = kJumpMeatBunglerStock; return;
+MakeMove_MeatBunglerStock:
 
-          if (move_i == 0) {
-            // Do nothing.
-            s_.bounty_value = 0;
-          } else if ((move_i == 1) && s_.can_toss) {
-            // If move_i_ == 1, and tossing was an option, toss it.
-            s_.bounty_value *= -1;
-          }
-            
+          if (move_i == 1) s_.bounty_value = 0;
+
           break;
         }
         case kPrincessIndex: {
@@ -764,48 +790,13 @@ MakeMove_PrincessStock:
       // Cap the bounty on the storage limit.
       s_.adj_bounty_value = std::min(static_cast<IndexT>(22 - s_.total_stock),
                                      s_.bounty_value);
-      stock_n_[current_player_x_][s_.bounty_type] += s_.adj_bounty_value;
-      if (s_.adj_bounty_value > 0) s_.repent_check[current_player_x_] = false;
-      if (stock_n_[current_player_x_][s_.bounty_type] < 0) {
-        stock_n_[current_player_x_][s_.bounty_type] = 0;
-      } else if (CheckForWin(current_player_x_)) {
-        return;
+      if (s_.adj_bounty_value > 0) {
+        // Stock was taken.
+        stock_n_[current_player_x_][s_.bounty_type] += s_.adj_bounty_value;
+        s_.repent_check[current_player_x_] = false;
+        if (CheckForWin(current_player_x_)) return;
       }
-
-      // One last thing to do: the Meat Bungler can bungle the meats if he
-      // didn't win.
-
-      if ((s_.original_bounty_value > 0)
-          && (cards_in_play_[3].value != kBunglerIndex)) {
-        for (s_.i = 0; s_.i < 3; ++s_.i) {
-          if (cards_in_play_[s_.i].value == kBunglerIndex) {
-            // The Meat Bungler was played, but didn't win.
-            current_player_x_ = cards_in_play_[s_.i].player_i;
-            if (stock_n_[current_player_x_][s_.original_bounty_type] == 0) break;
-            // By now, there is something we *could* toss if we wanted to.
-            decision_class_ = Decisions::kMeatBunglerBounty;
-            available_actions_n_ = 2;
-            move_to_policy_i_[0] = 0;
-            move_to_policy_i_[1] = 1;
-
-            // Wait for an answer.
-            jump_label_ = kJumpMeatBunglerBountyLose; return;
-MakeMove_MeatBunglerBounty_Lose:
-
-            if (move_i == 1) {
-              // Toss it!
-              stock_n_[current_player_x_][s_.original_bounty_type] -=
-                  s_.original_bounty_value;
-              if (stock_n_[current_player_x_][s_.original_bounty_type] < 0) {
-                stock_n_[current_player_x_][s_.original_bounty_type] = 0;
-              }
-            }
-
-            break;
-          }
-        }
-      }
-
+ 
       // That's a hand, on to the next one!
     }
 
@@ -841,6 +832,24 @@ MakeMove_RepentStock:
     }
 
     // That's a round, on to the next one!
+  }
+}
+
+void Ignoble4::SetLocations(const std::vector<int>& in_play,
+                            const std::vector<int>& deck) {
+  for (auto in_play_card : in_play) {
+    for (auto deck_card : deck) {
+      CHECK_NE(in_play_card, deck);
+    }
+  }
+  CHECK_EQ(in_play.size(), 4 - current_location_i_);
+  CHECK_EQ(deck.size() - 1, top_of_deck_i_);
+
+  for (int i = 0, q = current_location_i_; i < in_play.size(); ++i, ++q) {
+    locations_in_play_[i] = in_play[q];
+  }
+  for (int i = 0; i < top_of_deck_i_ + 1; ++i) {
+    location_deck_[i] = deck[i];
   }
 }
 

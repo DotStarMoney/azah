@@ -105,17 +105,27 @@ class Ignoble4Network : public GameNetwork {
   nn::Constant<4, 1> p_princess_stock_target_;
   nn::op::SoftmaxCrossEnt<4, 1> p_princess_stock_loss_;
 
-  // 4) MeatBunglerBounty
+  // 4) MeatBunglerToss
 
-  nn::Variable<3, kFeatureDepth> p_meat_bungler_bounty_linear_k_;
-  nn::op::Matmul<3, kFeatureDepth, kFeatureDepth, 1> 
-      p_meat_bungler_bounty_linear_;
-  nn::op::Softmax<3, 1> p_meat_bungler_bounty_;
+  nn::Variable<2, kFeatureDepth> p_meat_bungler_toss_linear_k_;
+  nn::op::Matmul<2, kFeatureDepth, kFeatureDepth, 1> 
+      p_meat_bungler_toss_linear_;
+  nn::op::Softmax<2, 1> p_meat_bungler_toss_;
 
-  nn::Constant<3, 1> p_meat_bungler_bounty_target_;
-  nn::op::SoftmaxCrossEnt<3, 1> p_meat_bungler_bounty_loss_;
+  nn::Constant<2, 1> p_meat_bungler_toss_target_;
+  nn::op::SoftmaxCrossEnt<2, 1> p_meat_bungler_toss_loss_;
 
-  // 5) MerryPiemanStock
+  // 5) MeatBunglerStock
+
+  nn::Variable<2, kFeatureDepth> p_meat_bungler_stock_linear_k_;
+  nn::op::Matmul<2, kFeatureDepth, kFeatureDepth, 1>
+      p_meat_bungler_stock_linear_;
+  nn::op::Softmax<2, 1> p_meat_bungler_stock_;
+
+  nn::Constant<2, 1> p_meat_bungler_stock_target_;
+  nn::op::SoftmaxCrossEnt<2, 1> p_meat_bungler_stock_loss_;
+
+  // 6) MerryPiemanStock
 
   nn::Variable<4, kFeatureDepth> p_merry_pieman_stock_linear_k_;
   nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1>
@@ -125,7 +135,7 @@ class Ignoble4Network : public GameNetwork {
   nn::Constant<4, 1> p_merry_pieman_stock_target_;
   nn::op::SoftmaxCrossEnt<4, 1> p_merry_pieman_stock_loss_;
 
-  // 6) BenedictIncrease
+  // 7) BenedictIncrease
 
   nn::Variable<2, kFeatureDepth> p_benedict_increase_linear_k_;
   nn::op::Matmul<2, kFeatureDepth, kFeatureDepth, 1>
@@ -135,7 +145,7 @@ class Ignoble4Network : public GameNetwork {
   nn::Constant<2, 1> p_benedict_increase_target_;
   nn::op::SoftmaxCrossEnt<2, 1> p_benedict_increase_loss_;
 
-  // 7) BethesdaSwap
+  // 8) BethesdaSwap
 
   nn::Variable<2, kFeatureDepth> p_bethesda_swap_linear_k_;
   nn::op::Matmul<2, kFeatureDepth, kFeatureDepth, 1> p_bethesda_swap_linear_;
@@ -144,7 +154,7 @@ class Ignoble4Network : public GameNetwork {
   nn::Constant<2, 1> p_bethesda_swap_target_;
   nn::op::SoftmaxCrossEnt<2, 1> p_bethesda_swap_loss_;
 
-  // 8) OunceStealStock
+  // 9) OunceStealStock
 
   nn::Variable<4, kFeatureDepth> p_ounce_steal_stock_linear_k_;
   nn::op::Matmul<4, kFeatureDepth, kFeatureDepth, 1> 
@@ -154,7 +164,7 @@ class Ignoble4Network : public GameNetwork {
   nn::Constant<4, 1> p_ounce_steal_stock_target_;
   nn::op::SoftmaxCrossEnt<4, 1> p_ounce_steal_stock_loss_;
 
-  // 9) MagicianStockTakeToss
+  // 10) MagicianStockTakeToss
 
   nn::Variable<8, kFeatureDepth> p_magician_stock_take_toss_linear_k_;
   nn::op::Matmul<8, kFeatureDepth, kFeatureDepth, 1>
@@ -164,7 +174,7 @@ class Ignoble4Network : public GameNetwork {
   nn::Constant<8, 1> p_magician_stock_take_toss_target_;
   nn::op::SoftmaxCrossEnt<8, 1> p_magician_stock_take_toss_loss_;
 
-  // 10) RepentStock
+  // 11) RepentStock
 
   nn::Variable<5, kFeatureDepth> p_repent_stock_linear_k_;
   nn::op::Matmul<5, kFeatureDepth, kFeatureDepth, 1> p_repent_stock_linear_;

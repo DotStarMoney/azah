@@ -29,6 +29,7 @@ constexpr int kCheckpointFreq = 10;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
+  /*
   RLPlayer player(16);
 
   RLPlayer::SelfPlayOptions options{
@@ -59,6 +60,6 @@ int main(int argc, char* argv[]) {
     std::cout << "Finished " << (i + 1) << " games with loss " << losses
         << std::endl;
   }
-
+  */
   return 0;
 }
