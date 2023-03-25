@@ -88,18 +88,18 @@ struct Location {
   int bounty_n;
 };
 constexpr Location kLocations[] = {
-        {0, 2},  // Soot Cellar
-        {0, 3},  // Swamp
-        {0, 3},  // Peasant Village
-        {1, 1},  // The Hedgerow
-        {1, 2},  // Grove
-        {1, 3},  // Vegetable Garden
-        {2, 1},  // Thy Frigid Plunge
-        {2, 2},  // Pig Sty
-        {2, 2},  // Plains
-        {3, 1},  // Market
-        {3, 1},  // The Tomb
-        {3, 2}   // The Coiniary
+        {0, 2},  // 0 Soot Cellar
+        {0, 3},  // 1 Swamp
+        {0, 3},  // 2 Peasant Village
+        {1, 1},  // 3 The Hedgerow
+        {1, 2},  // 4 Grove
+        {1, 3},  // 5 Vegetable Garden
+        {2, 1},  // 6 Thy Frigid Plunge
+        {2, 2},  // 7 Pig Sty
+        {2, 2},  // 8 Plains
+        {3, 1},  // 9 Market
+        {3, 1},  // 10 The Tomb
+        {3, 2}   // 11 The Coiniary
     };
 
 constexpr std::array<std::array<int, 4>, 4> kDeckContents = {{
@@ -123,8 +123,10 @@ constexpr int kJumpOunceStealStock = 8;
 constexpr int kJumpMagicianStockTakeToss = 9;
 constexpr int kJumpRepentStock = 10;
 
-// After 500 decisions, it's a tie.
-constexpr int kMaxDepth = 500;
+// After 4050 decisions, it's a tie. If you're wondering where this comes from,
+// it's the ~80th percentile of average game depths over 10000 purely random
+// games.
+constexpr int kMaxDepth = 4050;
 
 template <std::signed_integral IntType>
 IntType bounty_value(IntType stock_value, IntType modifier) {
@@ -139,10 +141,31 @@ Ignoble4::Ignoble4() :
     deck_select_tie_order_{0, 1, 2, 3},
     hand_size_{0, 0, 0, 0},
     stock_n_{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}},
+    current_location_i_(0),
     location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
     top_of_deck_i_(-1),
     winning_player_i_(-1),
-    tie_(false),
+    out_of_time_(false),
+    out_of_time_outcome_{-1, -1, -1, -1},
+    depth_(0) {
+  // Just for the first shuffle.
+  absl::BitGen bitgen;
+  MakeMove(-1, bitgen);
+}
+
+Ignoble4::Ignoble4(const std::vector<int>& fixed_deck_select_tie_order) :
+    jump_label_(kJumpInit),
+    fixed_deck_select_tie_order_(fixed_deck_select_tie_order),
+    decision_class_(Decisions::kTeamSelect),
+    deck_select_tie_order_{0, 1, 2, 3},
+    hand_size_{0, 0, 0, 0},
+    stock_n_{{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}},
+    current_location_i_(0),
+    location_deck_{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+    top_of_deck_i_(-1),
+    winning_player_i_(-1),
+    out_of_time_(false),
+    out_of_time_outcome_{-1, -1, -1, -1},
     depth_(0) {
   // Just for the first shuffle.
   absl::BitGen bitgen;
@@ -166,8 +189,28 @@ GameState Ignoble4::State() const {
 }
 
 std::array<float, 4> Ignoble4::Outcome() const {
-  if (tie_) {
-    return {0.25f, 0.25f, 0.25f, 0.25f};
+  if (out_of_time_) {
+    if (out_of_time_outcome_[0] == -1) {
+      float sum = 0.0f;
+      for (int i = 0; i < 4; ++i) {
+        // The amount we still need...
+        int total_missing = 0;
+        int total = 0;
+        for (int q = 0; q < 4; ++q) {
+          total_missing += std::max(5 - stock_n_[i][q], 0);
+          total += stock_n_[i][q];
+        }
+        // The amount we'd have to throw away to get there...
+        int total_extra = std::max(total_missing - (22 - total), 0);
+        out_of_time_outcome_[i] = 
+            1.0f / static_cast<float>(total_missing + total_extra);
+        sum += out_of_time_outcome_[i];
+      }
+      for (int i = 0; i < 4; ++i) {
+        out_of_time_outcome_[i] = out_of_time_outcome_[i] / sum;
+      }
+    }
+    return out_of_time_outcome_;
   } else {
     std::array<float, 4> outcome{0.0f, 0.0f, 0.0f, 0.0f};
     outcome[winning_player_i_] = 1.0f;
@@ -306,7 +349,7 @@ void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
   depth_ += 1;
   if (depth_ > kMaxDepth) {
     winning_player_i_ = 0;
-    tie_ = true;
+    out_of_time_ = true;
     return;
   }
 
@@ -337,8 +380,14 @@ void Ignoble4::MakeMove(int move_i, absl::BitGenRef bitgen) {
 
   // This will never change, and is the equivalent of picking a player to start
   // and the seating order at the table.
-  std::shuffle(deck_select_tie_order_.begin(), deck_select_tie_order_.end(),
-               bitgen);
+  if (fixed_deck_select_tie_order_.empty()) {
+    std::shuffle(deck_select_tie_order_.begin(), deck_select_tie_order_.end(),
+                 bitgen);
+  } else {
+    for (int i = 0; i < 4; ++i) {
+      deck_select_tie_order_[i] = fixed_deck_select_tie_order_[i];
+    }
+  }
   for (;;) {
     // Start of a new round. First we check to see if a location shuffle is in
     // order.
@@ -405,8 +454,14 @@ MakeMove_TeamSelect:
          current_location_i_ < 4;
          ++current_location_i_) {
       // Each player select a card in a random order.
-      s_.select_order = {0, 1, 2, 3};
-      std::shuffle(s_.select_order.begin(), s_.select_order.end(), bitgen);
+      if (fixed_select_order_.empty()) {
+        s_.select_order = {0, 1, 2, 3};
+        std::shuffle(s_.select_order.begin(), s_.select_order.end(), bitgen);
+      } else {
+        for (int i = 0; i < 4; ++i) {
+          s_.select_order[i] = fixed_select_order_[i];
+        }
+      }
 
       // The index of the hand card selected by each player 1-4.
 
@@ -801,8 +856,14 @@ MakeMove_PrincessStock:
     }
 
     // Repent in a random order.
-    s_.repent_order = {0, 1, 2, 3};
-    std::shuffle(s_.repent_order.begin(), s_.repent_order.end(), bitgen);
+    if (fixed_repent_order_.empty()) {
+      s_.repent_order = {0, 1, 2, 3};
+      std::shuffle(s_.repent_order.begin(), s_.repent_order.end(), bitgen);
+    } else {
+      for (int i = 0; i < 4; ++i) {
+        s_.repent_order[i] = fixed_repent_order_[i];
+      }
+    }
 
     // Before we go to the next round, determine which players may repent for
     // their sins.
@@ -839,7 +900,7 @@ void Ignoble4::SetLocations(const std::vector<int>& in_play,
                             const std::vector<int>& deck) {
   for (auto in_play_card : in_play) {
     for (auto deck_card : deck) {
-      CHECK_NE(in_play_card, deck);
+      CHECK_NE(in_play_card, deck_card);
     }
   }
   CHECK_EQ(in_play.size(), 4 - current_location_i_);
@@ -850,6 +911,22 @@ void Ignoble4::SetLocations(const std::vector<int>& in_play,
   }
   for (int i = 0; i < top_of_deck_i_ + 1; ++i) {
     location_deck_[i] = deck[i];
+  }
+}
+
+void Ignoble4::SetFixedSelectOrder(const std::vector<int>& order) {
+  CHECK_EQ(order.size(), 4);
+  fixed_select_order_.resize(4);
+  for (int i = 0; i < 4; ++i) {
+    fixed_select_order_[i] = order[i];
+  }
+}
+
+void Ignoble4::SetFixedRepentOrder(const std::vector<int>& order) {
+  CHECK_EQ(order.size(), 4);
+  fixed_repent_order_.resize(4);
+  for (int i = 0; i < 4; ++i) {
+    fixed_repent_order_[i] = order[i];
   }
 }
 

@@ -20,7 +20,7 @@ using RLPlayer = azah::mcts::RLPlayer<Game, GameNetwork>;
 constexpr std::string_view kCheckpointFormat = 
     "c:/usr/azah/checkpoints/ignoble4_%d.dat";
 
-constexpr int kLoadCheckpointIndex = 5250;
+constexpr int kLoadCheckpointIndex = 0;
 
 constexpr int kCheckpointFreq = 10;
 
@@ -29,7 +29,6 @@ constexpr int kCheckpointFreq = 10;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  /*
   RLPlayer player(16);
 
   RLPlayer::SelfPlayOptions options{
@@ -40,7 +39,7 @@ int main(int argc, char* argv[]) {
       .one_hot_breakover_moves_n = 80,
       .exploration_scale = 0.22};
 
-  {
+  if (kLoadCheckpointIndex > 0)  {
     std::ifstream checkpoint(
         absl::StrFormat(kCheckpointFormat, kLoadCheckpointIndex), 
         std::ios::in | std::ios::binary);
@@ -60,6 +59,6 @@ int main(int argc, char* argv[]) {
     std::cout << "Finished " << (i + 1) << " games with loss " << losses
         << std::endl;
   }
-  */
+
   return 0;
 }

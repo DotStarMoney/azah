@@ -20,6 +20,9 @@ class Ignoble4 : public Game<4> {
  public:
   Ignoble4();
 
+  // For simulating deterministic scenarios, not used during learning.
+  Ignoble4(const std::vector<int>& fixed_deck_select_tie_order);
+
   const std::string_view name() const override;
 
   int CurrentPlayerI() const override;
@@ -36,10 +39,13 @@ class Ignoble4 : public Game<4> {
 
   void MakeMove(int move_i, absl::BitGenRef bitgen);
 
+  // For simulating deterministic scenarios, not used during learning.
   void SetLocations(const std::vector<int>& in_play, 
                     const std::vector<int>& deck);
+  void SetFixedSelectOrder(const std::vector<int>& order);
+  void SetFixedRepentOrder(const std::vector<int>& order);
 
- private:
+ public:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
   typedef std::int8_t IndexT;
 
@@ -73,6 +79,10 @@ class Ignoble4 : public Game<4> {
     std::array<IndexT, 4> repent_order;
   } s_;
 
+  // For simulating deterministic scenarios, not used during learning.
+  const std::vector<int> fixed_deck_select_tie_order_;
+  std::vector<int> fixed_select_order_;
+  std::vector<int> fixed_repent_order_;
 
   // True if player_a should pick before player_b.
   bool ComparePlayerPickOrder(int player_a, int player_b) const;
@@ -95,7 +105,7 @@ class Ignoble4 : public Game<4> {
     kRepentStock = 11
   };
   Decisions decision_class_;
-  
+
   // A random player order determined at the start of the game that breaks ties
   // for deck selection on [0, 3]. Lower numbers go first.
   std::array<IndexT, 4> deck_select_tie_order_;
@@ -138,8 +148,11 @@ class Ignoble4 : public Game<4> {
   // If -1, nobody has won yet. Otherwise, this is the index of the winning
   // player [0, 3]. When there's a tie, this is set to 0.
   IndexT winning_player_i_;
-  // When nobody won, this is set to true.
-  bool tie_;
+  // When we ran out the clock, this is set to true.
+  bool out_of_time_;
+  // Cached out of time outcome. When this is all -1, we haven't computed the
+  // values yet.
+  mutable std::array<float, 4> out_of_time_outcome_;
 
   // Tracks the maximum number of decisions made.
   int depth_;
