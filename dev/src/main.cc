@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include <chrono>
 #include <iostream>
 #include <fstream>
 #include <string_view>
@@ -19,6 +20,7 @@ using RLPlayer = azah::mcts::RLPlayer<Game, GameNetwork>;
 
 constexpr std::string_view kCheckpointFormat = 
     "c:/usr/azah/checkpoints/ignoble4_%d.dat";
+constexpr char kStatsFile[] = "c:/usr/azah/checkpoints/chk_stats.txt";
 
 constexpr int kLoadCheckpointIndex = 0;
 
@@ -58,6 +60,12 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Finished " << (i + 1) << " games with loss " << losses
         << std::endl;
+    {
+      std::ofstream stats(kStatsFile, std::ios::out | std::ios::app);
+      auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch()).count();
+      stats << i << ", " << now << ": " << losses << "\n";
+    }
   }
 
   return 0;
