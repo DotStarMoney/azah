@@ -45,7 +45,7 @@ class Ignoble4 : public Game<4> {
   void SetFixedSelectOrder(const std::vector<int>& order);
   void SetFixedRepentOrder(const std::vector<int>& order);
 
- public:
+ private:
   static constexpr std::string_view kName_ = "Ignoble 4-Player";
   typedef std::int8_t IndexT;
 
