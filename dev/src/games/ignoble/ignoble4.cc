@@ -291,16 +291,13 @@ int Ignoble4::PolicyClassI() const {
 
 bool Ignoble4::ComparePlayerPickOrder(int player_a, int player_b) const {
   // Whoever has the least amount of the good stuff goes first.
-  for (std::size_t stock_i = 0; stock_i < 4; ++stock_i) {
-    if (stock_n_[player_a][3] < stock_n_[player_b][3]) {
-      return true;
-    } else if (stock_n_[player_a][3] > stock_n_[player_b][3]) {
-      return false;
-    }
+  for (int stock_i = 3; stock_i >= 0; --stock_i) {
+    if (stock_n_[player_a][stock_i] == stock_n_[player_b][stock_i]) continue;
+    return stock_n_[player_a][stock_i] < stock_n_[player_b][stock_i];
   }
   // If we got here, both players have equivalent stock. Now we sort by tie
   // order.
-  for (std::size_t tie_order_i = 0; tie_order_i < 4; ++tie_order_i) {
+  for (int tie_order_i = 0; tie_order_i < 4; ++tie_order_i) {
     if (deck_select_tie_order_[tie_order_i] == player_a) {
       return true;
     } else if (deck_select_tie_order_[tie_order_i] == player_b) {
@@ -453,7 +450,7 @@ MakeMove_TeamSelect:
     for (current_location_i_ = 0; 
          current_location_i_ < 4;
          ++current_location_i_) {
-      // Each player select a card in a random order.
+      // Each player selects a card in a random order.
       if (fixed_select_order_.empty()) {
         s_.select_order = {0, 1, 2, 3};
         std::shuffle(s_.select_order.begin(), s_.select_order.end(), bitgen);
