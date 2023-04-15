@@ -25,7 +25,8 @@ class Ignoble4Network : public GameNetwork {
   Ignoble4Network();
 
  private:
-  static constexpr int kFeatureDepth = 64;
+  static constexpr int kFeatureDepth = 80;
+  static constexpr int kExpandFeatureDepth = kFeatureDepth * 4;
  
   // Four inputs for each board, with the first position being the current
   // player's turn and the other's rotated accordingly.
@@ -36,24 +37,24 @@ class Ignoble4Network : public GameNetwork {
   nn::Constant<60, 1> input_global_;
 
   // We expand each input (non-global) into 4 kFeatureDepth vectors.
-  nn::Variable<256, 129> input_embedding_k_;
+  nn::Variable<kExpandFeatureDepth, 129> input_embedding_k_;
 
-  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_1_;
-  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_2_;
-  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_3_;
-  nn::op::BroadcastMatmul<256, 129, 4> input_embedding_pos_4_;
+  nn::op::BroadcastMatmul<kExpandFeatureDepth, 129, 4> input_embedding_pos_1_;
+  nn::op::BroadcastMatmul<kExpandFeatureDepth, 129, 4> input_embedding_pos_2_;
+  nn::op::BroadcastMatmul<kExpandFeatureDepth, 129, 4> input_embedding_pos_3_;
+  nn::op::BroadcastMatmul<kExpandFeatureDepth, 129, 4> input_embedding_pos_4_;
 
   // Three concats to get a 64x16 column vector from 4 64x4s. 
-  nn::op::ConcatCols<64, 4, 4> concat_1_;
-  nn::op::ConcatCols<64, 4, 4> concat_2_;
-  nn::op::ConcatCols<64, 8, 8> concat_3_;
+  nn::op::ConcatCols<kFeatureDepth, 4, 4> concat_1_;
+  nn::op::ConcatCols<kFeatureDepth, 4, 4> concat_2_;
+  nn::op::ConcatCols<kFeatureDepth, 8, 8> concat_3_;
 
   // We expand the global state into a 64-D vector added to all of the columns.
-  nn::Variable<64, 60> input_global_embedding_k_;
-  nn::op::Matmul<64, 60, 60, 1> input_global_embedding_;
+  nn::Variable<kFeatureDepth, 60> input_global_embedding_k_;
+  nn::op::Matmul<kFeatureDepth, 60, 60, 1> input_global_embedding_;
 
   // Add the global embedding to the input embeddings.
-  nn::op::BroadcastAdd<64, 16> global_to_features_;
+  nn::op::BroadcastAdd<kFeatureDepth, 16> global_to_features_;
 
   // At this, we have a 64x16 state matrix that we can operate on normally.
 
