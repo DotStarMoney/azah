@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string_view>
+#include <vector>
 
 #include "absl/strings/str_format.h"
 #include "games/game.h"
@@ -22,9 +23,11 @@ constexpr std::string_view kCheckpointFormat =
     "c:/usr/azah/checkpoints/ignoble4_%d.dat";
 constexpr char kStatsFile[] = "c:/usr/azah/checkpoints/chk_stats.txt";
 
-constexpr int kLoadCheckpointIndex = 0;
+constexpr int kLoadCheckpointIndex = 15000;
 
 constexpr int kCheckpointFreq = 10;
+
+constexpr int kRepeats = 10;
 
 }  // namespace
 
@@ -48,6 +51,58 @@ int main(int argc, char* argv[]) {
     player.Deserialize(checkpoint);
   }
 
+  Game game;
+  absl::BitGen bitgen;
+
+  while (game.State() == azah::games::GameState::kOngoing) {
+    std::vector<RLPlayer::EvaluateResult> all_results;
+    for (int i = 0; i < kRepeats; ++i) {
+      all_results.push_back(player.Evaluate(game, options));
+    }
+
+    for (int i = 1; i < kRepeats; ++i) {
+      for (int q = 0; q < all_results[0].predicted_move.size(); ++q) {
+        all_results[0].predicted_move[q] += all_results[i].predicted_move[q];
+      }
+      for (int q = 0; q < 4; ++q) {
+        all_results[0].predicted_outcome[q] += 
+            all_results[i].predicted_outcome[q];
+      }
+    }
+    for (int i = 0; i < all_results[0].predicted_move.size(); ++i) {
+      all_results[0].predicted_move[i] /= kRepeats;
+    }
+    for (int i = 0; i < 4; ++i) {
+      all_results[0].predicted_outcome[i] /= kRepeats;
+    }
+
+    RLPlayer::EvaluateResult result = std::move(all_results[0]);
+
+
+    std::cout << "Outcome odds = [";
+    for (int i = 0; i < Game::players_n(); ++i) {
+      std::cout << result.predicted_outcome[i];
+      if (i < (Game::players_n() - 1)) std::cout << ", ";
+    }
+    std::cout << "]\n";
+
+    std::cout << "Move probability = [";
+    int q = -1;
+    float q_value = 0.0f;
+    for (int i = 0; i < result.predicted_move.size(); ++i) {
+      std::cout << result.predicted_move[i];
+      if (result.predicted_move[i] > q_value) {
+        q_value = result.predicted_move[i];
+        q = i;
+      }
+      if (i < (result.predicted_move.size() - 1)) std::cout << ", ";
+    }
+    std::cout << "]\n";
+
+    game.MakeMove(q, bitgen);
+  }
+
+  /*
   for (int i = kLoadCheckpointIndex; i < 10000; ++i) {
     std::cout << "Playing game..." << std::endl;
     auto losses = player.Train(1, options);
@@ -67,6 +122,6 @@ int main(int argc, char* argv[]) {
       stats << i << ", " << now << ": " << losses << "\n";
     }
   }
-
+  */
   return 0;
 }
